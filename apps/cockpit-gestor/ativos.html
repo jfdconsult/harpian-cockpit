@@ -1,0 +1,243 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Cockpit Gestor · Ativos</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+<style>
+  .atv td,.atv th{padding:7px 9px;font-size:13px;text-align:right;white-space:nowrap}
+  .atv th{position:sticky;top:0;background:#0c2039;z-index:2;font-size:12px}
+  /* coluna Desc fica no tamanho menor de antes */
+  .atv td:nth-child(3),.atv th:nth-child(3){font-size:11px}
+  .atv td:first-child,.atv td:nth-child(2),.atv th:first-child,.atv th:nth-child(2){text-align:left}
+  .atv tbody tr:hover{outline:1px solid var(--gold)}
+  /* .tk-link now in harpian-ds.css */
+  .rs{font-weight:800;font-size:10px;padding:2px 7px;border-radius:5px;letter-spacing:.3px}
+  .rs.long{background:#10351f;color:var(--green)} .rs.short{background:#3a1414;color:var(--red)}
+  .rs.lfvg{background:#10351f;color:var(--green);border:1px solid var(--amber)} .rs.sfvg{background:#3a1414;color:var(--red);border:1px solid var(--amber)}
+  .rs.buy{background:rgba(0,229,255,.13);color:#00E5FF;border:1px solid #00E5FF} .rs.sell{background:rgba(255,61,255,.13);color:#FF3DFF;border:1px solid #FF3DFF}
+  th.momd,td.momd{background:rgba(201,160,44,.05)} th.momd{color:var(--gold)}
+  .wrapx{overflow:auto;max-height:74vh;border:1px solid var(--bd);border-radius:10px}
+  /* AÇÃO — pulso disciplinado: só o que precisa de auditoria pisca (Von Restorff) */
+  @keyframes pulseRow{0%,100%{box-shadow:inset 4px 0 0 var(--red)}50%{box-shadow:inset 4px 0 0 rgba(231,76,60,.25)}}
+  @keyframes pulseBadge{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.94)}}
+  @keyframes pulseDot{0%{box-shadow:0 0 0 0 rgba(231,76,60,.55)}70%{box-shadow:0 0 0 7px rgba(231,76,60,0)}100%{box-shadow:0 0 0 0 rgba(231,76,60,0)}}
+  @keyframes flashCell{0%{background:rgba(201,160,44,.45)}100%{background:transparent}}
+  tr.auditar{animation:pulseRow 1.3s ease-in-out infinite}
+  tr.auditar:hover{outline:1px solid var(--red)}
+  .acao{font-weight:800;font-size:9.5px;padding:3px 8px;border-radius:20px;letter-spacing:.4px;display:inline-block}
+  .acao.r{background:#3a1414;color:#ff6b5e;animation:pulseBadge 1.25s ease-in-out infinite}
+  .acao.a{background:#3a2c10;color:var(--amber)}
+  .acao.g{background:#15251a;color:#5f7a68}
+  .acao .d{display:inline-block;width:6px;height:6px;border-radius:50%;background:#ff5e52;margin-right:5px;vertical-align:middle;animation:pulseDot 1.25s infinite}
+  .flash{animation:flashCell 1.1s ease-out}
+  /* MOVIMENTO — entrada/saída/aumento/redução (o que mudou hoje) */
+  .mov{font-weight:800;font-size:9.5px;padding:3px 8px;border-radius:5px;letter-spacing:.3px;display:inline-block}
+  .mov.entrada{background:#10351f;color:var(--green)}
+  .mov.saida{background:#3a1414;color:#ff6b5e;animation:pulseBadge 1.25s ease-in-out infinite}
+  .mov.aumento{background:#13301d;color:#6fe39a}
+  .mov.reducao{background:#3a2c10;color:var(--amber)}
+  .mov.mantem{background:transparent;color:#5f7a68;font-weight:600}
+  .auditbar{display:flex;align-items:center;gap:12px;padding:11px 16px;border-radius:10px;margin-bottom:14px;border:1px solid var(--bd);background:#0f2747;cursor:default}
+  .auditbar.hot{border-color:#7a2a22;background:linear-gradient(90deg,#2a1411,#0f2036);animation:pulseRow 1.6s ease-in-out infinite;cursor:pointer}
+  .auditbar .big{font-size:22px;font-weight:800}
+  .auditbar.hot .big{color:#ff6b5e}
+  .live{display:inline-flex;align-items:center;gap:6px}
+  .live .dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulseDot 1.6s infinite}
+  /* Barra de filtros — centro de controle (Jakob/consistência: um lugar só) */
+  .fbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;padding:14px 16px;border:1px solid var(--bd);border-radius:10px;background:#0f2747}
+  .fgrp{display:flex;flex-direction:column;gap:4px}
+  .fgrp label{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--gold)}
+  .fbar .hds-input{min-width:150px}
+  .hds-btn.ghost{background:transparent;border:1px solid var(--bd);color:var(--txt)}
+  .fcount{margin-left:auto;align-self:center;font-size:12px;color:var(--mut);font-weight:600;white-space:nowrap}
+  .fcount b{color:var(--gold)}
+  @media (prefers-reduced-motion:reduce){
+    tr.auditar,.acao.r,.acao .d,.auditbar.hot,.live .dot,.flash{animation:none}
+  }
+</style></head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="hds-wrap">
+  <div class="flex between wrap mb">
+    <div><div class="hds-h1">Ativos · scanner</div><div class="hds-sub">A base inteira — sinal RS, momentum (DEMA/TEMA), ROC 25d, posição dia/52sem, consecutivas. Dado real (Yahoo). Compara com o AlphaDroid.</div></div>
+    <span class="live"><span class="dot"></span><span id="conn" class="hds-tag b">…</span></span>
+  </div>
+  <div class="auditbar" id="auditbar" onclick="onlyAudit()"><span class="big" id="auditn">0</span><div><div style="font-weight:700" id="audittitle">Nenhuma ação pendente</div><div class="c-mut2" id="auditsub" style="font-size:11px">a cesta está calma — nada exige auditoria agora</div></div></div>
+  <div class="fbar mb">
+    <div class="fgrp"><label>Universo</label><select id="basket" class="hds-input" onchange="load()"></select></div>
+    <div class="fgrp"><label>Estratégia</label><select id="estf" class="hds-input" onchange="render()"><option value="">Todas</option></select></div>
+    <div class="fgrp"><label>Setor</label><select id="setf" class="hds-input" onchange="render()"><option value="">Todos os setores</option></select></div>
+    <div class="fgrp"><label>Subsetor</label><select id="subf" class="hds-input" onchange="render()"><option value="">Todos</option></select></div>
+    <div class="fgrp"><label>Movimento</label><select id="movf" class="hds-input" onchange="render()">
+      <option value="">Todos</option><option value="REVISAO">Só revisão (mudou)</option>
+      <option value="ENTRADA">Entradas</option><option value="SAÍDA">Saídas</option>
+      <option value="AUMENTO">Aumentos</option><option value="REDUÇÃO">Reduções</option></select></div>
+    <div class="fgrp"><label>Sinal RS</label><select id="rsf" class="hds-input" onchange="render()"><option value="">Todos</option><option>Long</option><option>Short</option><option>L-FVG</option><option>S-FVG</option></select></div>
+    <div class="fgrp"><label>Ação</label><select id="acf" class="hds-input" onchange="render()"><option value="">Todas</option><option value="AUDITAR">Só auditar</option><option value="OBSERVAR">Observar+</option></select></div>
+    <div class="fgrp"><label>Ordenar por</label><select id="sortf" class="hds-input" onchange="render()">
+      <option value="revisao">Revisão (mudanças primeiro)</option>
+      <option value="score">Score (maior força)</option>
+      <option value="score_asc">Score (menor)</option>
+      <option value="mom">Maior momento (DEMA)</option>
+      <option value="mom_asc">Menor momento</option>
+      <option value="ytd">Maior ganho no ano</option>
+      <option value="roc">Maior ROC 25d</option>
+      <option value="net">Maior alta no dia</option>
+      <option value="net_asc">Maior queda no dia</option>
+      <option value="pos52">Posição 52s (topo)</option>
+    </select></div>
+    <div class="fgrp"><label>Ticker</label><input id="q" class="hds-input" placeholder="buscar…" oninput="render()" style="width:120px"></div>
+    <div class="fgrp" style="justify-content:flex-end"><label>&nbsp;</label><button class="hds-btn ghost" onclick="clearFilters()">Limpar</button></div>
+    <div class="fcount" id="fcount">—</div>
+  </div>
+  <div class="flex mb" style="gap:8px"><span class="c-mut2" style="font-size:11px;align-self:center">ordenado por Score (força) · clique no cabeçalho de uma cesta pra trocar · análise da cesta no botão <b style="color:var(--gold)">◆ JIM</b> (alto à direita)</span></div>
+  <div class="wrapx"><table class="atv hds">
+    <thead><tr>
+      <th>#</th><th>Symbol</th><th>Desc</th><th>Movimento</th><th>Ação</th><th>RS</th><th>Score</th><th>Last</th><th>Net%</th>
+      <th>Mom EMA</th><th>Mom DEMA</th><th>Mom TEMA</th><th class="momd">D13</th><th class="momd">J37</th><th>12-1</th><th>ROC25</th>
+      <th>YTD%</th><th>52w%</th><th>Dia%</th><th>MA dev</th><th>Consec</th><th>Sinais</th>
+    </tr></thead><tbody id="rows"></tbody>
+  </table></div>
+  <div class="hds-foot" id="foot">—</div>
+</div>
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API=(location.search.match(/api=([^&]+)/)||[])[1]||'http://localhost:8080';
+var HEAD={'X-User-Role':'gestor_quant','X-User-Name':'Diogo'};
+document.getElementById('topbar').innerHTML=HDS.topbar({brand:'HARPIAN',small:'· COCKPIT GESTOR',ctx:'ATIVOS',user:'Diogo · gestor quant',clockId:'clk'});
+document.getElementById('navbar').innerHTML='<div class="hds-nav"><a href="index.html">Mission Control</a><a href="engine-room.html">Engine Room</a><span class="on">Ativos</span><a href="ticket.html">Tickets</a><a href="estrategias.html">Estratégias</a><a href="backtest.html">Backtest</a><a href="calibracao.html">Calibração</a><a href="protecao.html">Proteção</a><a href="indicadores.html">Indicadores</a><a href="reconciliacao.html">Reconciliação</a><a href="observador.html">Observador</a><a href="auditoria.html">Auditoria</a><a href="admin.html">Admin</a></div>';
+HDS.clock('clk');
+
+var DATA=[],RESUMO={},NOME='';
+var SINCOLOR={'Acelerando':'g','Freando':'a','Sobrecomprado':'r','Reversão?':'r','Esticado':'a','Fundo 52s':'b'};
+function tint(v,scale){ if(v==null||isNaN(v))return''; var a=Math.min(0.5,Math.abs(v)/scale); var c=v>=0?'46,204,113':'231,76,60'; return 'background:rgba('+c+','+a.toFixed(2)+')'; }
+function tintPos(p){ if(p==null)return''; var g=p>=50; var a=Math.min(0.5,(Math.abs(p-50)/50)*0.45+0.08); var c=g?'46,204,113':'243,156,18'; return 'background:rgba('+c+','+a.toFixed(2)+')'; }
+function num(v,suf){ return v==null?'—':(v.toLocaleString('pt-BR')+(suf||'')); }
+function rsCls(rs){ return rs==='Long'?'long':rs==='Short'?'short':rs==='L-FVG'?'lfvg':rs==='S-FVG'?'sfvg':rs==='Buy'?'buy':rs==='Sell'?'sell':''; }
+
+function loadBaskets(){
+  fetch(API+'/v1/assets/baskets',{headers:HEAD}).then(function(r){return r.json();}).then(function(d){
+    var opts='<option value="ALL">★ Base inteira (todas)</option>'+d.baskets.map(function(b){return '<option value="'+b.id+'">'+b.nome+' ('+b.n+')</option>';}).join('');
+    document.getElementById('basket').innerHTML=opts;
+    load();
+  }).catch(fail);
+}
+function load(){
+  var b=document.getElementById('basket').value||'CORE22-TECH-T1';
+  document.getElementById('conn').className='hds-tag b'; document.getElementById('conn').textContent='carregando…';
+  fetch(API+'/v1/assets/scan?basket='+b,{headers:HEAD}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+   .then(function(d){ DATA=d.rows; RESUMO=d.resumo||{}; NOME=d.nome; document.getElementById('conn').className='hds-tag g'; document.getElementById('conn').textContent='● '+d.source; document.getElementById('foot').textContent=d.nome+' · '+DATA.length+' ativos · '+d.rs_note; loadJimCesta(); renderResumo(); render(); })
+   .catch(fail);
+}
+function fail(e){ document.getElementById('conn').className='hds-tag r'; document.getElementById('conn').textContent='✕ offline'; }
+function fillOptions(sel, vals, keep){
+  var cur=keep?sel.value:''; var first=sel.options[0].outerHTML;
+  sel.innerHTML=first+vals.map(function(v){return '<option'+(v===cur?' selected':'')+'>'+v+'</option>';}).join('');
+}
+function renderResumo(){
+  // Banner DINÂMICO — quem precisa de revisão (mudou status / entrada / saída / ajuste)
+  var R=RESUMO, n=(R&&R.n_revisao)||0, bar=document.getElementById('auditbar');
+  document.getElementById('auditn').textContent=n;
+  if(n>0){ bar.className='auditbar hot';
+    var mc=R.mov_count||{}; var parts=[];
+    ['ENTRADA','SAÍDA','AUMENTO','REDUÇÃO'].forEach(function(k){ if(mc[k])parts.push(mc[k]+' '+k.toLowerCase()+(mc[k]>1?'s':'')); });
+    document.getElementById('audittitle').textContent=n+(n===1?' ativo precisa de revisão':' ativos precisam de revisão')+(parts.length?'  ·  '+parts.join(' · '):'');
+    document.getElementById('auditsub').innerHTML='<b>'+(R.precisam_revisao||[]).join(', ')+'</b> · clique para ver só esses · compare com o AlphaDroid antes de agir';
+  } else { bar.className='auditbar';
+    document.getElementById('audittitle').textContent='Nenhuma mudança hoje';
+    document.getElementById('auditsub').textContent='a base está estável — nenhum ativo mudou status ou intensidade';
+  }
+  // Popular dropdowns (Estratégia, Setor, Subsetor) com o que existe na base carregada
+  var ok=DATA.filter(function(r){return r.ok;});
+  function uniq(key,skip){ return ok.map(function(r){return r[key];}).filter(function(v,i,a){return v&&v!==skip&&a.indexOf(v)===i;}).sort(); }
+  fillOptions(document.getElementById('estf'), uniq('estrategia','—'), true);
+  fillOptions(document.getElementById('setf'), uniq('setor'), true);
+  fillOptions(document.getElementById('subf'), uniq('subsetor','—'), true);
+}
+function onlyAudit(){ if(!RESUMO||!RESUMO.n_revisao)return; document.getElementById('movf').value='REVISAO'; render(); }
+function clearFilters(){ ['estf','setf','subf','movf','rsf','acf','q'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('sortf').value='revisao'; render(); }
+var MOVRANK={'SAÍDA':0,'ENTRADA':1,'REDUÇÃO':2,'AUMENTO':3,'MANTÉM':9};
+var SORTERS={
+  revisao:function(a,b){ var ra=MOVRANK[(a.movimento||{}).mov]!=null?MOVRANK[(a.movimento||{}).mov]:9, rb=MOVRANK[(b.movimento||{}).mov]!=null?MOVRANK[(b.movimento||{}).mov]:9; return ra!==rb?ra-rb:(b.score||0)-(a.score||0); },
+  score:function(a,b){return (b.score||0)-(a.score||0);},
+  score_asc:function(a,b){return (a.score||0)-(b.score||0);},
+  mom:function(a,b){return (b.mom_j37||-1e9)-(a.mom_j37||-1e9);},
+  mom_asc:function(a,b){return (a.mom_j37||1e9)-(b.mom_j37||1e9);},
+  ytd:function(a,b){return (b.ytd_pct||-1e9)-(a.ytd_pct||-1e9);},
+  roc:function(a,b){return (b.roc_25||-1e9)-(a.roc_25||-1e9);},
+  net:function(a,b){return (b.net_pct||-1e9)-(a.net_pct||-1e9);},
+  net_asc:function(a,b){return (a.net_pct||1e9)-(b.net_pct||1e9);},
+  pos52:function(a,b){return (b.pos_52w||-1)-(a.pos_52w||-1);}
+};
+function acaoCell(f){ if(!f)return '<span class="acao g">—</span>';
+  if(f.acao==='AUDITAR')return '<span class="acao r" title="'+f.motivo+'"><span class="d"></span>AUDITAR</span>';
+  if(f.acao==='OBSERVAR')return '<span class="acao a" title="'+f.motivo+'">OBSERVAR</span>';
+  return '<span class="acao g" title="sem ação">OK</span>';
+}
+var MOVCLS={'ENTRADA':'entrada','SAÍDA':'saida','AUMENTO':'aumento','REDUÇÃO':'reducao','MANTÉM':'mantem'};
+function movCell(m){ if(!m)return '<span class="mov mantem">—</span>';
+  var arrow={'ENTRADA':'▲ ','SAÍDA':'▼ ','AUMENTO':'＋ ','REDUÇÃO':'－ ','MANTÉM':''}[m.mov]||'';
+  return '<span class="mov '+(MOVCLS[m.mov]||'mantem')+'" title="'+(m.motivo||'')+'">'+arrow+m.mov+'</span>';
+}
+function scoreTint(s){ if(s==null)return''; return 'background:rgba(46,204,113,'+(s/100*0.45).toFixed(2)+')'; }
+function render(){
+  var rsf=document.getElementById('rsf').value, q=(document.getElementById('q').value||'').toUpperCase();
+  var acf=document.getElementById('acf').value, setf=document.getElementById('setf').value, subf=document.getElementById('subf').value;
+  var estf=document.getElementById('estf').value, movf=document.getElementById('movf').value;
+  var sortf=document.getElementById('sortf').value;
+  var rows=DATA.filter(function(r){ if(!r.ok)return false;
+    if(estf&&r.estrategia!==estf)return false;
+    if(setf&&r.setor!==setf)return false;
+    if(subf&&r.subsetor!==subf)return false;
+    var mv=(r.movimento||{}).mov;
+    if(movf==='REVISAO'&&(mv==='MANTÉM'||!mv))return false;
+    if(movf&&movf!=='REVISAO'&&mv!==movf)return false;
+    if(rsf&&(r.rs||'')!==rsf)return false;
+    if(q&&r.ticker.indexOf(q)<0)return false;
+    if(acf==='AUDITAR'&&(r.flag||{}).acao!=='AUDITAR')return false;
+    if(acf==='OBSERVAR'&&(r.flag||{}).acao==='OK')return false;
+    return true; });
+  if(SORTERS[sortf])rows.sort(SORTERS[sortf]);
+  var fc=document.getElementById('fcount'); if(fc)fc.innerHTML='<b>'+rows.length+'</b> de '+DATA.filter(function(r){return r.ok;}).length+' ativos';
+  document.getElementById('rows').innerHTML=rows.map(function(r){
+    var cons=r.consec_up?('<span class="c-g">▲'+r.consec_up+'</span>'):r.consec_dn?('<span class="c-r">▼'+r.consec_dn+'</span>'):'0';
+    var sinais=(r.classificacao||[]).map(function(s){return '<span class="hds-tag '+(SINCOLOR[s]||'b')+'" style="margin:1px">'+s+'</span>';}).join('')||'<span class="c-mut2">—</span>';
+    var f=r.flag||{}; var trcls=f.acao==='AUDITAR'?' class="auditar"':'';
+    return '<tr'+trcls+'>'
+      +'<td class="c-mut2">'+(r.rank||'')+'</td>'
+      +'<td class="tk"><a class="tk-link" href="chart.html?ticker='+r.ticker+'" title="Abrir gráfico '+r.ticker+'">'+r.ticker+'</a></td>'
+      +'<td class="c-mut" style="max-width:140px;overflow:hidden;text-overflow:ellipsis">'+(r.name||'')+'</td>'
+      +'<td style="text-align:center">'+movCell(r.movimento)+'</td>'
+      +'<td style="text-align:center">'+acaoCell(f)+'</td>'
+      +'<td style="text-align:center"><span class="rs '+rsCls(r.rs)+'">'+r.rs+'</span></td>'
+      +'<td style="text-align:center;font-weight:800;'+scoreTint(r.score)+'">'+(r.score!=null?r.score:'—')+'</td>'
+      +'<td>'+num(r.last)+'</td>'
+      +'<td style="'+tint(r.net_pct,6)+'">'+num(r.net_pct,'%')+'</td>'
+      +'<td style="'+tint(r.mom_ema,60)+'">'+num(r.mom_ema,'%')+'</td>'
+      +'<td style="'+tint(r.mom_dema,60)+'">'+num(r.mom_dema,'%')+'</td>'
+      +'<td style="'+tint(r.mom_tema,60)+'">'+num(r.mom_tema,'%')+'</td>'
+      +'<td class="momd" style="'+tint(r.mom_d13,40)+'">'+num(r.mom_d13)+'</td>'
+      +'<td class="momd" style="'+tint(r.mom_j37,40)+'">'+num(r.mom_j37)+'</td>'
+      +'<td style="'+tint(r.ret_12_1,120)+'">'+num(r.ret_12_1,'%')+'</td>'
+      +'<td style="'+tint(r.roc_25,40)+'">'+num(r.roc_25,'%')+'</td>'
+      +'<td style="'+tint(r.ytd_pct,120)+'">'+num(r.ytd_pct,'%')+'</td>'
+      +'<td style="'+tintPos(r.pos_52w)+'">'+num(r.pos_52w,'%')+'</td>'
+      +'<td style="'+tintPos(r.pos_day)+'">'+num(r.pos_day,'%')+'</td>'
+      +'<td style="'+tint(r.ma_dev,8)+'">'+num(r.ma_dev,'%')+'</td>'
+      +'<td style="text-align:center">'+cons+'</td>'
+      +'<td style="text-align:left">'+sinais+'</td></tr>';
+  }).join('') || '<tr><td colspan="20" class="c-mut2" style="text-align:center;padding:20px">nenhum ativo no filtro</td></tr>';
+}
+function loadJimCesta(){
+  var b=document.getElementById('basket').value;
+  HDS.jim.setContext('Cesta · '+(NOME||b), ['Analisando a cesta…'], []);
+  fetch(API+'/v1/assets/insight?basket='+b,{headers:HEAD}).then(function(r){return r.json();})
+   .then(function(d){ HDS.jim.setContext('Cesta · '+(NOME||b), [d.insight], ['Top momento?','Quais auditar?','Comparar AlphaDroid']); })
+   .catch(function(){ HDS.jim.setContext('Cesta · '+(NOME||b), ['JIM indisponível.'], []); });
+}
+loadBaskets();
+// Atualização ao vivo — re-escaneia a cesta a cada 45s (feedback dinâmico, DOET)
+setInterval(function(){ if(document.hidden)return; load(); var w=document.querySelector('.wrapx'); if(w){w.classList.remove('flash');void w.offsetWidth;w.classList.add('flash');} }, 45000);
+</script>
+</body></html>

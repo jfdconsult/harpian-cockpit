@@ -1,0 +1,179 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Proteção & Defesa</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+<style>
+.pills{display:flex;gap:6px;margin-bottom:16px}
+.pill{padding:6px 18px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.6px;cursor:pointer;
+  border:1px solid var(--bd);background:transparent;color:var(--mut);transition:all .15s}
+.pill.on{background:var(--gold);color:#1a1300;border-color:var(--gold)}
+.pill:hover:not(.on){border-color:var(--gold);color:var(--txt)}
+.layer{margin-bottom:18px}
+.layer-title{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--gold);margin-bottom:10px;font-weight:700}
+.pilar-row{padding:8px 0;border-bottom:1px solid var(--bd2)}
+.pilar-row:last-child{border:0}
+.pilar-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.pilar-name{font-weight:700;font-size:13px}
+.decomp{font-size:10px;color:var(--mut2);margin:3px 0 6px;font-family:var(--mono)}
+.etf-row{display:flex;align-items:center;gap:9px;padding:6px 8px;border-bottom:1px solid var(--bd2);font-size:12px;border-radius:6px}
+.etf-row:last-child{border:0}
+.etf-row.top4{border:1px solid #00bcd4;background:rgba(0,188,212,.06)}
+.etf-tk{font-weight:700;width:50px}
+.etf-name{flex:1;color:var(--mut);font-size:11px}
+.etf-wt{font-variant-numeric:tabular-nums;font-weight:600;width:48px;text-align:right}
+.formula{background:#05101e;border:1px solid var(--bd);border-radius:6px;padding:8px 12px;font-size:11px;color:var(--mut);margin:6px 0;font-family:var(--mono)}
+.reentry-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd2);font-size:12px}
+.reentry-row:last-child{border:0}
+.col-left{width:59%;min-width:0}
+.col-right{width:39%;min-width:0}
+@media(max-width:900px){.col-left,.col-right{width:100%}}
+</style>
+</head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="hds-wrap">
+  <div class="flex between mb">
+    <div><div class="hds-h1">Proteção & Defesa</div><div class="hds-sub">Três camadas de defesa, temperatura por pilar, gate sistêmico e re-entry monitor.</div></div>
+    <div id="conn" class="hds-tag b">conectando…</div>
+  </div>
+  <div class="pills" id="pills"></div>
+  <div class="hds-grid hds-g4 mb" id="kpis"></div>
+  <div class="flex between mb" style="gap:var(--gap);align-items:flex-start;flex-wrap:wrap">
+    <div class="col-left" id="col-left"></div>
+    <div class="col-right" id="col-right"></div>
+  </div>
+  <div class="hds-foot">Cockpit Gestor · Proteção & Defesa · consome /v1/protection/*. Design system compartilhado (harpian-ds).</div>
+</div>
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API = (location.search.match(/api=([^&]+)/)||[])[1] || 'http://localhost:8080';
+var HEAD = {'X-User-Role':'socio_gestor','X-User-Name':'João Daniel'};
+var PID = 'HPC22';
+
+document.getElementById('topbar').innerHTML = HDS.topbar({brand:'HARPIAN', small:'· COCKPIT GESTOR', ctx:'PROTEÇÃO & DEFESA', user:'JD · sócio-gestor', clockId:'clk'});
+document.getElementById('navbar').innerHTML = '<div class="hds-nav">'
+  +'<a href="index.html">Mission Control</a>'
+  +'<a href="engine-room.html">Engine Room</a>'
+  +'<a href="ativos.html">Ativos</a>'
+  +'<a href="ticket.html">Tickets</a>'
+  +'<a href="estrategias.html">Estratégias</a>'
+  +'<a href="backtest.html">Backtest</a>'
+  +'<a href="calibracao.html">Calibração</a>'
+  +'<a href="protecao.html" class="on">Proteção</a>'
+  +'<a href="indicadores.html">Indicadores</a>'
+  +'<a href="reconciliacao.html">Reconciliação</a>'
+  +'<a href="observador.html">Observador</a>'
+  +'<a href="auditoria.html">Auditoria</a>'
+  +'<a href="admin.html">Admin</a></div>';
+HDS.clock('clk');
+
+function renderPills(){
+  document.getElementById('pills').innerHTML = ['HPC22','HPC11'].map(function(p){
+    return '<div class="pill'+(p===PID?' on':'')+'" onclick="switchPort(\''+p+'\')">'+p+'</div>';
+  }).join('');
+}
+function switchPort(id){ PID=id; renderPills(); loadAll(); }
+renderPills();
+
+function sem(s){ return s==='ataque'?'g':s==='alerta'?'a':s==='defesa'?'r':'b'; }
+function tempColor(v){ return v>=0.6?'#E74C3C':v>=0.4?'#F39C12':'#2ECC71'; }
+function pct01(v){ return Math.max(0,Math.min(100,v*100)); }
+function f2(n){ return Number(n).toFixed(2).replace('.',','); }
+
+function loadAll(){
+  var ok = 0;
+  function connected(){ ok++; if(ok===1){ document.getElementById('conn').className='hds-tag g'; document.getElementById('conn').textContent='● API ao vivo'; }}
+  function fail(e){ document.getElementById('conn').className='hds-tag r'; document.getElementById('conn').textContent='✕ API offline ('+e.message+')'; }
+
+  // Defense data
+  fetch(API+'/v1/protection/defense?portfolio_id='+PID, {headers:HEAD})
+   .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+   .then(function(d){
+     connected();
+     // KPIs
+     var regSem = d.regime==='RISK-ON'?'g':d.regime==='WARNING'?'a':d.regime==='RISK-OFF'?'r':'b';
+     document.getElementById('kpis').innerHTML =
+       HDS.kpi('Regime', HDS.stateChip(d.regime, regSem), PID) +
+       HDS.kpi('Defesa ativo', (d.defesa_pct!=null?d.defesa_pct+'%':'—'), 'do portfólio') +
+       HDS.kpi('Cross-Correlation', f2(d.cross_correlation), 'sistêmico') +
+       HDS.kpi('Velocidade', d.velocidade!=null?f2(d.velocidade):'—', 'EMA momentum');
+
+     // LEFT column: 3 layers
+     var html = '<div class="hds-card">';
+     html += '<h2><span>3 camadas de defesa</span>'+HDS.tag(PID,'b')+'</h2>';
+
+     // Layer 1
+     html += '<div class="layer"><div class="layer-title">Layer 1 — Temperatura por pilar</div>';
+     (d.pilares||[]).forEach(function(p){
+       var col = tempColor(p.temperatura);
+       html += '<div class="pilar-row"><div class="pilar-head"><span class="pilar-name">Pilar '+p.nome+'</span>'
+         +'<span style="font-weight:700;color:'+col+'">'+f2(p.temperatura)+'</span>'
+         +HDS.tag(p.status, sem(p.status))+'</div>'
+         +'<div class="decomp">turb '+f2(p.turb)+' × 0.40 + trend_break '+f2(p.trend_break)+' × 0.35 + jerk '+f2(p.jerk)+' × 0.25</div>'
+         +HDS.bullet('Pilar '+p.nome, 'limiar '+f2(p.limiar), pct01(p.temperatura), f2(p.temperatura), col)
+         +'</div>';
+     });
+     html += '</div>';
+
+     // Layer 2
+     html += '<div class="layer"><div class="layer-title">Layer 2 — Gate sistêmico</div>';
+     var cc = d.cross_correlation||0, gf = d.g_factor!=null?d.g_factor:Math.max(0,Math.min(1,(cc-0.55)/(0.75-0.55)));
+     html += '<div class="hds-kv"><span class="c-mut">Cross-correlation</span><span class="v" style="color:'+(cc>=0.75?'#E74C3C':cc>=0.55?'#F39C12':'#2ECC71')+'">'+f2(cc)+'</span></div>';
+     html += '<div class="hds-kv"><span class="c-mut">g factor</span><span class="v">'+f2(gf)+'</span></div>';
+     html += '<div class="formula">g = clip((cc − 0.55) / (0.75 − 0.55), 0, 1)</div>';
+     html += HDS.bullet('Cross-correlation', '0.55 → 0.75', pct01(cc), f2(gf), cc>=0.55?'#F39C12':'#2ECC71');
+     html += '</div>';
+
+     // Layer 3
+     html += '<div class="layer"><div class="layer-title">Layer 3 — Re-entry</div>';
+     var re = d.reentry || {};
+     var emaSt = re.ema_status||'n/a', vel = re.velocidade!=null?f2(re.velocidade):'—', days = re.days_in_defense!=null?re.days_in_defense:'—';
+     var reSem = re.mode==='re-entering'?'g':re.mode==='monitorando'?'a':'b';
+     html += '<div class="hds-kv"><span class="c-mut">EMA 20</span><span class="v" style="color:'+(emaSt==='acima'?'#2ECC71':'#E74C3C')+'">'+emaSt+'</span></div>';
+     html += '<div class="hds-kv"><span class="c-mut">Velocidade</span><span class="v">'+vel+'</span></div>';
+     html += '<div class="hds-kv"><span class="c-mut">Dias em defesa</span><span class="v">'+days+'</span></div>';
+     html += '<div style="margin-top:6px">'+HDS.stateChip(re.mode||'n/a', reSem)+'</div>';
+     html += '</div>';
+     html += '</div>';
+     document.getElementById('col-left').innerHTML = html;
+   }).catch(fail);
+
+  // Pilar D
+  fetch(API+'/v1/protection/pilar-d', {headers:HEAD})
+   .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+   .then(function(d){
+     connected();
+     var html = '<div class="hds-card mb"><h2><span>Pilar D · Rotação defensiva</span>'+HDS.tag('cap '+d.cap_pct+'%','a')+'</h2>';
+     html += '<div style="font-size:10px;color:var(--mut);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px">Universo · '+((d.etfs||[]).length)+' ETFs</div>';
+     (d.etfs||[]).forEach(function(e,i){
+       var isTop = e.selected || i < 4;
+       html += '<div class="etf-row'+(isTop?' top4':'')+'">'
+         +'<a class="tk-link" href="chart.html?ticker='+e.ticker+'" style="font-weight:700;width:50px;display:inline-block">'+e.ticker+'</a>'
+         +'<span class="etf-name">'+(e.name||'')+'</span>'
+         +'<span class="etf-wt">'+(e.weight_pct!=null?e.weight_pct.toFixed(1)+'%':'—')+'</span>'
+         +'</div>';
+     });
+     html += '<div class="hds-kv" style="margin-top:10px"><span class="c-mut">Contribution YTD</span><span class="v c-g">'+(d.contribution_ytd!=null?(d.contribution_ytd>=0?'+':'')+d.contribution_ytd.toFixed(2).replace('.',',')+'%':'—')+'</span></div>';
+     html += '</div>';
+
+     // Re-entry monitor card
+     html += '<div class="hds-card"><h2><span>Re-Entry Monitor</span></h2>';
+     html += '<div class="hds-kv"><span class="c-mut">Mode</span><span class="v">'+(d.reentry_mode||'—')+'</span></div>';
+     html += '<div class="hds-kv"><span class="c-mut">EMA cross</span><span class="v">'+(d.ema_cross||'—')+'</span></div>';
+     html += '<div class="hds-kv"><span class="c-mut">Sizing</span><span class="v">'+(d.sizing_pct!=null?d.sizing_pct+'%':'—')+'</span></div>';
+     if(d.velocity_pct!=null){
+       html += HDS.bullet('Velocidade', '', Math.max(0,Math.min(100,d.velocity_pct*100)), (d.velocity_pct>=0?'+':'')+d.velocity_pct.toFixed(2).replace('.',','), d.velocity_pct>=0?'#2ECC71':'#E74C3C');
+     }
+     html += '</div>';
+
+     document.getElementById('col-right').innerHTML = html;
+   }).catch(function(){
+     document.getElementById('col-right').innerHTML = '<div class="hds-card"><div class="hds-ph"><b>Pilar D indisponível</b>API não respondeu</div></div>';
+   });
+}
+
+loadAll();
+</script>
+</body></html>

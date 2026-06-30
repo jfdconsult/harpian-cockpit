@@ -1,0 +1,108 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Reconciliação</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+</head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="hds-wrap">
+  <div class="flex between mb">
+    <div><div class="hds-h1">Reconciliação — HQP × IBKR × Lynks</div><div class="hds-sub">Compara alvo HQP × execução IBKR × contabilidade Lynks</div></div>
+    <div id="conn" class="hds-tag b">conectando…</div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="hds-grid hds-g4 mb" id="kpis"></div>
+
+  <!-- Main table -->
+  <div class="hds-card mb">
+    <h2><span>Posições</span><span id="itemCount" class="hds-tag b">0</span></h2>
+    <table>
+      <thead><tr>
+        <th>Ticker</th><th style="text-align:right">HQP Target</th><th style="text-align:right">IBKR Fill</th>
+        <th style="text-align:right">Lynks Posição</th><th style="text-align:right">Delta</th><th>Status</th><th>Nota</th>
+      </tr></thead>
+      <tbody id="positions"></tbody>
+    </table>
+  </div>
+
+  <div class="hds-foot">Compara alvo HQP × execução IBKR × contabilidade Lynks · Cockpit Gestor · v1</div>
+</div>
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API = (location.search.match(/api=([^&]+)/)||[])[1] || 'http://localhost:8080';
+var HEAD = {'X-User-Role':'socio_gestor','X-User-Name':'João Daniel'};
+
+document.getElementById('topbar').innerHTML = HDS.topbar({brand:'HARPIAN', small:'· COCKPIT GESTOR', ctx:'RECONCILIAÇÃO', user:'JD · sócio-gestor', clockId:'clk'});
+document.getElementById('navbar').innerHTML = '<div class="hds-nav">'
+  + '<a href="index.html">Mission Control</a>'
+  + '<a href="engine-room.html">Engine Room</a>'
+  + '<a href="ativos.html">Ativos</a>'
+  + '<a href="ticket.html">Tickets</a>'
+  + '<a href="estrategias.html">Estratégias</a>'
+  + '<a href="backtest.html">Backtest</a>'
+  + '<a href="calibracao.html">Calibração</a>'
+  + '<a href="protecao.html">Proteção</a>'
+  + '<a href="indicadores.html">Indicadores</a>'
+  + '<a href="reconciliacao.html" class="on">Reconciliação</a>'
+  + '<a href="observador.html">Observador</a>'
+  + '<a href="auditoria.html">Auditoria</a>'
+  + '<a href="admin.html">Admin</a></div>';
+HDS.clock('clk');
+
+function statusSem(s){
+  if(s==='ok') return 'g';
+  if(s==='parcial') return 'a';
+  return 'r';
+}
+function statusLabel(s){
+  if(s==='ok') return 'OK';
+  if(s==='parcial') return 'PARCIAL';
+  return 'PENDENTE';
+}
+function fmtNum(n){
+  if(n===null||n===undefined) return '—';
+  return Number(n).toLocaleString('pt-BR');
+}
+
+fetch(API + '/v1/reconciliation/', {headers: HEAD})
+ .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+ .then(function(d){
+   document.getElementById('conn').className='hds-tag g';
+   document.getElementById('conn').textContent='● API ao vivo';
+   var items = d.items || d || [];
+   var ok=0, parcial=0, pendente=0;
+   items.forEach(function(i){
+     if(i.status==='ok') ok++;
+     else if(i.status==='parcial') parcial++;
+     else pendente++;
+   });
+   document.getElementById('kpis').innerHTML =
+     HDS.kpi('Total itens', items.length, 'posições comparadas') +
+     HDS.kpi('OK', ok, 'reconciliados', 'c-g') +
+     HDS.kpi('Parcial', parcial, 'diferença menor', 'c-a') +
+     HDS.kpi('Pendente', pendente, 'ação necessária', 'c-r');
+   document.getElementById('itemCount').textContent = items.length + ' posições';
+   document.getElementById('positions').innerHTML = items.map(function(i){
+     var deltaColor = (i.delta===0||i.delta==='0') ? 'c-g' : 'c-r';
+     return '<tr>'
+       + '<td class="tk"><a class="tk-link" href="chart.html?ticker='+i.ticker+'" title="Abrir gráfico">'+i.ticker+'</a></td>'
+       + '<td style="text-align:right">'+fmtNum(i.hqp_target)+'</td>'
+       + '<td style="text-align:right">'+fmtNum(i.ibkr_fill)+'</td>'
+       + '<td style="text-align:right">'+fmtNum(i.lynks_position)+'</td>'
+       + '<td style="text-align:right" class="'+deltaColor+'">'+fmtNum(i.delta)+'</td>'
+       + '<td>'+HDS.tag(statusLabel(i.status), statusSem(i.status))+'</td>'
+       + '<td class="c-mut2" style="font-size:10px">'+((i.nota||i.note)||'')+'</td>'
+       + '</tr>';
+   }).join('');
+   if(!items.length) document.getElementById('positions').innerHTML='<tr><td colspan="7" class="c-mut2">Nenhuma posição para reconciliar</td></tr>';
+ })
+ .catch(function(e){
+   document.getElementById('conn').className='hds-tag r';
+   document.getElementById('conn').textContent='✕ API offline ('+e.message+')';
+   document.getElementById('kpis').innerHTML='<div class="hds-ph" style="grid-column:1/-1"><b>API não respondeu</b>Suba a API: <code>uvicorn app.main:app --port 8080</code></div>';
+ });
+</script>
+</body></html>

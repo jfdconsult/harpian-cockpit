@@ -1,0 +1,229 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Engine Room</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+<style>
+body.hds{padding:0;overflow-x:hidden}
+.er-wrap{padding:6px 10px;margin:0 auto}
+.g12{display:grid;grid-template-columns:repeat(12,1fr);gap:10px;margin-bottom:10px}
+.s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}
+@media(max-width:1100px){.s4,.s5,.s6,.s7{grid-column:span 12}}
+.c{background:linear-gradient(180deg,var(--card),#0c2039);border:1px solid var(--bd);border-radius:10px;padding:14px 16px}
+.c h2{font-size:11px;text-transform:uppercase;letter-spacing:1.6px;color:var(--gold);margin-bottom:10px;font-weight:700}
+.gz{display:flex;flex-direction:column;align-items:center}
+.gsub{font-size:13px;color:var(--mut);text-align:center;margin-top:4px}
+.gsub b{font-size:14px}
+.glegend{display:flex;justify-content:space-between;width:96%;font-size:10px;font-weight:700;letter-spacing:.5px;margin-top:4px}
+.prow{margin-bottom:14px}
+.phead{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px;align-items:baseline;flex-wrap:wrap;gap:6px}
+.phead small{color:var(--mut);font-size:11px}
+.dist{font-size:13px;font-weight:700;white-space:nowrap}
+.psub{font-size:10px;color:var(--mut2);margin-top:3px;display:flex;gap:14px}
+.bullet{height:14px;border-radius:7px;position:relative;background:#08182c;overflow:hidden}
+.bz{position:absolute;top:0;bottom:0;opacity:.28}
+.bneedle{position:absolute;top:-2px;bottom:-2px;width:3px;background:#fff;border-radius:2px;box-shadow:0 0 7px rgba(255,255,255,.7)}
+.legend{font-size:10px;color:var(--mut2);margin-top:8px;line-height:1.5}
+.irow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bd2);font-size:13px}
+.irow:last-child{border:0}
+.ilab{width:140px;color:var(--mut);font-size:13px;flex-shrink:0}
+.ibarwrap{flex:1;min-width:80px}
+.ival{text-align:right;font-size:12px;flex-shrink:0}
+.ival b{font-size:14px}
+.chip{font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;white-space:nowrap}
+.chip.on{background:#10351f;color:#2ECC71}.chip.off{background:#3a1414;color:#E74C3C}.chip.na{background:#23344a;color:var(--mut)}
+.lrow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.lname{width:130px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.sw{width:10px;height:10px;border-radius:2px}
+.lbar{flex:1;height:28px;border-radius:6px;overflow:hidden;display:flex;border:1px solid var(--bd2)}
+.la{background:linear-gradient(90deg,#2d6cad,#4A90D9);display:flex;align-items:center;padding-left:8px;font-size:12px;font-weight:700;color:#fff;white-space:nowrap}
+.lb{background:linear-gradient(90deg,#caa12e,#e0c160);display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:12px;font-weight:700;color:#1a1405;white-space:nowrap}
+.lnote{font-size:10px;color:var(--mut2);margin-top:6px;line-height:1.5}
+.orow{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px}
+.olabel{width:130px;color:var(--mut);display:flex;align-items:center;gap:5px;flex-shrink:0}
+.odelta{font-weight:800;font-size:12px;padding:3px 8px;border-radius:5px;min-width:48px;text-align:center}
+.odelta.up{background:#10351f;color:#2ECC71}.odelta.dn{background:#3a1414;color:#E74C3C}.odelta.fl{background:#23344a;color:var(--mut)}
+.otag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;color:#fff;letter-spacing:.3px}
+.otag.AUM{background:#1f7a45}.otag.RED{background:#b08010}.otag.DEF{background:#9a3030}
+.otag.SAI{background:#7a1f1f}.otag.ENT{background:#1a5a8a}.otag.NEU{background:#3a4a5f}
+.otxt{flex:1;color:var(--txt);font-size:13px}
+.pdbox{margin-top:10px;padding:10px 14px;border:1px solid rgba(231,76,60,.45);background:rgba(231,76,60,.05);border-radius:8px}
+.pdhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.pdhead h3{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:#f08070;font-weight:800}
+.pdhead .sub{font-size:10px;color:#c47a72}
+.pdwinner{font-size:13px;color:#f3a195;margin-bottom:6px}
+.pdwinner b{color:#ff8b78;font-weight:800}
+.pdholdings{display:flex;flex-wrap:wrap;gap:6px}
+.pdh{background:rgba(231,76,60,.16);border:1px solid rgba(231,76,60,.4);padding:4px 10px;border-radius:5px;font-size:12px;font-weight:700;color:#ffc4ba;white-space:nowrap}
+.pdh b{color:#fff;margin-right:4px}
+.pdrocs{display:flex;gap:12px;margin-top:7px;font-size:10px;color:#c47a72}
+.pdrocs span b{color:#f0a395}
+.pdwarn{font-size:11px;color:#c47a72;font-style:italic;margin-top:6px}
+.foot{font-size:9px;color:var(--mut2);border-top:1px solid var(--bd);padding:6px 0;line-height:1.5;margin-top:4px}
+.foot b{color:var(--mut)}
+.metabar{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--mut2);margin-bottom:6px;padding:0 2px}
+.pill-mode{padding:2px 10px;border-radius:14px;font-size:10px;font-weight:700;background:#3a2d10;color:var(--gold);border:1px solid var(--gold)}
+</style>
+</head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="er-wrap">
+  <div class="metabar">
+    <div id="er-meta"></div>
+    <div id="conn" class="hds-tag b">conectando…</div>
+  </div>
+  <div id="er-body"></div>
+  <div class="foot">
+    <b>SOMENTE LEITURA</b> — zero ordens, zero movimentação.
+    Regime/indicadores conforme OS_4_INDICADORES.md · 4 estados conforme CAP_P_ORQUESTRADOR_REGIME.md.
+  </div>
+</div>
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API=(location.search.match(/api=([^&]+)/)||[])[1]||'http://localhost:8080';
+var HEAD={'X-User-Role':'socio_gestor','X-User-Name':'João Daniel'};
+
+document.getElementById('topbar').innerHTML=HDS.topbar({brand:'HARPIAN',small:'· ENGINE ROOM',ctx:'HC-US.IG',user:'JD · sócio-gestor',clockId:'clk'});
+document.getElementById('navbar').innerHTML='<div class="hds-nav">'
+  +'<a href="index.html">Mission Control</a>'
+  +'<span class="on">Engine Room</span>'
+  +'<a href="ativos.html">Ativos</a>'
+  +'<a href="ticket.html">Tickets</a>'
+  +'<a href="estrategias.html">Estratégias</a>'
+  +'<a href="backtest.html">Backtest</a>'
+  +'<a href="calibracao.html">Calibração</a>'
+  +'<a href="protecao.html">Proteção</a>'
+  +'<a href="indicadores.html">Indicadores</a>'
+  +'<a href="reconciliacao.html">Reconciliação</a>'
+  +'<a href="observador.html">Observador</a>'
+  +'<a href="auditoria.html">Auditoria</a>'
+  +'<a href="admin.html">Admin</a></div>';
+HDS.clock('clk');
+
+function f2(n){return n!=null?Number(n).toFixed(2).replace('.',','):'—'}
+function f3(n){return n!=null?Number(n).toFixed(3).replace('.',','):'—'}
+function sign(n){return n>=0?'+':''}
+function bulletHTML(pct){
+  return '<div class="bullet">'
+    +'<div class="bz" style="left:0;width:25%;background:#E74C3C"></div>'
+    +'<div class="bz" style="left:25%;width:25%;background:#F39C12"></div>'
+    +'<div class="bz" style="left:50%;width:25%;background:#2ECC71"></div>'
+    +'<div class="bz" style="left:75%;width:25%;background:#4A90D9"></div>'
+    +'<div class="bneedle" style="left:calc('+pct+'% - 1px)"></div></div>';
+}
+
+fetch(API+'/v1/engine-room/',{headers:HEAD})
+ .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
+ .then(function(d){
+   document.getElementById('conn').className='hds-tag g';
+   document.getElementById('conn').textContent='● ao vivo';
+   var R=d.regime;
+   document.getElementById('er-meta').innerHTML='Dados: <b style="color:#a9c0dd">'+d.data_source+'</b> · as-of '+d.as_of+' · gerado '+d.gerado+' <span class="pill-mode">'+d.mode+'</span>';
+
+   var h='';
+
+   // === ROW 1: gauge (s4) | pilar temps (s4) | indicators (s4) ===
+   h+='<div class="g12">';
+
+   // Gauge
+   h+='<div class="c s4 gz"><h2>Regime de Mercado · 4 estados</h2>';
+   h+=HDS.regimeGauge(R.estado,'exposição de ataque: '+R.exposicao_ataque_pct+'%');
+   h+='<div class="gsub">CRS <b style="color:#fff">'+f3(R.crs)+'</b> · WATCH '+f2(R.watch)+' · DEFESA '+f3(R.defesa)+'</div>';
+   h+='<div class="glegend"><span style="color:#E74C3C">&#9668; defesa</span><span style="color:#2ECC71">ataque &#9658;</span></div></div>';
+
+   // Pilar temps
+   h+='<div class="c s4"><h2>Temperatura por Pilar · distância ao gatilho</h2>';
+   d.pilares.forEach(function(p){
+     var np=(1-p.temp)*100;
+     var dc=p.status==='GATILHO'?'#F39C12':'#2ECC71';
+     var dt=p.status==='GATILHO'?'GATILHO +'+f3(Math.abs(p.folga)):'folga '+f3(p.folga);
+     h+='<div class="prow"><div class="phead"><span>'+p.nome+' <small>'+p.proxy+' · '+f3(p.temp)+'/'+f2(p.lim)+'</small>';
+     h+=' <small style="color:var(--mut)">24h '+sign(p.delta_24h)+f3(p.delta_24h)+'</small>';
+     if(p.delta_5d!=null) h+=' <small style="color:#E74C3C">5d '+sign(p.delta_5d)+f3(p.delta_5d)+'</small>';
+     h+='</span><span class="dist" style="color:'+dc+'">'+dt+'</span></div>';
+     h+=bulletHTML(np);
+     h+='<div class="psub"><span>turb '+f2(p.turb)+'</span><span>trend-break '+f2(p.trend_break)+'</span><span>jerk '+f2(p.jerk)+'</span></div></div>';
+   });
+   h+='<div class="legend">agulha = temperatura · esquerda = quente/defesa · direita = frio/seguro</div>';
+   var pr=d.pilares_resumo;
+   h+='<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin-top:4px">';
+   h+='<span>máx <b style="color:#fff">'+f3(pr.max)+'</b></span>';
+   h+='<span>média <b style="color:#fff">'+f3(pr.media)+'</b></span>';
+   h+='<span>em defesa <b style="color:#fff">'+pr.em_defesa+'</b></span></div></div>';
+
+   // Indicators
+   h+='<div class="c s4"><h2>Indicadores Sistêmicos · distância ao gatilho</h2>';
+   d.indicadores.forEach(function(ind){
+     h+='<div class="irow"><div class="ilab">'+ind.nome+'</div>';
+     if(ind.tipo==='chips'){
+       h+='<div style="flex:1;display:flex;gap:5px;flex-wrap:wrap">';
+       ind.chips.forEach(function(c){h+='<span class="chip '+(c.ok?'on':'off')+'">'+c.label+(c.ok?' ✓':' ✗')+'</span>';});
+       h+='</div><div class="ival">'+ind.desc_right+'</div>';
+     }else if(ind.tipo==='standalone'){
+       h+='<div style="flex:1"><span class="chip na">'+ind.desc+'</span></div><div class="ival"></div>';
+     }else{
+       h+='<div class="ibarwrap">'+bulletHTML(ind.needle_pct)+'</div>';
+       h+='<div class="ival"><b style="color:'+ind.cor+'">'+(ind.valor_fmt||f3(ind.valor))+'</b> '+ind.desc;
+       if(ind.delta_24h!=null){
+         h+=' <span style="font-size:10px;color:var(--mut)">24h '+sign(ind.delta_24h)+f3(ind.delta_24h)+'</span>';
+         if(ind.delta_5d!=null){
+           var dc2=ind.delta_5d_dir==='dn'?'#2ECC71':'#E74C3C';
+           h+=' <span style="font-size:10px;color:'+dc2+'">5d '+sign(ind.delta_5d)+f3(ind.delta_5d)+'</span>';
+         }
+       }
+       h+='</div>';
+     }
+     h+='</div>';
+   });
+   h+='</div></div>';
+
+   // === ROW 2: carga (s7) | orient + pilar D (s5) ===
+   h+='<div class="g12">';
+
+   // Left: Carga
+   h+='<div class="c s7"><h2>Distribuição de Carga · A · B por perfil</h2>';
+   d.carga.perfis.forEach(function(p){
+     h+='<div class="lrow"><div class="lname"><span class="sw" style="background:'+p.cor+'"></span>'+p.nome+'</div>';
+     h+='<div class="lbar"><div class="la" style="width:'+p.a_pct+'%">A '+p.a_pct+'%</div>';
+     h+='<div class="lb" style="width:'+p.b_pct+'%">'+p.b_pct+'% B</div></div></div>';
+   });
+   h+='<div class="lnote"><span style="color:#4A90D9">●</span> A = ações HC-US 3.1 · <span style="color:#e0c160">●</span> B = ETFs HC-US 11. Range homologado: CONS 31,9→3,5% · BAL 52,7→8,4% · ADV 70→17%.</div>';
+   h+='</div>';
+
+   // Right: Orient + Pilar D
+   h+='<div class="c s5">';
+   h+='<h2>Orientação do dia · ontem → hoje</h2>';
+   d.orientacao.forEach(function(o){
+     h+='<div class="orow"><div class="olabel"><span class="sw" style="background:'+o.cor+'"></span>'+o.perfil+'</div>';
+     h+='<div class="odelta '+o.dir+'">'+o.delta+'</div>';
+     h+='<span class="otag '+o.tag+'">'+o.tag+'</span>';
+     h+='<div class="otxt">'+o.texto+'</div></div>';
+   });
+
+   var pd=d.pilar_d;
+   h+='<div class="pdbox"><div class="pdhead"><h3>▲ PILAR D · DEFESA · '+pd.lane_vencedora+'</h3>';
+   h+='<div class="sub">Carga: '+pd.carga+'</div></div>';
+   h+='<div class="pdwinner">Lane vencedora (WTA ROC 6m): <b>'+pd.lane_vencedora+'</b></div>';
+   h+='<div class="pdholdings">';
+   pd.holdings.forEach(function(x){h+='<span class="pdh"><b>'+x.ticker+'</b>'+x.peso_pct+'%</span>';});
+   h+='</div><div class="pdrocs">';
+   pd.rocs.forEach(function(r){
+     var st=r.winner?'color:#ff8b78;font-weight:800':'';
+     h+='<span style="'+st+'">'+r.lane+' ROC <b>'+r.roc+'</b></span>';
+   });
+   h+='</div>';
+   h+='<div class="pdwarn">'+pd.nota+'</div></div>';
+   h+='</div>';
+
+   h+='</div>';
+
+   document.getElementById('er-body').innerHTML=h;
+ })
+ .catch(function(e){
+   document.getElementById('conn').className='hds-tag r';
+   document.getElementById('conn').textContent='✕ offline ('+e.message+')';
+   document.getElementById('er-body').innerHTML='<div class="hds-ph" style="padding:40px"><b>API não respondeu</b><br><code>uvicorn app.main:app --port 8080</code></div>';
+ });
+</script>
+</body></html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Cockpit Gestor · Backtest Lab</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+<style>
+  .lay{display:grid;grid-template-columns:300px 1fr;gap:var(--gap);align-items:start}
+  @media(max-width:900px){.lay{grid-template-columns:1fr}}
+  .side{display:flex;flex-direction:column;gap:var(--gap)}
+  /* form elements */
+  .fg{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+  .fg label{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--gold)}
+  .fg .val{font-size:13px;font-weight:600;color:#5de5d5;background:#0b2e3e;padding:6px 10px;border-radius:var(--r-sm);border:1px solid #1a4a5a}
+  /* period chips */
+  .chips{display:flex;gap:6px}
+  .chip{padding:5px 12px;font-size:11px;font-weight:600;border-radius:var(--r-sm);border:1px solid var(--bd);
+    color:var(--mut);cursor:pointer;background:transparent;transition:all .15s}
+  .chip:hover{border-color:var(--gold);color:var(--txt)}
+  .chip.on{background:#0b3a4a;border-color:#5de5d5;color:#5de5d5}
+  /* big submit */
+  .btn-cyan{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;
+    font-size:14px;font-weight:800;border:none;border-radius:var(--r-sm);cursor:pointer;letter-spacing:.4px;
+    background:linear-gradient(180deg,#1ab5a0,#0e8a7a,#076a5e);color:#e0fff8;transition:filter .15s}
+  .btn-cyan:hover{filter:brightness(1.12)}
+  /* runs list */
+  .runs{max-height:340px;overflow-y:auto}
+  .run-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--bd2);
+    cursor:pointer;font-size:12px;transition:background .12s}
+  .run-item:hover,.run-item.sel{background:rgba(255,255,255,.04)}
+  .run-item.sel{border-left:3px solid var(--gold)}
+  .grade{font-weight:800;font-size:10px;padding:2px 8px;border-radius:5px;letter-spacing:.4px}
+  .grade.A{background:#10351f;color:var(--green)} .grade.B{background:#13314d;color:var(--blue)}
+  .grade.F{background:#3a1414;color:var(--red)} .grade.rodando{background:#3a2d10;color:var(--amber)}
+  /* metrics table */
+  .mtable{width:100%;border-collapse:collapse;font-size:12px}
+  .mtable th{text-align:left;color:var(--mut);font-weight:500;font-size:9px;text-transform:uppercase;
+    letter-spacing:.5px;padding:7px 10px;border-bottom:1px solid var(--bd)}
+  .mtable td{padding:8px 10px;border-bottom:1px solid var(--bd2);font-variant-numeric:tabular-nums}
+  .mtable tr.oos{background:rgba(93,229,213,.06)}
+  .flag{font-size:14px;margin-left:4px}
+  /* grade badge big */
+  .grade-big{position:absolute;top:14px;right:16px;font-size:15px;font-weight:900;padding:5px 16px;
+    border-radius:var(--r-sm);letter-spacing:1px}
+  .grade-big.A{background:#10351f;color:var(--green);border:1px solid var(--green)}
+  .grade-big.B{background:#13314d;color:var(--blue);border:1px solid var(--blue)}
+  .grade-big.F{background:#3a1414;color:var(--red);border:1px solid var(--red)}
+  .grade-big.rodando{background:#3a2d10;color:var(--amber);border:1px solid var(--amber)}
+  /* charts area */
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+  @media(max-width:700px){.charts{grid-template-columns:1fr}}
+  .chart-box{background:#0a1e36;border:1px solid var(--bd2);border-radius:var(--r-sm);padding:12px}
+  .chart-box h3{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-bottom:8px}
+  /* toast */
+  .toast{position:fixed;bottom:24px;right:24px;background:#0e8a7a;color:#e0fff8;padding:12px 20px;
+    border-radius:var(--r-sm);font-weight:700;font-size:13px;opacity:0;transform:translateY(20px);
+    transition:all .3s;z-index:999;pointer-events:none}
+  .toast.show{opacity:1;transform:translateY(0)}
+  /* red flags */
+  .rf{background:#2a1411;border:1px solid #5a2a22;border-radius:var(--r-sm);padding:10px 14px;margin-top:10px;font-size:12px;color:#ff8a7a}
+</style></head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="hds-wrap">
+  <div class="flex between mb">
+    <div><div class="hds-h1">Backtest Lab</div><div class="hds-sub">Rodar backtests DeLorean (walk-forward PIT) no Modal, comparar janelas, validar antes de promover.</div></div>
+    <div id="conn" class="hds-tag b">conectando…</div>
+  </div>
+
+  <div class="lay">
+    <!-- LEFT -->
+    <div class="side">
+      <div class="hds-card">
+        <h2><span>Configurar backtest</span></h2>
+        <div class="fg">
+          <label>Alvo</label>
+          <select id="alvo" class="hds-input"><option>HPC22</option><option>HPC11</option><option>HCUST</option></select>
+        </div>
+        <div class="fg">
+          <label>Método</label>
+          <div class="val">DeLorean · walk-forward PIT</div>
+        </div>
+        <div class="fg">
+          <label>Período</label>
+          <div class="chips" id="chips">
+            <span class="chip" onclick="setPeriod(this,'5y')">5 anos</span>
+            <span class="chip" onclick="setPeriod(this,'10y')">10 anos</span>
+            <span class="chip on" onclick="setPeriod(this,'full')">Desde 2007</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Custos (bps)</label>
+          <input id="custos" class="hds-input" type="number" value="15">
+        </div>
+        <div class="fg">
+          <label>Rebalance</label>
+          <input id="rebalance" class="hds-input" value="mensal + defesa diária" readonly style="color:var(--mut)">
+        </div>
+        <button class="btn-cyan" onclick="submitBt()">▶ Rodar no Modal</button>
+      </div>
+
+      <div class="hds-card">
+        <h2><span>Runs recentes</span></h2>
+        <div class="runs" id="runs"><div class="c-mut2" style="padding:16px;text-align:center;font-size:12px">carregando…</div></div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div id="results">
+      <div class="hds-ph" style="padding:40px">
+        <b>Nenhum backtest selecionado</b>
+        Selecione um run à esquerda ou submeta um novo backtest.
+      </div>
+    </div>
+  </div>
+
+  <div class="hds-foot">Backtest Lab · consome /v1/backtest. Método DeLorean = walk-forward point-in-time. Validação em 2 janelas (OOS + cheio).</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API=(location.search.match(/api=([^&]+)/)||[])[1]||'http://localhost:8080';
+var HEAD={'X-User-Role':'socio_gestor','X-User-Name':'João Daniel'};
+var PERIOD='full', RUNS=[], SEL=null;
+
+document.getElementById('topbar').innerHTML=HDS.topbar({brand:'HARPIAN',small:'· COCKPIT GESTOR',ctx:'BACKTEST LAB',user:'JD · sócio-gestor',clockId:'clk'});
+document.getElementById('navbar').innerHTML='<div class="hds-nav">'
+  +'<a href="index.html">Mission Control</a>'
+  +'<a href="engine-room.html">Engine Room</a>'
+  +'<a href="ativos.html">Ativos</a>'
+  +'<a href="ticket.html">Tickets</a>'
+  +'<a href="estrategias.html">Estratégias</a>'
+  +'<a class="on" href="backtest.html">Backtest</a>'
+  +'<a href="calibracao.html">Calibração</a>'
+  +'<a href="protecao.html">Proteção</a>'
+  +'<a href="indicadores.html">Indicadores</a>'
+  +'<a href="reconciliacao.html">Reconciliação</a>'
+  +'<a href="observador.html">Observador</a>'
+  +'<a href="auditoria.html">Auditoria</a>'
+  +'<a href="admin.html">Admin</a></div>';
+HDS.clock('clk');
+
+function setPeriod(el,p){
+  PERIOD=p;
+  var chips=document.querySelectorAll('#chips .chip');
+  for(var i=0;i<chips.length;i++)chips[i].className='chip';
+  el.className='chip on';
+}
+
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show';
+  setTimeout(function(){t.className='toast';},2800);
+}
+
+function loadRuns(){
+  fetch(API+'/v1/backtest/runs',{headers:HEAD})
+    .then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+    .then(function(d){
+      document.getElementById('conn').className='hds-tag g';
+      document.getElementById('conn').textContent='● API ao vivo';
+      RUNS=d.runs||[];
+      renderRuns();
+    })
+    .catch(function(e){
+      document.getElementById('conn').className='hds-tag r';
+      document.getElementById('conn').textContent='✕ API offline';
+      document.getElementById('runs').innerHTML='<div class="c-mut2" style="padding:16px;text-align:center;font-size:12px">API não respondeu ('+e.message+')</div>';
+    });
+}
+
+function renderRuns(){
+  if(!RUNS.length){document.getElementById('runs').innerHTML='<div class="c-mut2" style="padding:16px;text-align:center;font-size:12px">nenhum run registrado</div>';return;}
+  document.getElementById('runs').innerHTML=RUNS.map(function(r,i){
+    var gcls=r.grade==='A'?'A':r.grade==='B'?'B':r.grade==='F'?'F':'rodando';
+    var label=r.grade||'…';
+    return '<div class="run-item'+(SEL===i?' sel':'')+'" onclick="selectRun('+i+')">'
+      +'<div><div style="font-weight:600">'+r.name+'</div><div class="c-mut2" style="font-size:10px">'+(r.date||'')+'</div></div>'
+      +'<span class="grade '+gcls+'">'+label+'</span></div>';
+  }).join('');
+}
+
+function selectRun(i){
+  SEL=i; renderRuns();
+  var r=RUNS[i];
+  if(r.status==='running'){
+    document.getElementById('results').innerHTML='<div class="hds-card"><h2><span>'+r.name+'</span><span class="hds-tag a">rodando…</span></h2>'
+      +'<div style="text-align:center;padding:30px;color:var(--amber);font-size:14px">⏳ Backtest em execução no Modal…<br><span class="c-mut2" style="font-size:11px">Tempo estimado: '+(r.eta||'~3 min')+'</span></div></div>';
+    return;
+  }
+  var m=r.metricas||{};
+  var oos=m.oos||{}, full=m.cheio||{};
+  var gcls=r.grade==='A'?'A':r.grade==='B'?'B':r.grade==='F'?'F':'rodando';
+  var flags=r.red_flags||[];
+  var passOk=(r.grade==='A'||r.grade==='B');
+  var passIcon=function(v,bad){return (bad?'<span class="flag">🔴</span>':'<span class="flag">🟢</span>');};
+
+  var html='<div class="hds-card mb" style="position:relative">'
+    +'<h2><span>Métricas · validação 2 janelas</span></h2>'
+    +'<div class="grade-big '+gcls+'">GRADE '+r.grade+'</div>'
+    +'<table class="mtable"><thead><tr><th>Janela</th><th>CAGR</th><th>Sortino</th><th>Calmar</th><th>MaxDD</th><th>Risk Nº</th><th></th></tr></thead><tbody>'
+    +'<tr class="oos"><td style="font-weight:700;color:#5de5d5">OOS 2016→hoje</td>'
+      +'<td>'+(oos.cagr||'—')+'</td><td>'+(oos.sortino||'—')+'</td><td>'+(oos.calmar||'—')+'</td>'
+      +'<td style="color:var(--red)">'+(oos.max_dd||'—')+'</td><td>'+(oos.risk_num||'—')+'</td>'
+      +'<td>'+passIcon(passOk,!passOk)+'</td></tr>'
+    +'<tr><td style="font-weight:700">Cheio 2007→hoje</td>'
+      +'<td>'+(full.cagr||'—')+'</td><td>'+(full.sortino||'—')+'</td><td>'+(full.calmar||'—')+'</td>'
+      +'<td style="color:var(--red)">'+(full.max_dd||'—')+'</td><td>'+(full.risk_num||'—')+'</td>'
+      +'<td>'+passIcon(passOk,!passOk)+'</td></tr>'
+    +'</tbody></table>';
+  if(flags.length){
+    html+='<div class="rf"><b>RED FLAGS</b><ul style="margin:6px 0 0 16px">';
+    flags.forEach(function(f){html+='<li>'+f+'</li>';});
+    html+='</ul></div>';
+  }
+  html+='</div>';
+
+  // Charts
+  html+='<div class="charts">';
+  html+='<div class="chart-box"><h3>Equity Curve</h3>'+buildEquitySVG(r)+'</div>';
+  html+='<div class="chart-box"><h3>Retornos Anuais</h3>'+buildBarsSVG(r)+'</div>';
+  html+='</div>';
+
+  document.getElementById('results').innerHTML=html;
+}
+
+function buildEquitySVG(r){
+  var eq=r.equity_curve||[];
+  if(!eq.length) return '<div class="c-mut2" style="padding:20px;text-align:center;font-size:11px">sem dados de equity</div>';
+  var spy=r.spy_curve||[];
+  var defense=r.defense_periods||[];
+  var W=440,H=160,pad=4;
+  var allVals=eq.concat(spy.length?spy:eq);
+  var mn=Math.min.apply(null,allVals),mx=Math.max.apply(null,allVals);
+  if(mn===mx){mn-=1;mx+=1;}
+  function x(i,arr){return pad+(i/(arr.length-1))*(W-2*pad);}
+  function y(v){return H-pad-(v-mn)/(mx-mn)*(H-2*pad);}
+  // defense bands
+  var bands='';
+  defense.forEach(function(d){
+    var x1=pad+(d[0]/(eq.length-1))*(W-2*pad);
+    var x2=pad+(d[1]/(eq.length-1))*(W-2*pad);
+    bands+='<rect x="'+x1+'" y="0" width="'+(x2-x1)+'" height="'+H+'" fill="rgba(243,156,18,.08)"/>';
+  });
+  // SPY line
+  var spyPath='';
+  if(spy.length){
+    spyPath='<polyline fill="none" stroke="#5b7a99" stroke-width="1.2" opacity=".6" points="';
+    spy.forEach(function(v,i){spyPath+=x(i,spy).toFixed(1)+','+y(v).toFixed(1)+' ';});
+    spyPath+='"/>';
+  }
+  // Strategy line
+  var stratPath='<polyline fill="none" stroke="#5de5d5" stroke-width="2" points="';
+  eq.forEach(function(v,i){stratPath+=x(i,eq).toFixed(1)+','+y(v).toFixed(1)+' ';});
+  stratPath+='"/>';
+  // Legend
+  var legend='<text x="'+pad+'" y="12" fill="#5de5d5" font-size="9" font-weight="700">Estratégia</text>'
+    +'<text x="80" y="12" fill="#5b7a99" font-size="9">SPY</text>'
+    +'<text x="110" y="12" fill="rgba(243,156,18,.5)" font-size="9">Defesa</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block">'+bands+spyPath+stratPath+legend+'</svg>';
+}
+
+function buildBarsSVG(r){
+  var ann=r.annual_returns||[];
+  if(!ann.length) return '<div class="c-mut2" style="padding:20px;text-align:center;font-size:11px">sem dados anuais</div>';
+  var W=440,H=160,pad=20,barGap=2;
+  var vals=ann.map(function(a){return a.ret;});
+  var mx=Math.max.apply(null,vals.map(function(v){return Math.abs(v);}));
+  if(mx===0)mx=1;
+  var barW=(W-2*pad)/ann.length-barGap;
+  var zero=pad+(H-2*pad)*0.5;
+  var bars='<line x1="'+pad+'" x2="'+(W-pad)+'" y1="'+zero+'" y2="'+zero+'" stroke="var(--bd)" stroke-width="1"/>';
+  ann.forEach(function(a,i){
+    var bx=pad+i*(barW+barGap);
+    var bh=Math.abs(a.ret)/mx*((H-2*pad)*0.45);
+    var by=a.ret>=0?zero-bh:zero;
+    var col=a.ret>=0?'var(--green)':'var(--red)';
+    bars+='<rect x="'+bx+'" y="'+by+'" width="'+barW+'" height="'+bh+'" fill="'+col+'" rx="2" opacity=".85"/>';
+    if(ann.length<=20) bars+='<text x="'+(bx+barW/2)+'" y="'+(H-2)+'" fill="var(--mut2)" font-size="7" text-anchor="middle">'+a.year+'</text>';
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block">'+bars+'</svg>';
+}
+
+function submitBt(){
+  var body={
+    target:document.getElementById('alvo').value,
+    period:PERIOD,
+    costs_bps:parseInt(document.getElementById('custos').value)||15,
+    rebalance:document.getElementById('rebalance').value
+  };
+  fetch(API+'/v1/backtest/submit',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},HEAD),body:JSON.stringify(body)})
+    .then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+    .then(function(d){
+      toast('Submetido ao Modal');
+      // Add to runs list
+      RUNS.unshift({name:d.name||body.target+' · '+PERIOD,date:'agora',status:'running',grade:null,eta:d.eta||'~3 min'});
+      SEL=0; renderRuns(); selectRun(0);
+    })
+    .catch(function(e){toast('Erro: '+e.message);});
+}
+
+loadRuns();
+</script>
+</body></html>

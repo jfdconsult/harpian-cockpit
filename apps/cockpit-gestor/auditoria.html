@@ -1,0 +1,155 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Auditoria</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+</head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="hds-wrap">
+  <div class="flex between mb">
+    <div><div class="hds-h1">Auditoria — Trilha Imutável</div><div class="hds-sub">Append-only · cada decisão, aprovação, ordem e execução registrada</div></div>
+    <div id="conn" class="hds-tag b">conectando…</div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="hds-card mb">
+    <h2><span>Filtros</span></h2>
+    <div class="flex wrap" style="gap:10px">
+      <select id="fType" class="hds-input" onchange="applyFilters()">
+        <option value="">Todos os tipos</option>
+        <option value="pipeline">pipeline</option>
+        <option value="motor">motor</option>
+        <option value="ticket">ticket</option>
+        <option value="order">order</option>
+        <option value="kill_switch">kill_switch</option>
+        <option value="version">version</option>
+      </select>
+      <input type="date" id="fFrom" class="hds-input" onchange="applyFilters()" title="Data início">
+      <input type="date" id="fTo" class="hds-input" onchange="applyFilters()" title="Data fim">
+      <input type="text" id="fActor" class="hds-input" placeholder="Filtrar ator…" oninput="applyFilters()">
+      <button class="hds-btn ghost" onclick="clearFilters()">Limpar</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="hds-grid hds-g4 mb" id="kpis"></div>
+
+  <!-- Timeline -->
+  <div class="hds-card mb">
+    <h2><span>Timeline de eventos</span><span id="evtCount" class="hds-tag b">0</span></h2>
+    <table>
+      <thead><tr>
+        <th>Timestamp</th><th>Ator</th><th>Papel</th><th>Ação</th><th>Ref</th><th>Detalhe</th>
+      </tr></thead>
+      <tbody id="timeline"></tbody>
+    </table>
+  </div>
+
+  <div class="hds-foot">Trilha imutável · append-only · correções são novos eventos</div>
+</div>
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API = (location.search.match(/api=([^&]+)/)||[])[1] || 'http://localhost:8080';
+var HEAD = {'X-User-Role':'socio_gestor','X-User-Name':'João Daniel'};
+var ALL_EVENTS = [];
+
+document.getElementById('topbar').innerHTML = HDS.topbar({brand:'HARPIAN', small:'· COCKPIT GESTOR', ctx:'AUDITORIA', user:'JD · sócio-gestor', clockId:'clk'});
+document.getElementById('navbar').innerHTML = '<div class="hds-nav">'
+  + '<a href="index.html">Mission Control</a>'
+  + '<a href="engine-room.html">Engine Room</a>'
+  + '<a href="ativos.html">Ativos</a>'
+  + '<a href="ticket.html">Tickets</a>'
+  + '<a href="estrategias.html">Estratégias</a>'
+  + '<a href="backtest.html">Backtest</a>'
+  + '<a href="calibracao.html">Calibração</a>'
+  + '<a href="protecao.html">Proteção</a>'
+  + '<a href="indicadores.html">Indicadores</a>'
+  + '<a href="reconciliacao.html">Reconciliação</a>'
+  + '<a href="observador.html">Observador</a>'
+  + '<a href="auditoria.html" class="on">Auditoria</a>'
+  + '<a href="admin.html">Admin</a></div>';
+HDS.clock('clk');
+
+function rowColor(type){
+  if(type==='pipeline'||type==='motor') return 'rgba(74,144,217,0.06)';
+  if(type==='ticket'||type==='order') return 'rgba(201,160,44,0.06)';
+  if(type==='kill_switch') return 'rgba(231,76,60,0.08)';
+  if(type==='version') return 'rgba(155,89,182,0.06)';
+  return 'transparent';
+}
+function typeSem(type){
+  if(type==='pipeline'||type==='motor') return 'b';
+  if(type==='ticket'||type==='order') return 'a';
+  if(type==='kill_switch') return 'r';
+  if(type==='version') return 'b';
+  return 'b';
+}
+function fmtTS(ts){
+  if(!ts) return '—';
+  var d = new Date(ts);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR');
+}
+
+function clearFilters(){
+  document.getElementById('fType').value='';
+  document.getElementById('fFrom').value='';
+  document.getElementById('fTo').value='';
+  document.getElementById('fActor').value='';
+  applyFilters();
+}
+
+function applyFilters(){
+  var fType = document.getElementById('fType').value;
+  var fFrom = document.getElementById('fFrom').value;
+  var fTo = document.getElementById('fTo').value;
+  var fActor = document.getElementById('fActor').value.toLowerCase();
+  var filtered = ALL_EVENTS.filter(function(e){
+    if(fType && e.type !== fType) return false;
+    if(fFrom && e.timestamp && e.timestamp.slice(0,10) < fFrom) return false;
+    if(fTo && e.timestamp && e.timestamp.slice(0,10) > fTo) return false;
+    if(fActor && (e.actor||'').toLowerCase().indexOf(fActor)===-1) return false;
+    return true;
+  });
+  renderEvents(filtered);
+}
+
+function renderEvents(events){
+  document.getElementById('evtCount').textContent = events.length + ' eventos';
+  document.getElementById('timeline').innerHTML = events.map(function(e){
+    return '<tr style="background:'+rowColor(e.type)+'">'
+      + '<td style="font-size:10px;white-space:nowrap">'+fmtTS(e.timestamp)+'</td>'
+      + '<td><b>'+((e.actor)||'—')+'</b></td>'
+      + '<td class="c-mut" style="font-size:11px">'+((e.role)||'—')+'</td>'
+      + '<td>'+HDS.tag(e.type||'—', typeSem(e.type))+'</td>'
+      + '<td class="tk">'+(e.ref && /^[A-Z]{1,5}(\.[A-Z])?$/.test(e.ref) ? '<a class="tk-link" href="chart.html?ticker='+e.ref+'" title="Abrir gráfico">'+e.ref+'</a>' : ((e.ref)||'—'))+'</td>'
+      + '<td class="c-mut" style="font-size:11px">'+((e.detail)||'—')+'</td>'
+      + '</tr>';
+  }).join('');
+}
+
+fetch(API + '/v1/audit', {headers: HEAD})
+ .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+ .then(function(d){
+   document.getElementById('conn').className='hds-tag g';
+   document.getElementById('conn').textContent='● API ao vivo';
+   ALL_EVENTS = d.events || d || [];
+   // KPIs
+   var total = ALL_EVENTS.length;
+   var types = {};
+   ALL_EVENTS.forEach(function(e){ types[e.type] = (types[e.type]||0)+1; });
+   document.getElementById('kpis').innerHTML =
+     HDS.kpi('Total eventos', total, 'trilha completa') +
+     HDS.kpi('Pipeline/Motor', (types.pipeline||0)+(types.motor||0), '', 'c-b') +
+     HDS.kpi('Tickets/Ordens', (types.ticket||0)+(types.order||0), '', 'c-a') +
+     HDS.kpi('Kill Switch', types.kill_switch||0, '', 'c-r');
+   renderEvents(ALL_EVENTS);
+ })
+ .catch(function(e){
+   document.getElementById('conn').className='hds-tag r';
+   document.getElementById('conn').textContent='✕ API offline ('+e.message+')';
+   document.getElementById('kpis').innerHTML='<div class="hds-ph" style="grid-column:1/-1"><b>API não respondeu</b>Suba a API: <code>uvicorn app.main:app --port 8080</code></div>';
+ });
+</script>
+</body></html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Estratégias</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+<style>
+.pills{display:flex;gap:4px;margin-bottom:var(--gap)}
+.pill{padding:8px 18px;font-size:12px;font-weight:700;border-radius:var(--r-sm);cursor:pointer;
+  background:var(--card);border:1px solid var(--bd);color:var(--mut);transition:all .15s;letter-spacing:.3px}
+.pill:hover{color:var(--txt);border-color:var(--bd2)}
+.pill.on{background:linear-gradient(180deg,var(--gold),var(--gold-deep));color:#1a1300;border-color:var(--gold)}
+.strat-layout{display:grid;grid-template-columns:1fr 380px;gap:var(--gap);align-items:start}
+.tree-card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--bd);
+  border-radius:var(--r);padding:var(--pad)}
+.tree-card h2{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--gold);margin-bottom:11px}
+.pilar-hdr{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);cursor:pointer;
+  margin-bottom:2px;transition:background .15s;user-select:none}
+.pilar-hdr:hover{background:rgba(255,255,255,.03)}
+.pilar-hdr .arrow{font-size:10px;color:var(--mut);transition:transform .2s;width:14px}
+.pilar-hdr .arrow.open{transform:rotate(90deg)}
+.pilar-hdr .name{font-weight:700;font-size:13px;flex:1}
+.pilar-hdr .weight{font-size:12px;color:var(--gold);font-weight:700}
+.pilar-A{border-left:3px solid #4A90D9}
+.pilar-B{border-left:3px solid #2ECC71}
+.pilar-C{border-left:3px solid #F39C12}
+.pilar-D{border-left:3px solid #E74C3C}
+.pilar-body{padding-left:18px;margin-bottom:8px}
+.esteira-hdr{display:flex;align-items:center;gap:8px;padding:7px 10px;font-size:12px;color:var(--mut);
+  border-bottom:1px solid var(--bd2)}
+.esteira-hdr .ename{font-weight:600;color:var(--txt);flex:1}
+.esteira-hdr .ew{font-size:11px;color:var(--gold);font-weight:600}
+.esteira-bar{height:4px;background:var(--bd2);border-radius:2px;margin:0 10px 6px}
+.esteira-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--gold),var(--gold2))}
+.ativo-row{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 24px;font-size:12px;
+  border-bottom:1px solid var(--bd2)}
+.ativo-row:last-child{border:0}
+.ativo-row .atk{font-weight:700;width:60px}
+.ativo-row .atype{font-size:8px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:.4px}
+.atype-ACAO,.atype-AÇÃO{background:#13314d;color:var(--blue)}
+.atype-ETF{background:#3a2d10;color:var(--amber)}
+.atype-COMMODITY{background:#2a1230;color:#e87dc4}
+.ativo-row .aw{margin-left:auto;font-size:11px;color:var(--mut);font-weight:600;font-variant-numeric:tabular-nums}
+.ativo-row .del{margin-left:6px;color:var(--mut2);cursor:pointer;font-size:14px;opacity:.5;transition:opacity .15s}
+.ativo-row .del:hover{opacity:1;color:var(--red)}
+.add-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;margin:6px 10px 6px 24px;
+  font-size:10px;color:var(--gold);cursor:pointer;border:1px dashed var(--bd);border-radius:5px;
+  background:transparent;transition:border-color .15s;font-weight:600}
+.add-btn:hover{border-color:var(--gold)}
+.info-card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--bd);
+  border-radius:var(--r);padding:var(--pad)}
+.info-card h2{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--gold);margin-bottom:11px}
+.estado-chip{display:inline-block;padding:3px 10px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.5px}
+.estado-live{background:#10351f;color:var(--green)}
+.estado-homologado{background:#13314d;color:var(--blue)}
+.estado-lab{background:#3a2d10;color:var(--amber)}
+.sparkline{width:100%;height:60px;margin:10px 0}
+.action-btns{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.action-btns .hds-btn{justify-content:center;font-size:11px;padding:8px 14px}
+@media(max-width:900px){.strat-layout{grid-template-columns:1fr}}
+</style>
+</head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="hds-wrap">
+  <div class="flex between mb">
+    <div><div class="hds-h1">Estratégias / ETPs</div><div class="hds-sub">Composição hierárquica dos portfólios. Pilar &rarr; Esteira &rarr; Ativo.</div></div>
+    <div id="conn" class="hds-tag b">conectando...</div>
+  </div>
+  <div class="pills" id="pills"></div>
+  <div class="hds-grid hds-g4 mb" id="kpis"></div>
+  <div class="strat-layout">
+    <div class="tree-card" id="tree"><h2>Composição</h2><div id="tree-body"></div></div>
+    <div>
+      <div class="info-card" id="info"></div>
+    </div>
+  </div>
+  <div class="hds-foot">Estratégias · v1 · Composição editável. Pesos sincronizam com a API (/v1/strategies).</div>
+</div>
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API = (location.search.match(/api=([^&]+)/)||[])[1] || 'http://localhost:8080';
+var HEAD = {'X-User-Role':'socio_gestor','X-User-Name':'João Daniel'};
+var HEADJ = Object.assign({'Content-Type':'application/json'}, HEAD);
+
+document.getElementById('topbar').innerHTML = HDS.topbar({brand:'HARPIAN', small:'· COCKPIT GESTOR', ctx:'ESTRATÉGIAS', user:'JD · sócio-gestor', clockId:'clk'});
+document.getElementById('navbar').innerHTML = '<div class="hds-nav">'
+  + '<a href="index.html">Mission Control</a>'
+  + '<a href="engine-room.html">Engine Room</a>'
+  + '<a href="ativos.html">Ativos</a>'
+  + '<a href="ticket.html">Tickets</a>'
+  + '<a href="estrategias.html" class="on">Estratégias</a>'
+  + '<a href="backtest.html">Backtest</a>'
+  + '<a href="calibracao.html">Calibração</a>'
+  + '<a href="protecao.html">Proteção</a>'
+  + '<a href="indicadores.html">Indicadores</a>'
+  + '<a href="reconciliacao.html">Reconciliação</a>'
+  + '<a href="observador.html">Observador</a>'
+  + '<a href="auditoria.html">Auditoria</a>'
+  + '<a href="admin.html">Admin</a></div>';
+HDS.clock('clk');
+
+var portfolios = [];
+var currentId = 'HPC22';
+var openPilars = {};
+
+function sem(regime){ return regime==='RISK-ON'?'g':regime==='WARNING'?'a':regime==='RISK-OFF'?'r':'b'; }
+
+function current(){ return portfolios.find(function(p){ return p.id===currentId; }); }
+
+function renderPills(){
+  document.getElementById('pills').innerHTML = portfolios.map(function(p){
+    return '<div class="pill'+(p.id===currentId?' on':'')+'" onclick="switchPort(\''+p.id+'\')">'+p.nome+'</div>';
+  }).join('');
+}
+
+function renderKPIs(){
+  var p = current(); if(!p) return;
+  document.getElementById('kpis').innerHTML =
+    HDS.kpi('Cota', 'US$ '+(p.cota||0).toFixed(2), p.descricao)
+    + HDS.kpi('CAGR', (p.cagr_pct||0).toFixed(1)+'%', 'anualizado', 'c-g')
+    + HDS.kpi('Sortino / Max DD', (p.sortino||0).toFixed(2)+' / '+(p.max_dd_pct||0).toFixed(1)+'%', 'Calmar '+(p.calmar||0).toFixed(2))
+    + HDS.kpi('Risk Number', String(p.risk_number||'—'), 'SPY = 27,6', 'c-'+sem(p.regime));
+}
+
+function pilarColor(i){ return ['#4A90D9','#2ECC71','#F39C12','#E74C3C'][i%4]; }
+function pilarCls(i){ return ['pilar-A','pilar-B','pilar-C','pilar-D'][i%4]; }
+
+function renderTree(){
+  var p = current(); if(!p){ document.getElementById('tree-body').innerHTML='<div class="hds-ph"><b>Sem dados</b></div>'; return; }
+  var h = '';
+  var hasPilares = p.pilares && p.pilares.length > 0;
+
+  if(hasPilares){
+    p.pilares.forEach(function(pil, pi){
+      var key = p.id+'_'+pi;
+      var isOpen = openPilars[key] !== false;
+      h += '<div class="pilar-hdr '+pilarCls(pi)+'" onclick="togglePilar(\''+key+'\')">'
+        + '<span class="arrow'+(isOpen?' open':'')+'">&#9654;</span>'
+        + '<span class="name">'+pil.nome+'</span>'
+        + '<span class="weight">'+pil.peso_pct+'%</span>'
+        + '</div>';
+      if(isOpen){
+        h += '<div class="pilar-body">';
+        (pil.esteiras||[]).forEach(function(est){ h += renderEsteira(p, est); });
+        h += '</div>';
+      }
+    });
+  }
+
+  // Direct esteiras (no pilares)
+  var directEsteiras = p.esteiras || [];
+  if(directEsteiras.length > 0){
+    directEsteiras.forEach(function(est){ h += renderEsteira(p, est); });
+  }
+
+  if(!hasPilares && directEsteiras.length === 0){
+    h = '<div class="hds-ph"><b>Sem composição definida</b>Este portfólio ainda não tem esteiras configuradas.</div>';
+  }
+
+  document.getElementById('tree-body').innerHTML = h;
+}
+
+function renderEsteira(port, est){
+  var h = '<div class="esteira-hdr"><span class="ename">'+est.nome+'</span><span class="ew">'+est.peso_pct+'%</span></div>'
+    + '<div class="esteira-bar"><div class="esteira-bar-fill" style="width:'+Math.min(100,est.peso_pct)+'%"></div></div>';
+  (est.ativos||[]).forEach(function(a){
+    var tc = 'atype-'+a.tipo.replace('Ã','A').replace('Ç','C');
+    h += '<div class="ativo-row">'
+      + '<a class="tk-link" href="chart.html?ticker='+a.ticker+'" style="width:60px;display:inline-block" title="Abrir gráfico">'+a.ticker+'</a>'
+      + '<span class="atype '+tc+'">'+a.tipo+'</span>'
+      + '<span class="aw">'+a.peso_pct+'%</span>'
+      + '<span class="del" onclick="removeAtivo(\''+port.id+'\',\''+est.nome+'\',\''+a.ticker+'\')" title="Remover">&times;</span>'
+      + '</div>';
+  });
+  h += '<button class="add-btn" onclick="addAtivo(\''+port.id+'\',\''+est.nome+'\')">+ Adicionar ativo</button>';
+  return h;
+}
+
+function renderInfo(){
+  var p = current(); if(!p) return;
+  var estadoCls = 'estado-'+(p.estado||'lab');
+  var regSem = sem(p.regime);
+
+  // Mini sparkline SVG (placeholder equity curve)
+  var pts = [];
+  for(var i=0;i<40;i++){
+    var y = 55 - (Math.sin(i*0.18)*15 + i*0.9 + Math.random()*5);
+    pts.push((i*7.5)+','+y.toFixed(1));
+  }
+  var sparkSvg = '<svg class="sparkline" viewBox="0 0 300 60" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+HDS.COLORS.gold+'" stop-opacity=".3"/><stop offset="100%" stop-color="'+HDS.COLORS.gold+'" stop-opacity="0"/></linearGradient></defs>'
+    + '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+HDS.COLORS.gold+'" stroke-width="1.5"/>'
+    + '<polygon points="0,60 '+pts.join(' ')+' 297,60" fill="url(#sg)"/>'
+    + '</svg>';
+
+  var h = '<h2>Estratégia</h2>'
+    + '<div style="margin-bottom:14px"><div style="font-size:18px;font-weight:700">'+p.motor+'</div>'
+    + '<div style="font-size:11px;color:var(--mut)">Versão '+p.motor_version+'</div></div>'
+    + '<div class="hds-kv"><span class="c-mut">Estado</span><span class="v"><span class="estado-chip '+estadoCls+'">'+(p.estado||'—').toUpperCase()+'</span></span></div>'
+    + '<div class="hds-kv"><span class="c-mut">Regime hoje</span><span class="v">'+HDS.stateChip(p.regime, regSem)+'</span></div>'
+    + '<div class="hds-kv"><span class="c-mut">ISIN</span><span class="v" style="font-size:11px">'+(p.isin||'n/a')+'</span></div>'
+    + '<div class="hds-kv"><span class="c-mut">Alocado</span><span class="v">US$ '+(p.alocado_usd/1e6).toFixed(1)+'M</span></div>'
+    + '<div class="hds-kv"><span class="c-mut">Exposição</span><span class="v">'+p.exposicao_pct+'%</span></div>'
+    + '<div class="hds-kv"><span class="c-mut">DD do mês</span><span class="v c-r">'+p.dd_mes_pct.toFixed(1)+'%</span></div>'
+    + sparkSvg
+    + '<div style="font-size:11px;color:var(--mut);margin-bottom:10px">'+p.descricao+'</div>'
+    + '<div class="action-btns">'
+    + '<button class="hds-btn" onclick="void 0">Editar na Strategy Factory</button>'
+    + '<button class="hds-btn ghost" onclick="void 0">Testar no Backtest</button>'
+    + '<button class="hds-btn ghost" onclick="void 0">Ver Numero de Risco</button>'
+    + '</div>';
+
+  document.getElementById('info').innerHTML = h;
+}
+
+function switchPort(id){
+  currentId = id;
+  renderPills(); renderKPIs(); renderTree(); renderInfo();
+}
+
+function togglePilar(key){
+  openPilars[key] = openPilars[key] === false ? true : false;
+  renderTree();
+}
+
+function addAtivo(portId, esteiraNome){
+  var ticker = prompt('Ticker do novo ativo (ex: AAPL):');
+  if(!ticker) return;
+  ticker = ticker.toUpperCase().trim();
+  var tipo = prompt('Tipo (AÇÃO, ETF, COMMODITY):', 'AÇÃO');
+  if(!tipo) return;
+  var peso = prompt('Peso (%):', '10');
+  if(!peso) return;
+  fetch(API + '/v1/strategies/' + portId + '/esteira/' + esteiraNome + '/ativo', {
+    method: 'POST', headers: HEADJ,
+    body: JSON.stringify({ticker: ticker, tipo: tipo, peso_pct: parseFloat(peso)})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.ok) refreshData();
+    else alert('Erro: ' + JSON.stringify(d));
+  })
+  .catch(function(e){ alert('Erro: ' + e.message); });
+}
+
+function removeAtivo(portId, esteiraNome, ticker){
+  if(!confirm('Remover ' + ticker + ' da esteira ' + esteiraNome + '?')) return;
+  fetch(API + '/v1/strategies/' + portId + '/esteira/' + esteiraNome + '/ativo/' + ticker, {
+    method: 'DELETE', headers: HEAD
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.ok) refreshData();
+    else alert('Erro: ' + JSON.stringify(d));
+  })
+  .catch(function(e){ alert('Erro: ' + e.message); });
+}
+
+function refreshData(){
+  fetch(API + '/v1/strategies/', {headers: HEAD})
+   .then(function(r){ return r.json(); })
+   .then(function(d){
+     portfolios = d.portfolios;
+     renderPills(); renderKPIs(); renderTree(); renderInfo();
+   });
+}
+
+// Initial load
+fetch(API + '/v1/strategies/', {headers: HEAD})
+ .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+ .then(function(d){
+   document.getElementById('conn').className='hds-tag g';
+   document.getElementById('conn').textContent='● API ao vivo';
+   portfolios = d.portfolios;
+   renderPills(); renderKPIs(); renderTree(); renderInfo();
+ })
+ .catch(function(e){
+   document.getElementById('conn').className='hds-tag r';
+   document.getElementById('conn').textContent='✕ API offline ('+e.message+')';
+   document.getElementById('tree-body').innerHTML='<div class="hds-ph"><b>API nao respondeu</b>Suba a API: <code>uvicorn app.main:app --port 8080</code></div>';
+ });
+</script>
+</body></html>

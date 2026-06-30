@@ -1,0 +1,144 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Observador (IA)</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+<style>
+.acc-bar{height:8px;border-radius:4px;background:#08182c;overflow:hidden;margin-top:6px}
+.acc-fill{height:100%;border-radius:4px;transition:width .3s}
+.acc-big{font-size:32px;font-weight:800;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="hds-wrap">
+  <div class="flex between mb">
+    <div><div class="hds-h1">Observador (IA) — Scorecard & Discovery</div><div class="hds-sub">Acurácia por pilar, alertas e hipóteses</div></div>
+    <div id="conn" class="hds-tag b">conectando…</div>
+  </div>
+
+  <!-- Scorecard grid -->
+  <div class="hds-grid hds-g4 mb" id="scorecard"></div>
+
+  <!-- Alertas + Hipóteses -->
+  <div class="hds-grid hds-g2 mb">
+    <div class="hds-card">
+      <h2><span>Alertas</span><span id="alertCount" class="hds-tag a">0</span></h2>
+      <div id="alerts"></div>
+    </div>
+    <div class="hds-card">
+      <h2><span>Hipóteses</span><span id="hypCount" class="hds-tag b">0</span></h2>
+      <div id="hypotheses"></div>
+    </div>
+  </div>
+
+  <div class="hds-foot">Observador (IA) · Scorecard & Discovery · Cockpit Gestor · v1</div>
+</div>
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API = (location.search.match(/api=([^&]+)/)||[])[1] || 'http://localhost:8080';
+var HEAD = {'X-User-Role':'socio_gestor','X-User-Name':'João Daniel'};
+
+document.getElementById('topbar').innerHTML = HDS.topbar({brand:'HARPIAN', small:'· COCKPIT GESTOR', ctx:'OBSERVADOR (IA)', user:'JD · sócio-gestor', clockId:'clk'});
+document.getElementById('navbar').innerHTML = '<div class="hds-nav">'
+  + '<a href="index.html">Mission Control</a>'
+  + '<a href="engine-room.html">Engine Room</a>'
+  + '<a href="ativos.html">Ativos</a>'
+  + '<a href="ticket.html">Tickets</a>'
+  + '<a href="estrategias.html">Estratégias</a>'
+  + '<a href="backtest.html">Backtest</a>'
+  + '<a href="calibracao.html">Calibração</a>'
+  + '<a href="protecao.html">Proteção</a>'
+  + '<a href="indicadores.html">Indicadores</a>'
+  + '<a href="reconciliacao.html">Reconciliação</a>'
+  + '<a href="observador.html" class="on">Observador</a>'
+  + '<a href="auditoria.html">Auditoria</a>'
+  + '<a href="admin.html">Admin</a></div>';
+HDS.clock('clk');
+
+function accColor(pct){
+  if(pct>=80) return 'var(--green)';
+  if(pct>=60) return 'var(--amber)';
+  return 'var(--red)';
+}
+function accSem(pct){
+  if(pct>=80) return 'g';
+  if(pct>=60) return 'a';
+  return 'r';
+}
+function sevSem(s){
+  if(s==='high'||s==='alto') return 'r';
+  if(s==='medium'||s==='medio'||s==='médio') return 'a';
+  return 'g';
+}
+function hypSem(s){
+  if(s==='testando') return 'a';
+  if(s==='validado'||s==='validada') return 'g';
+  if(s==='rejeitado'||s==='rejeitada') return 'r';
+  return 'b';
+}
+function fmtTS(ts){
+  if(!ts) return '';
+  var d = new Date(ts);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+
+fetch(API + '/v1/observador/', {headers: HEAD})
+ .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+ .then(function(d){
+   document.getElementById('conn').className='hds-tag g';
+   document.getElementById('conn').textContent='● API ao vivo';
+
+   // Scorecard
+   var pilars = d.scorecard || d.pilars || [];
+   document.getElementById('scorecard').innerHTML = pilars.map(function(p){
+     var acc = p.accuracy || p.accuracy_pct || 0;
+     var col = accColor(acc);
+     var acertos = p.acertos || p.hits || 0;
+     var erros = p.erros || p.misses || 0;
+     return '<div class="hds-card" style="text-align:center">'
+       + '<h2><span>'+p.name+'</span></h2>'
+       + '<div class="acc-big" style="color:'+col+'">'+acc.toFixed(1)+'%</div>'
+       + '<div class="c-mut" style="font-size:11px;margin-top:4px">'+acertos+' acertos · '+erros+' erros</div>'
+       + '<div class="acc-bar"><div class="acc-fill" style="width:'+acc+'%;background:'+col+'"></div></div>'
+       + '</div>';
+   }).join('');
+   if(!pilars.length) document.getElementById('scorecard').innerHTML='<div class="hds-ph" style="grid-column:1/-1">Nenhum pilar configurado</div>';
+
+   // Alerts
+   var alerts = d.alerts || d.alertas || [];
+   document.getElementById('alertCount').textContent = alerts.length;
+   document.getElementById('alerts').innerHTML = alerts.length ? alerts.map(function(a){
+     return '<div class="hds-li">'
+       + '<div class="hds-dot" style="background:var(--'+({r:'red',a:'amber',g:'green'}[sevSem(a.severity||a.severidade)]||'amber')+')"></div>'
+       + '<div style="flex:1">'
+       + '<div style="font-size:11px"><b>'+((a.tipo||a.type)||'')+'</b> · <span class="c-mut">'+(a.pilar||'')+'</span></div>'
+       + '<div class="c-mut" style="font-size:11px">'+((a.description||a.descricao)||'')+'</div>'
+       + '</div>'
+       + HDS.tag(a.severity||a.severidade||'info', sevSem(a.severity||a.severidade))
+       + '<span class="t">'+fmtTS(a.timestamp)+'</span>'
+       + '</div>';
+   }).join('') : '<div class="c-mut2" style="padding:12px;text-align:center;font-size:11px">Nenhum alerta ativo</div>';
+
+   // Hypotheses
+   var hyps = d.hypotheses || d.hipoteses || [];
+   document.getElementById('hypCount').textContent = hyps.length;
+   document.getElementById('hypotheses').innerHTML = hyps.length ? hyps.map(function(h){
+     var st = h.status || 'testando';
+     return '<div class="hds-li">'
+       + '<div style="flex:1">'
+       + '<div style="font-size:11px"><b class="c-gold">'+((h.id)||'')+'</b> '+((h.description||h.descricao)||'')+'</div>'
+       + '</div>'
+       + HDS.tag(st, hypSem(st))
+       + '<span class="t">'+fmtTS(h.timestamp)+'</span>'
+       + '</div>';
+   }).join('') : '<div class="c-mut2" style="padding:12px;text-align:center;font-size:11px">Nenhuma hipótese registrada</div>';
+ })
+ .catch(function(e){
+   document.getElementById('conn').className='hds-tag r';
+   document.getElementById('conn').textContent='✕ API offline ('+e.message+')';
+   document.getElementById('scorecard').innerHTML='<div class="hds-ph" style="grid-column:1/-1"><b>API não respondeu</b>Suba a API: <code>uvicorn app.main:app --port 8080</code></div>';
+ });
+</script>
+</body></html>

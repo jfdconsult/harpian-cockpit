@@ -1,0 +1,324 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Tickets do Dia</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+body.hds{padding:0;overflow:hidden}
+.tk-page{display:flex;flex-direction:column;height:calc(100vh - var(--topbar-h) - 38px)}
+.tk-header{padding:10px 16px;flex-shrink:0}
+.tk-body{flex:1;display:grid;grid-template-columns:300px 1fr;gap:10px;padding:0 16px;min-height:0;overflow:hidden}
+.tk-list{overflow-y:auto;padding-right:4px}
+.tk-detail{overflow-y:auto;padding-right:4px;display:flex;flex-direction:column;gap:10px}
+.detail-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:10px;flex-shrink:0}
+
+.tkt-item{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--bd);
+  border-radius:var(--r-sm);padding:12px 14px;margin-bottom:6px;cursor:pointer;transition:border-color .15s}
+.tkt-item:hover,.tkt-item.sel{border-color:var(--gold)}
+.tkt-item.sel{box-shadow:0 0 0 1px var(--gold) inset}
+.tkt-item .row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.tkt-item .row:last-child{margin-bottom:0}
+/* .tk-link base in harpian-ds.css; override font-size for ticket list */
+.tk-link{font-size:16px}
+.tkt-item .nm{font-size:12px;color:var(--mut)}
+.tkt-item .val{font-size:13px;color:var(--mut);margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums}
+.type-badge{font-size:9px;font-weight:800;padding:3px 9px;border-radius:5px;letter-spacing:.5px;text-transform:uppercase}
+.type-AUMENTO{background:#10351f;color:var(--green)}
+.type-REDUCAO,.type-REDUÇÃO{background:#3a2d10;color:var(--amber)}
+.type-ENTRADA{background:#13314d;color:#5ec4e8}
+.type-TROCA{background:#2a1845;color:#b48ade}
+.type-SAIDA,.type-SAÍDA{background:#3a1414;color:var(--red)}
+
+.detail-card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--bd);
+  border-radius:var(--r);padding:11px 13px}
+.detail-card.span{grid-column:1/-1}
+.detail-card h2{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);margin-bottom:7px;font-weight:700}
+.detail-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.detail-header .big-tk{font-size:30px;font-weight:800;line-height:1}
+.detail-header .score{font-size:22px;font-weight:700;color:var(--gold)}
+.detail-header .chart-btn{padding:5px 12px;border:1px solid var(--bd);background:rgba(201,160,44,.08);color:var(--gold);
+  font-size:12px;font-weight:700;cursor:pointer;border-radius:6px;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all .12s}
+.detail-header .chart-btn:hover{background:rgba(201,160,44,.18);border-color:var(--gold)}
+.hds-kv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--bd2);font-size:13px}
+.hds-kv:last-child{border:0}
+.hds-kv .v{text-align:right}
+.eq-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bd2);font-size:13px}
+.eq-row:last-child{border:0}
+.eq-row .lbl{color:var(--mut)}
+.eq-row .val{font-weight:700;font-variant-numeric:tabular-nums}
+
+.jim-panel{background:linear-gradient(180deg,#1a1040,#120c30);border:1px solid #3a2870;
+  border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;height:100%}
+.jim-panel h2{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:#b48ade;margin-bottom:4px}
+.jim-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;flex-shrink:0}
+.jim-msg{background:#1e1250;border:1px solid #3a2870;border-radius:var(--r-sm);padding:12px 14px;font-size:13px;color:#d4c8f0;line-height:1.6}
+.jim-input-wrap{display:flex;gap:6px;margin-top:auto}
+.jim-input{flex:1;background:#0d0825;border:1px solid #3a2870;border-radius:var(--r-sm);
+  color:#d4c8f0;font-family:var(--sans);font-size:13px;padding:10px 12px}
+.jim-input::placeholder{color:#5a4a8a}
+.jim-qbtns{display:flex;flex-wrap:wrap;gap:6px}
+.jim-qbtn{background:#1e1250;border:1px solid #3a2870;border-radius:5px;padding:6px 12px;
+  font-size:11px;color:#b48ade;cursor:pointer;transition:background .15s}
+.jim-qbtn:hover{background:#2a1860}
+
+.action-bar{background:linear-gradient(90deg,var(--gold-deep),var(--gold),var(--gold2));
+  padding:12px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.action-bar .hds-btn{background:#1a1300;color:var(--gold2);font-size:14px;padding:10px 24px;font-weight:700}
+.action-bar .hds-btn:hover{background:#2a2000}
+.action-bar .hds-btn.ghost{background:transparent;color:#1a1300;border:1px solid #1a130088}
+.action-bar .hds-btn.ghost:hover{background:#1a130022}
+.action-bar .counts{margin-left:auto;font-size:13px;color:#1a1300;font-weight:700}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:999}
+.overlay-box{background:var(--card);border:2px solid var(--green);border-radius:var(--r);padding:30px 40px;text-align:center}
+.overlay-box .check{font-size:48px;color:var(--green);margin-bottom:10px}
+.overlay-box .msg{font-size:18px;font-weight:600;margin-bottom:6px}
+.overlay-box .sub{font-size:13px;color:var(--mut)}
+@media(max-width:1000px){.tk-body{grid-template-columns:1fr}}
+</style>
+</head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="tk-page">
+  <div class="tk-header">
+    <div class="flex between">
+      <div><div style="font-size:18px;font-weight:800;letter-spacing:.5px">Tickets do Dia</div><div style="font-size:12px;color:var(--mut);margin-top:2px">Ordens geradas pelo motor. Revise, aprove ou rejeite antes do envio a IBKR.</div></div>
+      <div id="conn" class="hds-tag b">conectando...</div>
+    </div>
+  </div>
+  <div class="tk-body">
+    <div id="list-col" class="tk-list"></div>
+    <div id="detail-col" class="tk-detail"></div>
+  </div>
+  <div class="action-bar" id="action-bar">
+    <button class="hds-btn" onclick="aprovar()">Aprovar Ticket</button>
+    <button class="hds-btn ghost" onclick="rejeitar()">Rejeitar</button>
+    <button class="hds-btn ghost" onclick="ajustar()">Ajustar</button>
+    <div class="counts" id="counts"></div>
+  </div>
+</div>
+<div id="overlay" style="display:none"></div>
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API = (location.search.match(/api=([^&]+)/)||[])[1] || 'http://localhost:8080';
+var HEAD = {'X-User-Role':'socio_gestor','X-User-Name':'João Daniel'};
+var HEADJ = Object.assign({'Content-Type':'application/json'}, HEAD);
+
+document.getElementById('topbar').innerHTML = HDS.topbar({brand:'HARPIAN', small:'· COCKPIT GESTOR', ctx:'TICKETS', user:'JD · sócio-gestor', clockId:'clk'});
+document.getElementById('navbar').innerHTML = '<div class="hds-nav">'
+  + '<a href="index.html">Mission Control</a>'
+  + '<a href="engine-room.html">Engine Room</a>'
+  + '<a href="ativos.html">Ativos</a>'
+  + '<a href="ticket.html" class="on">Tickets</a>'
+  + '<a href="estrategias.html">Estratégias</a>'
+  + '<a href="backtest.html">Backtest</a>'
+  + '<a href="calibracao.html">Calibração</a>'
+  + '<a href="protecao.html">Proteção</a>'
+  + '<a href="indicadores.html">Indicadores</a>'
+  + '<a href="reconciliacao.html">Reconciliação</a>'
+  + '<a href="observador.html">Observador</a>'
+  + '<a href="auditoria.html">Auditoria</a>'
+  + '<a href="admin.html">Admin</a></div>';
+HDS.clock('clk');
+
+var tickets = [];
+var selected = null;
+
+function renderList(){
+  var h = '';
+  tickets.forEach(function(t,i){
+    var cls = (selected && selected.id === t.id) ? ' sel' : '';
+    h += '<div class="tkt-item'+cls+'" onclick="selectTk('+i+')">'
+      + '<div class="row"><span class="type-badge type-'+t.tipo+'">'+t.tipo+'</span>'
+      + (t.status==='enviado' ? '<span class="hds-tag g" style="margin-left:auto">ENVIADO</span>' : '')
+      + '</div>'
+      + '<div class="row"><a class="tk-link" href="chart.html?ticker='+t.ticker+'" onclick="event.stopPropagation()" title="Abrir gráfico">'+t.ticker+'</a><span class="nm">'+(t.nome||'')+'</span></div>'
+      + '<div class="row"><span class="hds-side '+(t.side==='buy'?'buy':'sell')+'">'+(t.side==='buy'?'COMPRAR':'VENDER')+'</span>'
+      + '<span class="val">US$ '+(t.valor_usd/1000).toFixed(0)+'k</span></div>'
+      + '</div>';
+  });
+  document.getElementById('list-col').innerHTML = h;
+}
+
+function kv(label,val,vcls){ return '<div class="hds-kv"><span class="c-mut">'+label+'</span><span class="v '+(vcls||'')+'" style="font-weight:600">'+val+'</span></div>'; }
+
+function renderDetail(t){
+  if(!t){ document.getElementById('detail-col').innerHTML = '<div class="hds-ph" style="grid-column:1/-1;padding:40px 20px"><b style="font-size:16px">Nenhum ticket</b><span style="font-size:13px">Selecione um ticket na lista.</span></div>'; return; }
+  var preco_est = t.valor_usd / Math.max(t.quantidade, 1);
+  var sideTxt = t.side==='buy'?'COMPRAR':'VENDER';
+  var mom_eq = [
+    {n:'EMA 20d ROC', v: t.mom_126d * 0.15},
+    {n:'DEMA 20d ROC', v: t.mom_126d * 0.22},
+    {n:'TEMA 20d ROC', v: t.mom_126d * 0.18},
+    {n:'Retorno 12-1m', v: t.mom_126d * 0.95},
+    {n:'ROC 25d', v: t.mom_126d * 0.30}
+  ];
+
+  // header — faixa full-width compacta
+  var h = '<div class="detail-card span"><div class="detail-header">'
+    + '<a href="chart.html?ticker='+t.ticker+'" style="color:var(--gold);text-decoration:none" title="Abrir gráfico"><span class="big-tk">'+t.ticker+'</span></a>'
+    + '<span class="score">Score '+t.score+'</span>'
+    + '<span class="type-badge type-'+t.tipo+'" style="font-size:11px;padding:5px 12px">'+t.tipo+'</span>'
+    + '<span class="hds-side '+(t.side==='buy'?'buy':'sell')+'" style="font-size:11px;padding:4px 10px">'+sideTxt+'</span>'
+    + (t.troca_para ? '<span style="font-size:14px;color:var(--mut)">&rarr; '+t.troca_para+'</span>' : '')
+    + '<a class="chart-btn" href="chart.html?ticker='+t.ticker+'" style="margin-left:auto">&#x1F4C8; Gráfico</a>'
+    + '</div></div>';
+
+  // cards densos — fluem em 2-4 colunas conforme a largura (linha compacta)
+  h += '<div class="detail-row">';
+  h += '<div class="detail-card"><h2>Identificação</h2>'
+    + kv('Nome', t.nome||t.ticker) + kv('Portfolio', t.portfolio_id)
+    + kv('Pilar', t.pilar||'—') + kv('Esteira', t.esteira||'—')
+    + '<div class="hds-kv"><span class="c-mut">Status</span><span class="v">'+HDS.tag(t.status, t.status==='enviado'?'g':'a')+'</span></div></div>';
+
+  h += '<div class="detail-card"><h2>Memória de cálculo</h2>'
+    + kv('Motivo', t.motivo)
+    + '<div class="hds-kv"><span class="c-mut">Momentum 126d</span><span class="v '+(t.mom_126d>=0?'c-g':'c-r')+'" style="font-weight:800">'+(t.mom_126d>=0?'+':'')+t.mom_126d+'%</span></div>'
+    + kv('Score', t.score+' / 100') + kv('Lado', sideTxt) + '</div>';
+
+  h += '<div class="detail-card"><h2>5 equações de momentum</h2>';
+  mom_eq.forEach(function(eq){
+    h += '<div class="eq-row"><span class="lbl">'+eq.n+'</span><span class="val '+(eq.v>=0?'c-g':'c-r')+'">'+(eq.v>=0?'+':'')+eq.v.toFixed(2)+'%</span></div>';
+  });
+  h += '</div>';
+
+  h += '<div class="detail-card"><h2>Impacto financeiro</h2>'
+    + kv('Quantidade', HDS.nfmt(t.quantidade)+' unid.', '') + kv('Preço estimado', 'US$ '+preco_est.toFixed(2))
+    + '<div class="hds-kv"><span class="c-mut">Valor total</span><span class="v" style="font-size:18px;font-weight:800;color:var(--gold)">US$ '+HDS.nfmt(t.valor_usd)+'</span></div></div>';
+  h += '</div>';
+
+  // gráfico do ativo — preenche o resto da altura (decisão sem sair da tela)
+  h += '<div class="detail-card" style="flex:1;display:flex;flex-direction:column;min-height:260px;padding:9px 11px">'
+    + '<h2 style="margin-bottom:6px">Gráfico · '+t.ticker+' · diário'
+    + '<a href="chart.html?ticker='+t.ticker+'" style="color:var(--gold);font-weight:700;text-transform:none;letter-spacing:0;font-size:11px;margin-left:8px">abrir completo &rarr;</a></h2>'
+    + '<div id="tk-chart" style="flex:1;min-height:0"></div></div>';
+
+  document.getElementById('detail-col').innerHTML = h;
+  loadTkChart(t.ticker);
+}
+
+var tkChart=null;
+function loadTkChart(ticker){
+  var el=document.getElementById('tk-chart'); if(!el||typeof LightweightCharts==='undefined') return;
+  if(tkChart){ try{tkChart.remove();}catch(e){} tkChart=null; }
+  tkChart=LightweightCharts.createChart(el,{width:el.clientWidth,height:el.clientHeight,
+    layout:{background:{type:'solid',color:'#0A1A30'},textColor:'#7d96b3',fontSize:10,fontFamily:'Segoe UI,system-ui,sans-serif'},
+    grid:{vertLines:{color:'#16304f'},horzLines:{color:'#13283f'}},
+    rightPriceScale:{borderColor:'#1d3a5f'},timeScale:{borderColor:'#1d3a5f',timeVisible:false,rightOffset:3},
+    crosshair:{mode:LightweightCharts.CrosshairMode.Normal}});
+  var cs=tkChart.addCandlestickSeries({upColor:'#2ECC71',downColor:'#E74C3C',borderUpColor:'#2ECC71',borderDownColor:'#E74C3C',wickUpColor:'#2ECC71',wickDownColor:'#E74C3C'});
+  fetch(API+'/v1/market/chart/'+ticker+'?rng=6mo',{headers:HEAD})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok||!d.candles||!d.candles.length)return;
+      cs.setData(d.candles);
+      var S=d.studies||{};
+      if(S.ema){var e=tkChart.addLineSeries({color:'#E8ECF1',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});e.setData(S.ema);}
+      if(S.dema){var dm=tkChart.addLineSeries({color:'#FF3DFF',lineWidth:2,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});dm.setData(S.dema);}
+      tkChart.timeScale().fitContent();
+    }).catch(function(){});
+  new ResizeObserver(function(){ if(tkChart) tkChart.applyOptions({width:el.clientWidth,height:el.clientHeight}); }).observe(el);
+}
+
+function jimMsgs(t){
+  if(!t) return ['Selecione um ticket para eu analisar a memória de cálculo dele.'];
+  if(t.tipo==='AUMENTO') return [
+    'Momentum de '+t.ticker+' acelerou nas últimas 3 semanas. O ranking subiu de #5 para #'+Math.max(1, Math.floor(t.score/20))+'.',
+    'Volume institucional acima da média de 20 dias. Fluxo positivo confirmado por 13F recentes.',
+    'Risco de concentração: com este aumento, '+t.ticker+' fica com ~'+Math.min(10, (t.valor_usd/27900000*100+5)).toFixed(1)+'% do portfólio. Dentro do cap de 10%.'
+  ];
+  if(t.tipo==='REDUÇÃO') return [
+    t.ticker+' perdeu posição no ranking de momento. Sinal de desaceleração nos últimos 21 dias.',
+    'Redução parcial preserva exposição ao setor enquanto libera capital para ativos com momento superior.'
+  ];
+  if(t.tipo==='TROCA') return [
+    'Rotação: '+t.ticker+' sai (mom 126d: '+t.mom_126d+'%) e '+(t.troca_para||'substituto')+' entra com momento superior.',
+    'A troca mantém a exposição setorial constante. Impacto fiscal: ganho de capital de curto prazo.'
+  ];
+  return [t.tipo+' de '+t.ticker+': '+t.motivo, 'Score de confiança: '+t.score+'/100. Momentum de 126 dias: '+t.mom_126d+'%.'];
+}
+
+function setJim(t){
+  HDS.jim.setContext(
+    t ? t.ticker+' · '+t.tipo : 'JIM',
+    jimMsgs(t),
+    t ? ['Por que esta ordem?','Riscos?','Alternativas?'] : []
+  );
+}
+
+function updateCounts(){
+  var c = {AUMENTO:0, 'REDUÇÃO':0, TROCA:0, ENTRADA:0, 'SAÍDA':0};
+  tickets.forEach(function(t){ c[t.tipo] = (c[t.tipo]||0) + 1; });
+  var parts = [];
+  if(c.AUMENTO) parts.push(c.AUMENTO+' aum.');
+  if(c['REDUÇÃO']) parts.push(c['REDUÇÃO']+' red.');
+  if(c.TROCA) parts.push(c.TROCA+' troca');
+  if(c.ENTRADA) parts.push(c.ENTRADA+' ent.');
+  if(c['SAÍDA']) parts.push(c['SAÍDA']+' saída');
+  document.getElementById('counts').textContent = tickets.length + ' tickets | ' + parts.join(' · ');
+}
+
+function selectTk(i){
+  selected = tickets[i];
+  renderList();
+  renderDetail(selected);
+  setJim(selected);
+}
+
+function aprovar(){
+  if(!selected){ alert('Selecione um ticket.'); return; }
+  if(selected.status === 'enviado'){ alert('Ticket já aprovado.'); return; }
+  fetch(API + '/v1/tickets/' + selected.ticker + '/approve', {
+    method: 'POST', headers: HEADJ, body: JSON.stringify({aprovado_por: 'João Daniel'})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    selected.status = 'enviado';
+    showOverlay(selected.ticker + ' aprovado', 'Ordem enviada a IBKR com sucesso.');
+    renderList(); renderDetail(selected);
+  })
+  .catch(function(e){ showOverlay('Erro', e.message); });
+}
+
+function rejeitar(){
+  if(!selected){ alert('Selecione um ticket.'); return; }
+  selected.status = 'rejeitado';
+  renderList(); renderDetail(selected);
+}
+
+function ajustar(){
+  if(!selected){ alert('Selecione um ticket.'); return; }
+  var novaQtd = prompt('Nova quantidade para ' + selected.ticker + ':', selected.quantidade);
+  if(novaQtd && !isNaN(novaQtd)){
+    selected.quantidade = parseInt(novaQtd);
+    selected.valor_usd = selected.quantidade * (selected.valor_usd / selected.quantidade);
+    renderDetail(selected);
+  }
+}
+
+function showOverlay(title, sub){
+  var el = document.getElementById('overlay');
+  el.style.display = 'flex';
+  el.innerHTML = '<div class="overlay-box"><div class="check">&#10003;</div><div class="msg">'+title+'</div><div class="sub">'+sub+'</div></div>';
+  setTimeout(function(){ el.style.display = 'none'; }, 2500);
+}
+
+fetch(API + '/v1/tickets', {headers: HEAD})
+ .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+ .then(function(d){
+   document.getElementById('conn').className='hds-tag g';
+   document.getElementById('conn').textContent='● API ao vivo';
+   tickets = d.tickets;
+   updateCounts();
+   if(tickets.length > 0) selectTk(0);
+   else { renderList(); renderDetail(null); setJim(null); }
+ })
+ .catch(function(e){
+   document.getElementById('conn').className='hds-tag r';
+   document.getElementById('conn').textContent='✕ API offline ('+e.message+')';
+   document.getElementById('list-col').innerHTML='<div class="hds-ph" style="padding:30px"><b style="font-size:15px">API não respondeu</b><span style="font-size:13px">Suba a API: <code>uvicorn app.main:app --port 8080</code></span></div>';
+ });
+</script>
+</body></html>

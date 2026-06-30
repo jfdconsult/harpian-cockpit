@@ -1,0 +1,171 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Indicadores</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+<style>
+.ind-big{font-size:42px;font-weight:800;font-variant-numeric:tabular-nums;margin:8px 0 4px}
+.ind-limiar{font-size:11px;color:var(--mut);margin-bottom:4px}
+.ind-desc{font-size:11px;color:var(--mut2);line-height:1.5;margin-top:10px;border-top:1px solid var(--bd2);padding-top:8px}
+.ind-label{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.8px}
+.ind-status{display:flex;align-items:center;gap:8px;margin:6px 0}
+.ema-visual{display:flex;align-items:center;gap:14px;margin:12px 0}
+.ema-bar{width:100%;height:24px;border-radius:12px;position:relative;background:#08182c;overflow:hidden}
+.ema-half{position:absolute;top:0;bottom:0;width:50%}
+.ema-half.below{left:0;background:rgba(231,76,60,.15);border-right:2px dashed var(--mut2)}
+.ema-half.above{left:50%;background:rgba(46,204,113,.15)}
+.ema-needle{position:absolute;top:-2px;bottom:-2px;width:3px;background:#fff;border-radius:2px;box-shadow:0 0 7px rgba(255,255,255,.7)}
+.ema-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--mut2);margin-top:3px}
+.mac-comp{font-size:11px;color:var(--mut);margin-top:8px}
+.mac-comp span{display:inline-block;margin-right:12px}
+</style>
+</head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="hds-wrap">
+  <div class="flex between mb">
+    <div><div class="hds-h1">Indicadores</div><div class="hds-sub">4 sensores de defesa — temperatura, cross-correlation, EMA 20 e MAC Score.</div></div>
+    <div id="conn" class="hds-tag b">conectando…</div>
+  </div>
+  <div class="hds-grid hds-g2 mb" id="indicators"></div>
+  <div class="hds-foot">Cockpit Gestor · Indicadores · consome /v1/protection/indicators. Design system compartilhado (harpian-ds).</div>
+</div>
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API = (location.search.match(/api=([^&]+)/)||[])[1] || 'http://localhost:8080';
+var HEAD = {'X-User-Role':'socio_gestor','X-User-Name':'João Daniel'};
+
+document.getElementById('topbar').innerHTML = HDS.topbar({brand:'HARPIAN', small:'· COCKPIT GESTOR', ctx:'INDICADORES', user:'JD · sócio-gestor', clockId:'clk'});
+document.getElementById('navbar').innerHTML = '<div class="hds-nav">'
+  +'<a href="index.html">Mission Control</a>'
+  +'<a href="engine-room.html">Engine Room</a>'
+  +'<a href="ativos.html">Ativos</a>'
+  +'<a href="ticket.html">Tickets</a>'
+  +'<a href="estrategias.html">Estratégias</a>'
+  +'<a href="backtest.html">Backtest</a>'
+  +'<a href="calibracao.html">Calibração</a>'
+  +'<a href="protecao.html">Proteção</a>'
+  +'<a href="indicadores.html" class="on">Indicadores</a>'
+  +'<a href="reconciliacao.html">Reconciliação</a>'
+  +'<a href="observador.html">Observador</a>'
+  +'<a href="auditoria.html">Auditoria</a>'
+  +'<a href="admin.html">Admin</a></div>';
+HDS.clock('clk');
+
+function f2(n){ return Number(n).toFixed(2).replace('.',','); }
+function pct01(v){ return Math.max(0,Math.min(100,v*100)); }
+
+function tempColor(v){ return v>=0.6?'#E74C3C':v>=0.4?'#F39C12':'#2ECC71'; }
+function ccColor(v){ return v>=0.75?'#E74C3C':v>=0.55?'#F39C12':'#2ECC71'; }
+function statusLabel(type,v){
+  if(type==='temp') return v>=0.6?['defesa','r']:v>=0.4?['alerta','a']:['normal','g'];
+  if(type==='cc') return v>=0.75?['crítico','r']:v>=0.55?['elevado','a']:['normal','g'];
+  if(type==='mac') return v>=50?['positivo','g']:v>=30?['neutro','a']:['negativo','r'];
+  return ['—','b'];
+}
+
+function renderIndicators(d){
+  var t = d.temperatura || {};
+  var cc = d.cross_correlation || {};
+  var ema = d.ema20 || {};
+  var mac = d.mac_score || {};
+
+  var tVal = t.value!=null?t.value:0.42;
+  var tLimiar = t.limiar!=null?t.limiar:0.60;
+  var tSt = statusLabel('temp',tVal);
+
+  var ccVal = cc.value!=null?cc.value:0.62;
+  var ccLo = cc.band_low!=null?cc.band_low:0.55;
+  var ccHi = cc.band_high!=null?cc.band_high:0.75;
+  var gFactor = Math.max(0,Math.min(1,(ccVal-ccLo)/(ccHi-ccLo)));
+  var ccSt = statusLabel('cc',ccVal);
+
+  var emaStatus = ema.status||'acima';
+  var emaDist = ema.distance_pct!=null?ema.distance_pct:2.3;
+  var emaAbove = emaStatus==='acima';
+
+  var macVal = mac.value!=null?mac.value:68;
+  var macLimiar = mac.limiar!=null?mac.limiar:50;
+  var macSt = statusLabel('mac',macVal);
+
+  var html = '';
+
+  // 1. Temperatura
+  html += '<div class="hds-card">';
+  html += '<h2><span>Temperatura</span>'+HDS.tag(tSt[0],tSt[1])+'</h2>';
+  html += '<div class="ind-big" style="color:'+tempColor(tVal)+'">'+f2(tVal)+'</div>';
+  html += '<div class="ind-limiar">Limiar: '+f2(tLimiar)+'</div>';
+  html += HDS.bullet('Temperatura', '0 → 1', pct01(tVal), f2(tVal), tempColor(tVal));
+  html += '<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--mut2);margin-top:-6px"><span>0 (seguro)</span><span style="color:var(--amber)">limiar '+f2(tLimiar)+'</span><span>1 (defesa)</span></div>';
+  html += '<div class="ind-desc">Temperatura agregada dos pilares de ataque. Combina turbulência (40%), trend break (35%) e jerk (25%). Quando ultrapassa o limiar, ativa defesa no pilar correspondente.</div>';
+  html += '</div>';
+
+  // 2. Cross-Correlation
+  html += '<div class="hds-card">';
+  html += '<h2><span>Cross-Correlation</span>'+HDS.tag(ccSt[0],ccSt[1])+'</h2>';
+  html += '<div class="ind-big" style="color:'+ccColor(ccVal)+'">'+f2(ccVal)+'</div>';
+  html += '<div class="ind-limiar">Bandas: '+f2(ccLo)+' → '+f2(ccHi)+'</div>';
+  html += '<div style="display:flex;align-items:baseline;gap:12px;margin:6px 0">';
+  html += '<span class="ind-label">g factor</span>';
+  html += '<span style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums">'+f2(gFactor)+'</span>';
+  html += '</div>';
+  html += HDS.bullet('Cross-Correlation', f2(ccLo)+' → '+f2(ccHi), pct01(ccVal), f2(gFactor), ccColor(ccVal));
+  html += '<div style="font-size:11px;color:var(--mut);background:#05101e;border:1px solid var(--bd);border-radius:6px;padding:8px 12px;margin-top:4px;font-family:var(--mono)">g = clip((cc − '+f2(ccLo)+') / ('+f2(ccHi)+' − '+f2(ccLo)+'), 0, 1)</div>';
+  html += '<div class="ind-desc">Correlação cruzada entre ativos do portfólio. Valores altos indicam risco sistêmico — o gate reduz exposição proporcionalmente ao fator g.</div>';
+  html += '</div>';
+
+  // 3. EMA 20
+  html += '<div class="hds-card">';
+  html += '<h2><span>EMA 20</span>'+HDS.tag(emaAbove?'acima':'abaixo', emaAbove?'g':'r')+'</h2>';
+  html += '<div class="ind-big" style="color:'+(emaAbove?'#2ECC71':'#E74C3C')+'">'+(emaAbove?'ACIMA':'ABAIXO')+'</div>';
+  html += '<div class="ind-limiar">Distância: '+(emaDist>=0?'+':'')+emaDist.toFixed(1).replace('.',',')+'%</div>';
+  html += '<div class="ema-visual"><div style="width:100%">';
+  html += '<div class="ema-bar">';
+  html += '<div class="ema-half below"></div>';
+  html += '<div class="ema-half above"></div>';
+  var emaPos = 50 + Math.max(-50,Math.min(50,emaDist*5));
+  html += '<div class="ema-needle" style="left:calc('+emaPos.toFixed(1)+'% - 1px)"></div>';
+  html += '</div>';
+  html += '<div class="ema-labels"><span>abaixo EMA</span><span>EMA 20</span><span>acima EMA</span></div>';
+  html += '</div></div>';
+  html += '<div class="ind-desc">Posição do preço em relação à EMA de 20 períodos. Acima = tendência de alta intacta, permite re-entry. Abaixo = tendência quebrada, defesa mantida.</div>';
+  html += '</div>';
+
+  // 4. MAC Score
+  html += '<div class="hds-card">';
+  html += '<h2><span>MAC Score</span>'+HDS.tag(macSt[0],macSt[1])+'</h2>';
+  html += '<div class="ind-big" style="color:'+(macVal>=50?'#2ECC71':macVal>=30?'#F39C12':'#E74C3C')+'">'+macVal+'<span style="font-size:18px;color:var(--mut);font-weight:400">/100</span></div>';
+  html += '<div class="ind-limiar">Limiar: '+macLimiar+'</div>';
+  html += HDS.bullet('MAC Score', '0 → 100', macVal, macVal+'/100', macVal>=50?'#2ECC71':'#E74C3C');
+  html += '<div class="mac-comp">';
+  html += '<span>13F: '+(mac.f13!=null?mac.f13:'—')+'</span>';
+  html += '<span>COT: '+(mac.cot!=null?mac.cot:'—')+'</span>';
+  html += '<span>Fed: '+(mac.fed!=null?mac.fed:'—')+'</span>';
+  html += '</div>';
+  html += '<div class="ind-desc">Macro Aggregate Composite — combina posicionamento institucional (13F), mercado de futuros (COT) e política monetária (Fed) numa pontuação de 0 a 100.</div>';
+  html += '</div>';
+
+  document.getElementById('indicators').innerHTML = html;
+}
+
+fetch(API + '/v1/protection/indicators', {headers:HEAD})
+ .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+ .then(function(d){
+   document.getElementById('conn').className='hds-tag g';
+   document.getElementById('conn').textContent='● API ao vivo';
+   renderIndicators(d);
+ })
+ .catch(function(e){
+   document.getElementById('conn').className='hds-tag r';
+   document.getElementById('conn').textContent='✕ API offline ('+e.message+')';
+   // Render with defaults so the page is still useful
+   renderIndicators({
+     temperatura:{value:0.42,limiar:0.60},
+     cross_correlation:{value:0.62,band_low:0.55,band_high:0.75},
+     ema20:{status:'acima',distance_pct:2.3},
+     mac_score:{value:68,limiar:50,f13:72,cot:61,fed:70}
+   });
+ });
+</script>
+</body></html>

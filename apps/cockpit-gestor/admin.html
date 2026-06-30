@@ -1,0 +1,177 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Admin / Segurança</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+<style>
+.kill-btn{width:100%;padding:18px;border:none;border-radius:var(--r);font-size:16px;font-weight:800;
+  letter-spacing:1.5px;cursor:pointer;transition:all .15s}
+.kill-btn.active{background:linear-gradient(180deg,#c0392b,#e74c3c);color:#fff;box-shadow:0 0 24px rgba(231,76,60,.35)}
+.kill-btn.normal{background:linear-gradient(180deg,#1a9955,#2ecc71);color:#fff;box-shadow:0 0 14px rgba(46,204,113,.2)}
+.kill-btn:hover{filter:brightness(1.1)}
+.mode-chip{display:inline-block;padding:6px 18px;border-radius:var(--r-sm);font-weight:800;font-size:13px;letter-spacing:1px;cursor:pointer;transition:all .15s}
+.mode-chip.paper{background:#3a2d10;color:var(--gold);border:1px solid var(--gold)}
+.mode-chip.live{background:#10351f;color:var(--green);border:1px solid var(--green)}
+.mode-chip:hover{filter:brightness(1.15)}
+</style>
+</head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="hds-wrap">
+  <div class="flex between mb">
+    <div><div class="hds-h1">Admin / Segurança</div><div class="hds-sub">Kill switch, modo de operação, usuários e integrações</div></div>
+    <div id="conn" class="hds-tag b">conectando…</div>
+  </div>
+
+  <!-- Top row: 3 cards -->
+  <div class="hds-grid hds-g3 mb">
+    <div class="hds-card" id="killCard">
+      <h2><span>Kill Switch</span></h2>
+      <div style="text-align:center;padding:10px 0">
+        <button id="killBtn" class="kill-btn normal" onclick="toggleKill()">Operação normal</button>
+        <div class="c-mut" style="font-size:10px;margin-top:8px">Clique para alternar · pausa toda execução</div>
+      </div>
+    </div>
+    <div class="hds-card" id="modeCard">
+      <h2><span>Modo de Operação</span></h2>
+      <div style="text-align:center;padding:18px 0">
+        <span id="modeChip" class="mode-chip paper" onclick="toggleMode()">PAPER</span>
+        <div class="c-mut" style="font-size:10px;margin-top:8px">Clique para alternar paper/live</div>
+      </div>
+    </div>
+    <div class="hds-card">
+      <h2><span>EOD Schedule</span></h2>
+      <div style="text-align:center;padding:18px 0">
+        <div style="font-size:28px;font-weight:700;color:var(--gold)">17:00 ET</div>
+        <div class="c-mut" style="font-size:11px;margin-top:6px">Fechamento diário · geração de tickets</div>
+        <div class="c-mut2" style="font-size:10px;margin-top:4px">Pipeline: snapshot → sinais → ordens → reconcilia</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Usuários -->
+  <div class="hds-card mb">
+    <h2><span>Usuários & Permissões</span></h2>
+    <table>
+      <thead><tr><th>Nome</th><th>Papel</th><th>Permissões</th></tr></thead>
+      <tbody id="users"></tbody>
+    </table>
+  </div>
+
+  <!-- Integrações -->
+  <div class="hds-card mb">
+    <h2><span>Integrações</span></h2>
+    <table>
+      <thead><tr><th>Nome</th><th>Status</th><th>Escopo</th><th>Último sync</th></tr></thead>
+      <tbody id="integrations"></tbody>
+    </table>
+  </div>
+
+  <div class="hds-foot">Admin / Segurança · Cockpit Gestor · v1</div>
+</div>
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API = (location.search.match(/api=([^&]+)/)||[])[1] || 'http://localhost:8080';
+var HEAD = {'X-User-Role':'socio_gestor','X-User-Name':'João Daniel'};
+var KILL_ACTIVE = false;
+var CURRENT_MODE = 'paper';
+
+document.getElementById('topbar').innerHTML = HDS.topbar({brand:'HARPIAN', small:'· COCKPIT GESTOR', ctx:'ADMIN', user:'JD · sócio-gestor', clockId:'clk'});
+document.getElementById('navbar').innerHTML = '<div class="hds-nav">'
+  + '<a href="index.html">Mission Control</a>'
+  + '<a href="engine-room.html">Engine Room</a>'
+  + '<a href="ativos.html">Ativos</a>'
+  + '<a href="ticket.html">Tickets</a>'
+  + '<a href="estrategias.html">Estratégias</a>'
+  + '<a href="backtest.html">Backtest</a>'
+  + '<a href="calibracao.html">Calibração</a>'
+  + '<a href="protecao.html">Proteção</a>'
+  + '<a href="indicadores.html">Indicadores</a>'
+  + '<a href="reconciliacao.html">Reconciliação</a>'
+  + '<a href="observador.html">Observador</a>'
+  + '<a href="auditoria.html">Auditoria</a>'
+  + '<a href="admin.html" class="on">Admin</a></div>';
+HDS.clock('clk');
+
+function statusSem(s){
+  if(s==='conectado'||s==='ativo') return 'g';
+  if(s==='pendente') return 'a';
+  return 'r';
+}
+function fmtTS(ts){
+  if(!ts) return '—';
+  var d = new Date(ts);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR');
+}
+
+function updateKillUI(){
+  var btn = document.getElementById('killBtn');
+  if(KILL_ACTIVE){
+    btn.className='kill-btn active';
+    btn.textContent='KILL SWITCH ATIVO';
+  } else {
+    btn.className='kill-btn normal';
+    btn.textContent='Operação normal';
+  }
+}
+function updateModeUI(){
+  var chip = document.getElementById('modeChip');
+  if(CURRENT_MODE==='live'){
+    chip.className='mode-chip live';
+    chip.textContent='LIVE';
+  } else {
+    chip.className='mode-chip paper';
+    chip.textContent='PAPER';
+  }
+}
+
+function toggleKill(){
+  KILL_ACTIVE = !KILL_ACTIVE;
+  updateKillUI();
+  fetch(API + '/v1/admin/kill-switch', {
+    method:'POST', headers:Object.assign({'Content-Type':'application/json'}, HEAD),
+    body: JSON.stringify({active: KILL_ACTIVE})
+  }).catch(function(){});
+}
+function toggleMode(){
+  CURRENT_MODE = CURRENT_MODE==='paper' ? 'live' : 'paper';
+  updateModeUI();
+  fetch(API + '/v1/admin/mode', {
+    method:'POST', headers:Object.assign({'Content-Type':'application/json'}, HEAD),
+    body: JSON.stringify({mode: CURRENT_MODE})
+  }).catch(function(){});
+}
+
+fetch(API + '/v1/admin/config', {headers: HEAD})
+ .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+ .then(function(d){
+   document.getElementById('conn').className='hds-tag g';
+   document.getElementById('conn').textContent='● API ao vivo';
+
+   // Kill switch state
+   if(d.kill_switch !== undefined){ KILL_ACTIVE = d.kill_switch; updateKillUI(); }
+   // Mode
+   if(d.mode){ CURRENT_MODE = d.mode; updateModeUI(); }
+
+   // Users
+   var users = d.users || [];
+   document.getElementById('users').innerHTML = users.map(function(u){
+     var perms = (u.permissions||[]).map(function(p){ return HDS.tag(p,'b'); }).join(' ');
+     return '<tr><td><b>'+u.name+'</b></td><td class="c-mut">'+u.role+'</td><td>'+perms+'</td></tr>';
+   }).join('');
+   if(!users.length) document.getElementById('users').innerHTML='<tr><td colspan="3" class="c-mut2">Nenhum usuário configurado</td></tr>';
+
+   // Integrations
+   var integ = d.integrations || [];
+   document.getElementById('integrations').innerHTML = integ.map(function(i){
+     return '<tr><td><b>'+i.name+'</b></td><td>'+HDS.tag(i.status, statusSem(i.status))+'</td><td class="c-mut">'+((i.scope)||'—')+'</td><td class="c-mut2" style="font-size:10px">'+fmtTS(i.last_sync)+'</td></tr>';
+   }).join('');
+   if(!integ.length) document.getElementById('integrations').innerHTML='<tr><td colspan="4" class="c-mut2">Nenhuma integração configurada</td></tr>';
+ })
+ .catch(function(e){
+   document.getElementById('conn').className='hds-tag r';
+   document.getElementById('conn').textContent='✕ API offline ('+e.message+')';
+ });
+</script>
+</body></html>

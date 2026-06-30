@@ -1,0 +1,372 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Cockpit Gestor · Calibração</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+<style>
+  .lay3{display:grid;grid-template-columns:300px 1fr 300px;gap:var(--gap);align-items:start}
+  @media(max-width:1100px){.lay3{grid-template-columns:1fr}}
+  .side{display:flex;flex-direction:column;gap:var(--gap)}
+  /* formula groups */
+  .fgroup{margin-bottom:14px}
+  .fgroup-title{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);font-weight:700;
+    padding:6px 0 4px;border-bottom:1px solid var(--bd2);margin-bottom:6px}
+  .frow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd2);font-size:12px;gap:6px}
+  .frow:last-child{border:0}
+  .fname{flex:1;min-width:0}
+  .fname .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fname .d{font-size:10px;color:var(--mut2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fval{font-weight:700;font-variant-numeric:tabular-nums;color:#5de5d5;cursor:pointer;padding:3px 8px;
+    border-radius:var(--r-sm);border:1px solid transparent;transition:all .15s;white-space:nowrap}
+  .fval:hover{border-color:#5de5d5;background:rgba(93,229,213,.06)}
+  .fval-edit{display:flex;align-items:center;gap:4px}
+  .fval-edit input{width:60px;background:#05101e;border:1px solid #5de5d5;border-radius:4px;color:#5de5d5;
+    font-size:12px;padding:3px 6px;font-variant-numeric:tabular-nums;text-align:right}
+  .fval-edit .arrow{color:var(--gold);font-size:10px;font-weight:700}
+  .scroll-formulas{max-height:52vh;overflow-y:auto;padding-right:4px}
+  /* comparison table */
+  .ctable{width:100%;border-collapse:collapse;font-size:13px}
+  .ctable th{text-align:left;color:var(--mut);font-weight:500;font-size:9px;text-transform:uppercase;
+    letter-spacing:.5px;padding:8px 12px;border-bottom:1px solid var(--bd)}
+  .ctable td{padding:9px 12px;border-bottom:1px solid var(--bd2);font-variant-numeric:tabular-nums}
+  .ctable td:nth-child(4){font-weight:700}
+  .delta-up{color:var(--green)} .delta-dn{color:var(--red)} .delta-eq{color:var(--mut2)}
+  /* validation checks */
+  .checks{margin-top:14px}
+  .chk{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;border-bottom:1px solid var(--bd2)}
+  .chk:last-child{border:0}
+  .chk-icon{font-size:15px;flex-shrink:0}
+  .chk-pass{color:var(--green)} .chk-fail{color:var(--red)}
+  /* promote button */
+  .btn-gold{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;
+    font-size:13px;font-weight:800;border:none;border-radius:var(--r-sm);cursor:pointer;letter-spacing:.4px;
+    background:linear-gradient(180deg,var(--gold2),var(--gold),var(--gold-deep));color:#1a1300;transition:filter .15s}
+  .btn-gold:hover{filter:brightness(1.1)}
+  .btn-gold:disabled{opacity:.4;cursor:not-allowed;filter:none}
+  /* JIM panel */
+  .jim-panel{background:linear-gradient(180deg,#1a1040,#140c35);border:1px solid #3a2870;border-radius:var(--r)}
+  .jim-panel h2{color:#b89aff;padding:14px 14px 0}
+  .jim-panel h2 span:first-child{color:#b89aff}
+  .jim-bubble{margin:10px 14px;padding:10px 12px;background:rgba(184,154,255,.07);border-radius:10px;
+    border:1px solid rgba(184,154,255,.15);font-size:12px;line-height:1.65;color:#d4c6f0}
+  .jim-bubble .ref{font-size:10px;color:#8a70c0;font-style:italic;margin-top:6px;display:block}
+  .jim-input{display:flex;gap:6px;padding:10px 14px 14px}
+  .jim-input input{flex:1;background:#0e0828;border:1px solid #3a2870;border-radius:var(--r-sm);
+    color:#d4c6f0;font-size:12px;padding:8px 10px}
+  .jim-input input::placeholder{color:#5a4890}
+  .jim-input button{background:#3a2870;border:1px solid #5a3ea0;border-radius:var(--r-sm);color:#b89aff;
+    font-weight:700;font-size:11px;padding:8px 14px;cursor:pointer}
+  .jim-input button:hover{background:#4a3880}
+  /* candidates list */
+  .cand-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;
+    border-bottom:1px solid var(--bd2);cursor:pointer;font-size:12px;transition:background .12s}
+  .cand-item:hover,.cand-item.sel{background:rgba(255,255,255,.04)}
+  .cand-item.sel{border-left:3px solid var(--gold)}
+  .cand-status{font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:.3px}
+  .cand-status.pending{background:#3a2d10;color:var(--amber)} .cand-status.ready{background:#10351f;color:var(--green)}
+  .cand-status.rejected{background:#3a1414;color:var(--red)}
+  /* btn-create */
+  .btn-outline{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;
+    font-size:12px;font-weight:700;border:1px solid var(--bd);border-radius:var(--r-sm);cursor:pointer;
+    background:transparent;color:var(--mut);transition:all .15s;letter-spacing:.3px}
+  .btn-outline:hover{border-color:var(--gold);color:var(--txt)}
+  /* toast */
+  .toast{position:fixed;bottom:24px;right:24px;background:linear-gradient(180deg,var(--gold2),var(--gold));
+    color:#1a1300;padding:12px 20px;border-radius:var(--r-sm);font-weight:700;font-size:13px;
+    opacity:0;transform:translateY(20px);transition:all .3s;z-index:999;pointer-events:none}
+  .toast.show{opacity:1;transform:translateY(0)}
+</style></head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="hds-wrap">
+  <div class="flex between mb">
+    <div><div class="hds-h1">Calibração · Studio de Fórmulas</div><div class="hds-sub">Editar parâmetros dos motores, criar candidatos, comparar com o atual e promover ao Registry.</div></div>
+    <div id="conn" class="hds-tag b">conectando…</div>
+  </div>
+
+  <div class="lay3">
+    <!-- LEFT: Fórmulas -->
+    <div class="side">
+      <div class="hds-card">
+        <h2><span>Fórmulas & parâmetros</span></h2>
+        <div class="scroll-formulas" id="formulas"><div class="c-mut2" style="padding:16px;text-align:center;font-size:12px">carregando…</div></div>
+        <div style="margin-top:12px">
+          <button class="btn-outline" onclick="createCandidate()">+ Criar candidato</button>
+        </div>
+      </div>
+      <div class="hds-card">
+        <h2><span>Candidatos</span></h2>
+        <div id="candidates" style="max-height:200px;overflow-y:auto"><div class="c-mut2" style="padding:16px;text-align:center;font-size:12px">carregando…</div></div>
+      </div>
+    </div>
+
+    <!-- CENTER: Comparison -->
+    <div id="center">
+      <div class="hds-ph" style="padding:40px">
+        <b>Nenhum candidato selecionado</b>
+        Selecione um candidato à esquerda ou crie um novo ajustando os parâmetros.
+      </div>
+    </div>
+
+    <!-- RIGHT: JIM -->
+    <div class="side">
+      <div class="jim-panel">
+        <h2><span>JIM conselheiro</span><span class="hds-tag" style="background:#2a1850;color:#8a70c0;font-size:8px">air-gap · leitura</span></h2>
+        <div id="jim-bubbles">
+          <div class="jim-bubble">
+            Calibração é o ato de ajustar os hiperparâmetros sem tocar na estrutura do motor. O risco principal é <b>overfitting</b> — quanto mais parâmetros livres, maior a chance de ajustar ao ruído.
+            <span class="ref">Ref: Ilmanen, "Expected Returns" cap. 12</span>
+          </div>
+          <div class="jim-bubble">
+            Walk-forward com gap temporal é o único método honesto. Se o Sortino OOS cair mais de 40% vs IS, o candidato deve ser rejeitado — não promovido com ressalvas.
+            <span class="ref">Ref: Bailey & López de Prado, "The Deflated Sharpe Ratio"</span>
+          </div>
+          <div class="jim-bubble">
+            Antes de calibrar: verifique se o problema é realmente no parâmetro ou se é estrutural. Mudar tau de 37 para 40 não resolve um universo mal definido.
+            <span class="ref">Ref: Clenow, "Stocks on the Move" cap. 8</span>
+          </div>
+        </div>
+        <div class="jim-input">
+          <input id="jim-q" placeholder="Perguntar ao JIM…" onkeydown="if(event.key==='Enter')askJim()">
+          <button onclick="askJim()">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hds-foot">Calibração · consome /v1/calibration. Golden-master byte-a-byte + 9 validadores. Promover ao Model Registry só após GRADE A.</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API=(location.search.match(/api=([^&]+)/)||[])[1]||'http://localhost:8080';
+var HEAD={'X-User-Role':'socio_gestor','X-User-Name':'João Daniel'};
+var FORMULAS=[], CANDIDATES=[], SEL_CAND=null, EDITS={};
+
+document.getElementById('topbar').innerHTML=HDS.topbar({brand:'HARPIAN',small:'· COCKPIT GESTOR',ctx:'CALIBRAÇÃO',user:'JD · sócio-gestor',clockId:'clk'});
+document.getElementById('navbar').innerHTML='<div class="hds-nav">'
+  +'<a href="index.html">Mission Control</a>'
+  +'<a href="engine-room.html">Engine Room</a>'
+  +'<a href="ativos.html">Ativos</a>'
+  +'<a href="ticket.html">Tickets</a>'
+  +'<a href="estrategias.html">Estratégias</a>'
+  +'<a href="backtest.html">Backtest</a>'
+  +'<a class="on" href="calibracao.html">Calibração</a>'
+  +'<a href="protecao.html">Proteção</a>'
+  +'<a href="indicadores.html">Indicadores</a>'
+  +'<a href="reconciliacao.html">Reconciliação</a>'
+  +'<a href="observador.html">Observador</a>'
+  +'<a href="auditoria.html">Auditoria</a>'
+  +'<a href="admin.html">Admin</a></div>';
+HDS.clock('clk');
+
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show';
+  setTimeout(function(){t.className='toast';},2800);
+}
+
+/* ---------- FORMULAS ---------- */
+function loadFormulas(){
+  fetch(API+'/v1/calibration/formulas',{headers:HEAD})
+    .then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+    .then(function(d){
+      document.getElementById('conn').className='hds-tag g';
+      document.getElementById('conn').textContent='● API ao vivo';
+      FORMULAS=d.formulas||[];
+      renderFormulas();
+    })
+    .catch(function(e){
+      document.getElementById('conn').className='hds-tag r';
+      document.getElementById('conn').textContent='✕ API offline';
+      document.getElementById('formulas').innerHTML='<div class="c-mut2" style="padding:16px;text-align:center;font-size:12px">API não respondeu ('+e.message+')</div>';
+    });
+}
+
+function renderFormulas(){
+  if(!FORMULAS.length){document.getElementById('formulas').innerHTML='<div class="c-mut2" style="padding:16px;text-align:center;font-size:12px">nenhuma fórmula cadastrada</div>';return;}
+  var groups={};
+  FORMULAS.forEach(function(f){
+    var g=f.grupo||'Outros';
+    if(!groups[g])groups[g]=[];
+    groups[g].push(f);
+  });
+  var html='';
+  var order=['Defesa','Ataque','Pilar D','Pilar T','Seleção','Outros'];
+  order.forEach(function(g){
+    if(!groups[g])return;
+    html+='<div class="fgroup"><div class="fgroup-title">'+g+'</div>';
+    groups[g].forEach(function(f){
+      var edited=EDITS[f.id]!=null;
+      var valHtml;
+      if(edited){
+        valHtml='<div class="fval-edit"><span style="color:var(--mut2)">'+f.value+'</span><span class="arrow">→</span>'
+          +'<input id="edit-'+f.id+'" value="'+EDITS[f.id]+'" onchange="updateEdit(\''+f.id+'\',this.value)" onfocus="this.select()"></div>';
+      } else {
+        valHtml='<span class="fval" onclick="startEdit(\''+f.id+'\','+f.value+')">'+f.value+'</span>';
+      }
+      html+='<div class="frow"><div class="fname"><div class="n">'+f.name+'</div><div class="d">'+(f.description||'')+'</div></div>'+valHtml+'</div>';
+    });
+    html+='</div>';
+  });
+  // Also render groups not in the predefined order
+  Object.keys(groups).forEach(function(g){
+    if(order.indexOf(g)>=0)return;
+    html+='<div class="fgroup"><div class="fgroup-title">'+g+'</div>';
+    groups[g].forEach(function(f){
+      var edited=EDITS[f.id]!=null;
+      var valHtml;
+      if(edited){
+        valHtml='<div class="fval-edit"><span style="color:var(--mut2)">'+f.value+'</span><span class="arrow">→</span>'
+          +'<input id="edit-'+f.id+'" value="'+EDITS[f.id]+'" onchange="updateEdit(\''+f.id+'\',this.value)" onfocus="this.select()"></div>';
+      } else {
+        valHtml='<span class="fval" onclick="startEdit(\''+f.id+'\','+f.value+')">'+f.value+'</span>';
+      }
+      html+='<div class="frow"><div class="fname"><div class="n">'+f.name+'</div><div class="d">'+(f.description||'')+'</div></div>'+valHtml+'</div>';
+    });
+    html+='</div>';
+  });
+  document.getElementById('formulas').innerHTML=html;
+}
+
+function startEdit(id,current){
+  EDITS[id]=current;
+  renderFormulas();
+  var el=document.getElementById('edit-'+id);
+  if(el){el.focus();el.select();}
+}
+function updateEdit(id,val){EDITS[id]=val;}
+
+function createCandidate(){
+  var changes=Object.keys(EDITS);
+  if(!changes.length){toast('Edite ao menos 1 parâmetro');return;}
+  toast('Candidato criado (mock)');
+  var c={id:'cand-'+(CANDIDATES.length+1),name:'Candidato #'+(CANDIDATES.length+1),status:'ready',
+    date:'agora',changes:Object.assign({},EDITS),
+    metrics:{atual:{sortino:'2,16',cagr:'44,2%',maxdd:'-27,9%',calmar:'1,58'},
+             candidato:{sortino:'2,27',cagr:'46,0%',maxdd:'-26,3%',calmar:'1,75'}},
+    checks:{golden_master:true,validadores:true,walkforward_gap:true}};
+  CANDIDATES.unshift(c);
+  EDITS={};
+  renderFormulas();renderCandidates();
+  SEL_CAND=0;selectCandidate(0);
+}
+
+/* ---------- CANDIDATES ---------- */
+function loadCandidates(){
+  fetch(API+'/v1/calibration/candidates',{headers:HEAD})
+    .then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+    .then(function(d){
+      CANDIDATES=d.candidates||[];
+      renderCandidates();
+    })
+    .catch(function(){
+      document.getElementById('candidates').innerHTML='<div class="c-mut2" style="padding:16px;text-align:center;font-size:12px">sem conexão</div>';
+    });
+}
+
+function renderCandidates(){
+  if(!CANDIDATES.length){document.getElementById('candidates').innerHTML='<div class="c-mut2" style="padding:16px;text-align:center;font-size:12px">nenhum candidato</div>';return;}
+  document.getElementById('candidates').innerHTML=CANDIDATES.map(function(c,i){
+    var scls=c.status==='ready'?'ready':c.status==='rejected'?'rejected':'pending';
+    var slabel=c.status==='ready'?'PRONTO':c.status==='rejected'?'REJEITADO':'PENDENTE';
+    return '<div class="cand-item'+(SEL_CAND===i?' sel':'')+'" onclick="selectCandidate('+i+')">'
+      +'<div><div style="font-weight:600">'+c.name+'</div><div class="c-mut2" style="font-size:10px">'+(c.date||'')+'</div></div>'
+      +'<span class="cand-status '+scls+'">'+slabel+'</span></div>';
+  }).join('');
+}
+
+function selectCandidate(i){
+  SEL_CAND=i;renderCandidates();
+  var c=CANDIDATES[i];
+  var m=c.metrics||{};
+  var atual=m.atual||{}, cand=m.candidato||{};
+  var ch=c.checks||{};
+
+  function delta(a,b){
+    var va=parseFloat(String(a).replace(',','.').replace('%',''));
+    var vb=parseFloat(String(b).replace(',','.').replace('%',''));
+    if(isNaN(va)||isNaN(vb))return '<span class="delta-eq">—</span>';
+    var d=vb-va; var sign=d>0?'+':'';
+    var cls=d>0?'delta-up':d<0?'delta-dn':'delta-eq';
+    return '<span class="'+cls+'">'+sign+d.toFixed(2).replace('.',',')+'</span>';
+  }
+
+  function chkRow(label,pass){
+    return '<div class="chk"><span class="chk-icon '+(pass?'chk-pass':'chk-fail')+'">'+(pass?'✓':'✕')+'</span><span>'+label+'</span></div>';
+  }
+
+  var html='<div class="hds-card mb">'
+    +'<h2><span>Candidato × atual</span><span class="hds-tag '+(c.status==='ready'?'g':c.status==='rejected'?'r':'a')+'">'+(c.name)+'</span></h2>'
+    +'<table class="ctable"><thead><tr><th>Métrica</th><th>Atual</th><th>Candidato</th><th>Delta</th></tr></thead><tbody>'
+    +'<tr><td>Sortino</td><td>'+(atual.sortino||'—')+'</td><td>'+(cand.sortino||'—')+'</td><td>'+delta(atual.sortino,cand.sortino)+'</td></tr>'
+    +'<tr><td>CAGR</td><td>'+(atual.cagr||'—')+'</td><td>'+(cand.cagr||'—')+'</td><td>'+delta(atual.cagr,cand.cagr)+'</td></tr>'
+    +'<tr><td>MaxDD</td><td style="color:var(--red)">'+(atual.maxdd||'—')+'</td><td style="color:var(--red)">'+(cand.maxdd||'—')+'</td><td>'+delta(atual.maxdd,cand.maxdd)+'</td></tr>'
+    +'<tr><td>Calmar</td><td>'+(atual.calmar||'—')+'</td><td>'+(cand.calmar||'—')+'</td><td>'+delta(atual.calmar,cand.calmar)+'</td></tr>'
+    +'</tbody></table>'
+    +'<div class="checks">'
+    +chkRow('Golden-master: reproduz byte a byte',ch.golden_master)
+    +chkRow('9 validadores: sem red flag',ch.validadores)
+    +chkRow('Walk-forward gap temporal',ch.walkforward_gap)
+    +'</div>';
+
+  var allPass=ch.golden_master&&ch.validadores&&ch.walkforward_gap;
+  html+='<div style="margin-top:16px">'
+    +'<button class="btn-gold" '+(allPass?'onclick="promote('+i+')"':'disabled')+'>'
+    +(allPass?'Promover ao Registry':'Validação incompleta — promoção bloqueada')+'</button></div>';
+
+  // Changed params
+  if(c.changes&&Object.keys(c.changes).length){
+    html+='<div style="margin-top:14px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-bottom:6px">Parâmetros alterados</div>';
+    Object.keys(c.changes).forEach(function(k){
+      var orig=FORMULAS.filter(function(f){return f.id===k;});
+      var origVal=orig.length?orig[0].value:'?';
+      html+='<div class="frow"><div class="fname"><div class="n">'+k+'</div></div>'
+        +'<div class="fval-edit"><span style="color:var(--mut2)">'+origVal+'</span><span class="arrow" style="color:var(--gold)">→</span>'
+        +'<span style="color:#5de5d5;font-weight:700">'+c.changes[k]+'</span></div></div>';
+    });
+  }
+
+  html+='</div>';
+  document.getElementById('center').innerHTML=html;
+}
+
+function promote(i){
+  var c=CANDIDATES[i];
+  fetch(API+'/v1/calibration/candidates/'+c.id+'/promote',{method:'POST',headers:HEAD})
+    .then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+    .then(function(){toast('Promovido ao Model Registry');c.status='promoted';renderCandidates();})
+    .catch(function(e){toast('Erro: '+e.message);});
+}
+
+function askJim(){
+  var q=document.getElementById('jim-q').value;
+  if(!q)return;
+  document.getElementById('jim-q').value='';
+  var bubble='<div class="jim-bubble" style="border-color:rgba(93,229,213,.2);background:rgba(93,229,213,.05);color:#b0e0d8">'
+    +'<b style="font-size:10px;color:var(--mut2)">Você:</b> '+q+'</div>'
+    +'<div class="jim-bubble">Analisando a sua pergunta… (JIM está em modo air-gap, a resposta virá da API)</div>';
+  document.getElementById('jim-bubbles').innerHTML+=bubble;
+  // Scroll to bottom
+  var panel=document.querySelector('.jim-panel');
+  if(panel)panel.scrollTop=panel.scrollHeight;
+  // Try API
+  fetch(API+'/v1/calibration/jim?q='+encodeURIComponent(q),{headers:HEAD})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var last=document.getElementById('jim-bubbles').lastElementChild;
+      if(last)last.innerHTML=(d.answer||'JIM não disponível neste momento.')
+        +(d.ref?'<span class="ref">Ref: '+d.ref+'</span>':'');
+    })
+    .catch(function(){
+      var last=document.getElementById('jim-bubbles').lastElementChild;
+      if(last)last.textContent='JIM indisponível — API offline.';
+    });
+}
+
+loadFormulas();
+loadCandidates();
+</script>
+</body></html>

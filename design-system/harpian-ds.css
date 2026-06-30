@@ -1,0 +1,178 @@
+/* ============================================================
+   HARPIAN DESIGN SYSTEM (harpian-ds) · v2
+   Fonte única de verdade visual dos 3 front-ends
+   (Cockpit Gestor · Terminal MFO · Vitrine).
+   v2: padronização UX — fontes maiores, espaçamentos profissionais,
+   .tk-link canônico, hierarquia tipográfica Bloomberg-grade.
+   ============================================================ */
+
+:root{
+  /* superfícies */
+  --bg:#0A1A30; --card:#0F2747; --card2:#0c2039; --raise:#14315a;
+  --bd:#1d3a5f; --bd2:#16304f;
+  /* marca */
+  --gold:#C9A02C; --gold2:#e0c160; --gold-deep:#b08010;
+  /* semáforo (significado consistente) */
+  --green:#2ECC71; --amber:#F39C12; --red:#E74C3C; --blue:#4A90D9;
+  /* texto */
+  --txt:#E8ECF1; --mut:#7d96b3; --mut2:#5b7a99;
+  /* tipografia */
+  --sans:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'Segoe UI',system-ui,sans-serif;
+  /* layout */
+  --r:12px; --r-sm:8px; --gap:13px;
+  --pad:16px; --topbar-h:52px; --nav-h:38px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+.hds, body.hds{
+  font-family:var(--sans);
+  background:radial-gradient(1100px 520px at 50% -8%,#102a4a 0%,var(--bg) 58%) fixed;
+  color:var(--txt); font-size:14px; min-height:100vh;
+}
+
+/* ---------- TOPBAR (compartilhada) ---------- */
+.hds-top{display:flex;align-items:center;gap:14px;padding:11px 22px;border-bottom:1px solid var(--bd)}
+.hds-brand{font-size:17px;font-weight:700;letter-spacing:2px}
+.hds-brand small{color:var(--gold);font-weight:600;letter-spacing:1px}
+.hds-ctx{font-size:12px;color:var(--gold);letter-spacing:1px;font-weight:600}
+.hds-top-right{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:12px;color:var(--mut)}
+.hds-clock{font-variant-numeric:tabular-nums}
+
+/* ---------- NAV (barra de itens) ---------- */
+.hds-nav{display:flex;gap:2px;padding:0 16px;background:var(--card2);border-bottom:1px solid var(--bd);overflow-x:auto}
+.hds-nav a,.hds-nav span{padding:9px 15px;font-size:12px;color:var(--mut);cursor:pointer;letter-spacing:.5px;
+  border-bottom:2px solid transparent;white-space:nowrap;text-decoration:none}
+.hds-nav a:hover,.hds-nav span:hover{color:var(--txt)}
+.hds-nav a.on,.hds-nav span.on{color:var(--gold);border-bottom-color:var(--gold)}
+
+/* ---------- LAYOUT ---------- */
+.hds-wrap{padding:16px 22px 24px}
+.hds-h1{font-size:20px;font-weight:700;margin-bottom:2px}
+.hds-sub{font-size:13px;color:var(--mut);margin-bottom:16px}
+.hds-grid{display:grid;gap:var(--gap)}
+.hds-g2{grid-template-columns:repeat(2,1fr)}
+.hds-g3{grid-template-columns:repeat(3,1fr)}
+.hds-g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:900px){.hds-g3,.hds-g4{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.hds-g2,.hds-g3,.hds-g4{grid-template-columns:1fr}}
+
+/* ---------- CARD ---------- */
+.hds-card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--bd);
+  border-radius:var(--r);padding:var(--pad);position:relative}
+.hds-card h2{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:var(--gold);
+  margin-bottom:11px;display:flex;align-items:center;gap:7px;justify-content:space-between}
+.hds-card.clickable{cursor:pointer;transition:border-color .15s}
+.hds-card.clickable:hover{border-color:var(--gold)}
+
+/* ---------- KPI / STRIP ---------- */
+.hds-kpi{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--bd);
+  border-radius:var(--r);padding:14px 16px}
+.hds-kpi .l{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.8px}
+.hds-kpi .v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:4px}
+.hds-kpi .s{font-size:11px;color:var(--mut2);margin-top:2px}
+
+/* ---------- KV (linha rótulo→valor) ---------- */
+.hds-kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd2);font-size:13px}
+.hds-kv:last-child{border:0}
+.hds-kv .v{font-variant-numeric:tabular-nums;font-weight:600}
+
+/* ---------- CORES utilitárias (semáforo) ---------- */
+.c-g{color:var(--green)} .c-a{color:var(--amber)} .c-r{color:var(--red)} .c-b{color:var(--blue)}
+.c-mut{color:var(--mut)} .c-mut2{color:var(--mut2)} .c-gold{color:var(--gold)}
+
+/* ---------- CHIPS / TAGS / STATE ---------- */
+.hds-statechip{padding:4px 13px;border-radius:var(--r-sm);font-weight:800;font-size:12px;letter-spacing:1px;border:1px solid}
+.hds-statechip.g{color:var(--green);border-color:var(--green);background:#2ECC7118}
+.hds-statechip.a{color:var(--amber);border-color:var(--amber);background:#F39C1218}
+.hds-statechip.r{color:var(--red);border-color:var(--red);background:#E74C3C18}
+.hds-statechip.b{color:var(--blue);border-color:var(--blue);background:#4A90D918}
+.hds-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;letter-spacing:.4px}
+.hds-tag.g{background:#10351f;color:var(--green)} .hds-tag.a{background:#3a2d10;color:var(--gold)}
+.hds-tag.r{background:#3a1414;color:var(--red)} .hds-tag.b{background:#13314d;color:var(--blue)}
+.hds-side{font-size:10px;font-weight:800;padding:3px 9px;border-radius:5px;letter-spacing:.4px}
+.hds-side.buy{background:#10351f;color:var(--green)} .hds-side.sell{background:#3a1414;color:var(--red)}
+
+/* ---------- BULLET (régua-agulha "distância ao gatilho") ---------- */
+.hds-prow{margin-bottom:10px}
+.hds-phead{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;align-items:baseline}
+.hds-phead small{color:var(--mut2);font-size:11px}
+.hds-dist{font-size:12px;font-weight:700}
+.hds-bullet{height:12px;border-radius:6px;position:relative;background:#08182c;overflow:hidden}
+.hds-bz{position:absolute;top:0;bottom:0;opacity:.30}
+.hds-bneedle{position:absolute;top:-2px;bottom:-2px;width:3px;background:#fff;border-radius:2px;box-shadow:0 0 7px rgba(255,255,255,.7)}
+
+/* ---------- TABELA ---------- */
+.hds table{width:100%;border-collapse:collapse;font-size:13px}
+.hds th{text-align:left;color:var(--mut);font-weight:500;font-size:10px;text-transform:uppercase;
+  letter-spacing:.5px;padding:8px 10px;border-bottom:1px solid var(--bd)}
+.hds td{padding:8px 10px;border-bottom:1px solid var(--bd2);font-variant-numeric:tabular-nums}
+.hds .tk{font-weight:700;font-variant-numeric:normal}
+.hds tbody tr:hover{background:rgba(255,255,255,.03)}
+
+/* ---------- TICKER LINK (canônico — usar em todas as páginas) ---------- */
+.tk-link{color:var(--gold);cursor:pointer;text-decoration:none;font-weight:800;
+  border-bottom:1px dashed rgba(201,160,44,.3);transition:all .12s}
+.tk-link:hover{color:var(--gold2);border-bottom-color:var(--gold)}
+
+/* ---------- LISTA ---------- */
+.hds-li{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--bd2);font-size:13px}
+.hds-li:last-child{border:0}
+.hds-li .t{margin-left:auto;color:var(--mut2);font-size:11px}
+.hds-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ---------- BOTÕES ---------- */
+.hds-btn{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(180deg,var(--gold2),var(--gold),var(--gold-deep));
+  color:#1a1300;font-weight:700;font-size:12px;padding:8px 16px;border-radius:var(--r-sm);border:0;cursor:pointer;letter-spacing:.3px}
+.hds-btn:hover{filter:brightness(1.07)}
+.hds-btn.ghost{background:transparent;color:var(--mut);border:1px solid var(--bd)}
+.hds-btn.ghost:hover{color:var(--txt);border-color:var(--bd2)}
+
+/* ---------- FORM ---------- */
+.hds-input,.hds select.hds-input{background:#05101e;border:1px solid var(--bd);border-radius:var(--r-sm);
+  color:var(--txt);font-family:var(--sans);font-size:13px;padding:8px 10px}
+.hds-input::placeholder{color:var(--mut2)}
+
+/* ---------- PLACEHOLDER ---------- */
+.hds-ph{border:1px dashed var(--bd);border-radius:10px;padding:24px;text-align:center;color:var(--mut2)}
+.hds-ph b{color:var(--mut);display:block;margin-bottom:6px;font-size:14px}
+
+/* ---------- FOOT ---------- */
+.hds-foot{margin-top:20px;font-size:10px;color:var(--mut2);border-top:1px solid var(--bd);padding-top:10px;line-height:1.6}
+
+/* utilitários */
+.mb{margin-bottom:13px}.mt{margin-top:13px}.big{font-weight:700;font-variant-numeric:tabular-nums}
+.flex{display:flex;align-items:center;gap:10px}.between{justify-content:space-between}.wrap{flex-wrap:wrap}
+
+/* ============================================================
+   JIM COPILOT — botão fixo no topbar (todas as telas) + drawer
+   Copiloto inspirado em Jim Simons; acesso à memória de cálculo.
+   ============================================================ */
+.hds-jim-btn{background:linear-gradient(180deg,var(--gold2),var(--gold),var(--gold-deep));color:#1a1300;
+  font-weight:800;font-size:12px;letter-spacing:.4px;padding:5px 13px;border:0;border-radius:6px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;transition:filter .12s}
+.hds-jim-btn::before{content:"◆";font-size:9px;opacity:.85}
+.hds-jim-btn:hover{filter:brightness(1.09)}
+.hds-jim-back{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:998;opacity:0;pointer-events:none;transition:opacity .18s}
+.hds-jim-back.show{opacity:1;pointer-events:auto}
+.hds-jim-drawer{position:fixed;top:0;right:0;height:100vh;width:380px;max-width:92vw;z-index:999;
+  background:linear-gradient(180deg,#1a1040,#120c30);border-left:1px solid #3a2870;
+  transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(0,0,0,.4)}
+.hds-jim-drawer.open{transform:translateX(0)}
+.hds-jim-head{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid #3a2870}
+.hds-jim-ava{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0}
+.hds-jim-name{font-weight:700;color:#d4c8f0;font-size:14px}
+.hds-jim-sub{font-size:10.5px;color:#7a68a8;line-height:1.3}
+.hds-jim-x{margin-left:auto;color:#7a68a8;cursor:pointer;font-size:16px;padding:2px 6px}
+.hds-jim-x:hover{color:#d4c8f0}
+.hds-jim-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:9px}
+.hds-jim-ctx{font-size:10px;font-weight:700;letter-spacing:1px;color:#b48ade;text-transform:uppercase}
+.hds-jim-msg{background:#1e1250;border:1px solid #3a2870;border-radius:var(--r-sm);padding:11px 13px;font-size:13px;color:#d4c8f0;line-height:1.55}
+.hds-jim-qbtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.hds-jim-qbtn{background:#1e1250;border:1px solid #3a2870;border-radius:5px;padding:6px 11px;font-size:11px;color:#b48ade;cursor:pointer;transition:background .15s}
+.hds-jim-qbtn:hover{background:#2a1860}
+.hds-jim-foot{display:flex;gap:6px;padding:12px 16px;border-top:1px solid #3a2870}
+.hds-jim-input{flex:1;background:#0d0825;border:1px solid #3a2870;border-radius:var(--r-sm);color:#d4c8f0;font-family:var(--sans);font-size:13px;padding:9px 11px}
+.hds-jim-input::placeholder{color:#5a4a8a}
+.hds-jim-send{background:linear-gradient(180deg,var(--gold2),var(--gold),var(--gold-deep));color:#1a1300;font-weight:700;font-size:12px;padding:9px 14px;border:0;border-radius:var(--r-sm);cursor:pointer}

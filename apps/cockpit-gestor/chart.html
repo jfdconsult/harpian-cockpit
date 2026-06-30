@@ -1,0 +1,360 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Chart</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+body.hds{padding:0;overflow:hidden}
+.ch-wrap{display:flex;flex-direction:column;height:calc(100vh - var(--topbar-h) - 38px)}
+.ch-bar{display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid var(--bd);flex-shrink:0;flex-wrap:wrap}
+.ch-ticker{font-size:22px;font-weight:800;letter-spacing:1px}
+.ch-name{font-size:13px;color:var(--mut);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch-price{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.ch-pct{font-size:13px;font-weight:700;padding:3px 8px;border-radius:5px}
+.ch-pct.up{background:#10351f;color:var(--green)}.ch-pct.dn{background:#3a1414;color:var(--red)}
+.ch-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ch-range{display:flex;gap:2px}
+.ch-daily{font-size:10px;color:var(--mut2);letter-spacing:.5px;font-weight:600;border:1px solid var(--bd);border-radius:5px;padding:3px 8px}
+.ch-toolbar{display:flex;align-items:center;gap:9px;padding:6px 16px;border-bottom:1px solid var(--bd);flex-shrink:0;flex-wrap:wrap;background:var(--card2)}
+.ch-tlabel{font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--gold);text-transform:uppercase;flex-shrink:0}
+.ch-pos{display:inline-flex;align-items:center;gap:8px;font-size:11px;color:var(--mut);border:1px solid var(--bd);border-radius:6px;padding:3px 10px;white-space:nowrap}
+.ch-pos b{color:var(--txt);font-variant-numeric:tabular-nums}
+.ch-act{font-weight:800;font-size:10px;padding:3px 9px;border-radius:5px;letter-spacing:.4px}
+.ch-act.buy{background:#10351f;color:#2ECC71}.ch-act.red{background:#3a2c10;color:#F39C12}
+.ch-act.zero{background:#3a1414;color:#E74C3C}.ch-act.hold{background:#16304f;color:#9fb4cf}.ch-act.out{background:transparent;color:#5b7a99;border:1px solid var(--bd)}
+.ch-collegend{display:none;gap:13px;flex-wrap:wrap;align-items:center;padding:4px 16px;border-bottom:1px solid var(--bd);font-size:10px;color:var(--mut);background:#0b1f3a}
+.ch-collegend .ci{display:inline-flex;align-items:center;gap:5px}
+.ch-collegend .sw{width:11px;height:11px;border-radius:2px;display:inline-block;flex-shrink:0}
+.ch-range button{padding:5px 12px;border:1px solid var(--bd);background:transparent;color:var(--mut);font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;border-radius:5px;transition:all .12s}
+.ch-range button.on{background:var(--gold);color:#1a1300;border-color:var(--gold)}
+.ch-range button:hover:not(.on){border-color:var(--gold);color:var(--txt)}
+.ch-studies{display:flex;gap:2px;flex-wrap:wrap}
+.ch-studies button{padding:5px 9px;border:1px solid var(--bd);background:transparent;color:var(--mut);font-size:10px;font-weight:700;cursor:pointer;border-radius:5px;transition:all .12s;letter-spacing:.3px}
+.ch-studies button.on{border-color:var(--gold);color:var(--gold);background:rgba(201,160,44,.1)}
+.ch-studies button:hover:not(.on){border-color:#3a5a8a;color:var(--txt)}
+.ch-stack{flex:1;display:flex;flex-direction:column;min-height:0}
+.ch-pane{position:relative;min-height:0}
+.ch-pane.main{flex:1}
+.ch-pane.sub{flex-shrink:0;border-top:1px solid var(--bd);height:108px}
+.ch-pane .lbl{position:absolute;top:5px;left:10px;z-index:10;font-size:10px;font-weight:700;letter-spacing:1px;color:var(--mut);pointer-events:none;text-transform:uppercase}
+.ch-pane .lbl b{color:var(--txt)}
+.ch-cv{width:100%;height:100%}
+.ch-legend{position:absolute;top:6px;left:12px;z-index:10;pointer-events:none;line-height:1.45}
+.ch-legend .lg{font-size:11px;font-weight:600}
+.ch-meta{display:flex;gap:16px;padding:5px 16px;border-top:1px solid var(--bd);font-size:11px;color:var(--mut);flex-shrink:0;flex-wrap:wrap}
+.ch-meta b{color:var(--txt)}
+.ch-back{padding:5px 14px;border:1px solid var(--bd);background:transparent;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;border-radius:5px;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.ch-back:hover{background:rgba(201,160,44,.1);border-color:var(--gold)}
+.ch-tv{padding:5px 14px;border:1px solid #2962FF;background:rgba(41,98,255,.12);color:#5B9CF6;font-size:11px;font-weight:700;cursor:pointer;border-radius:5px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .12s;letter-spacing:.3px}
+.ch-tv:hover{background:rgba(41,98,255,.25);border-color:#5B9CF6}
+.ch-tv svg{width:14px;height:14px;fill:currentColor}
+.ch-src{font-size:10px;color:var(--mut2);margin-left:4px}
+</style>
+</head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="ch-wrap">
+  <div class="ch-bar">
+    <a class="ch-back" href="javascript:history.back()">&#8592; Voltar</a>
+    <span class="ch-ticker" id="tkr">—</span>
+    <span class="ch-name" id="tname">carregando...</span>
+    <span class="ch-price" id="tprice">—</span>
+    <span class="ch-pct" id="tpct">—</span>
+    <div class="ch-range" id="ranges"></div>
+    <span class="ch-daily">candles diários</span>
+    <span class="ch-pos" id="chpos"></span>
+    <div class="ch-right">
+      <a class="ch-tv" id="tvlink" target="_blank" rel="noopener" title="Abrir no TradingView com template HARPIAN DSPT"><svg viewBox="0 0 36 28"><path d="M14 22H7V6h7v16zm8-16h7v16h-7V6zm-2 0h-4v16h4V6z"/></svg>DSPT completo</a>
+    </div>
+  </div>
+  <div class="ch-toolbar">
+    <span class="ch-tlabel">ESTUDOS DSPT</span>
+    <div class="ch-studies" id="studybtns"></div>
+  </div>
+  <div class="ch-collegend" id="collegend"></div>
+  <div class="ch-stack" id="stack">
+    <div class="ch-pane main" id="pane-main">
+      <div class="ch-legend" id="legend"></div>
+      <div class="ch-cv" id="cv-main"></div>
+    </div>
+    <div class="ch-pane sub" id="pane-barcode">
+      <div class="lbl">BARCODE <b>−2…+2</b> · onde fechou + EMA/ATR</div>
+      <div class="ch-cv" id="cv-barcode"></div>
+    </div>
+    <div class="ch-pane sub" id="pane-dist">
+      <div class="lbl">DISTÂNCIA <b id="dist-val">—</b> · TR <b id="dist-tr">—</b> · LIMIAR <b id="dist-thr">—</b> · em ATR</div>
+      <div class="ch-cv" id="cv-dist"></div>
+    </div>
+    <div class="ch-pane sub" id="pane-mom">
+      <div class="lbl">MOMENTO · D13 <b id="mom-d13" style="color:#E0C160">—</b> Diogo &nbsp; J37 <b id="mom-j37" style="color:#4A90D9">—</b> João</div>
+      <div class="ch-cv" id="cv-mom"></div>
+    </div>
+  </div>
+  <div class="ch-meta" id="meta">—</div>
+</div>
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API=(location.search.match(/api=([^&]+)/)||[])[1]||'http://localhost:8080';
+var HEAD={'X-User-Role':'gestor_quant','X-User-Name':'Diogo'};
+var TICKER=(location.search.match(/ticker=([^&]+)/)||[])[1]||'NVDA';
+var RANGE='1y';
+var RANGES=['3mo','6mo','1y','2y','5y'];
+
+// Estudos DSPT do Diogo — ligados/desligados pelo gestor
+var STUDIES={
+  trend:{on:true,  lbl:'EMA/DEMA/TEMA'},   // linhas do Diogo (cascata α=1/d)
+  barcolor:{on:true,lbl:'Cor das barras'}, // FVG + cruzamento + impulso
+  atr:{on:true,    lbl:'Projeção ATR'},    // 4 níveis a partir da última barra
+  impulse:{on:false,lbl:'Fibo impulso'},   // níveis Fibonacci do último impulso
+  barcode:{on:true,lbl:'Barcode'},
+  dist:{on:true,   lbl:'Distância EMA'},
+  mom:{on:true,    lbl:'Momento D13/J37'},
+};
+var SUBOF={barcode:'pane-barcode',dist:'pane-dist',mom:'pane-mom'};
+
+var COL={ema:'#E8ECF1',dema:'#FF3DFF',tema:'#4A90D9',d13:'#E0C160',j37:'#4A90D9',
+         thr:'#5b7a99',atr:'#7d96b3',up:'#2ECC71',dn:'#E74C3C'};
+
+document.getElementById('topbar').innerHTML=HDS.topbar({brand:'HARPIAN',small:'· COCKPIT GESTOR',ctx:TICKER+' · CHART',user:'Diogo · gestor quant',clockId:'clk'});
+document.getElementById('navbar').innerHTML='<div class="hds-nav"><a href="index.html">Mission Control</a><a href="engine-room.html">Engine Room</a><a href="ativos.html">Ativos</a><a href="ticket.html">Tickets</a><a href="estrategias.html">Estratégias</a><a href="backtest.html">Backtest</a><a href="calibracao.html">Calibração</a><a href="protecao.html">Proteção</a><a href="indicadores.html">Indicadores</a><a href="reconciliacao.html">Reconciliação</a><a href="observador.html">Observador</a><a href="auditoria.html">Auditoria</a><a href="admin.html">Admin</a></div>';
+HDS.clock('clk');
+document.getElementById('tkr').textContent=TICKER;
+document.title='HARPIAN · '+TICKER;
+document.getElementById('tvlink').href='https://br.tradingview.com/chart/nNpCdTJZ/?symbol='+TICKER;
+
+// ---------- charts ----------
+var charts={}, series={}, priceLines=[], lastData=null, syncing=false;
+
+function baseOpts(el,showTime){
+  return {
+    width:el.clientWidth,height:el.clientHeight,
+    layout:{background:{type:'solid',color:'#0A1A30'},textColor:'#7d96b3',fontSize:11,fontFamily:'Segoe UI,system-ui,sans-serif'},
+    grid:{vertLines:{color:'#16304f'},horzLines:{color:'#13283f'}},
+    crosshair:{mode:LightweightCharts.CrosshairMode.Normal,vertLine:{color:'rgba(201,160,44,.4)',labelBackgroundColor:'#1d3a5f'},horzLine:{color:'rgba(201,160,44,.4)',labelBackgroundColor:'#1d3a5f'}},
+    rightPriceScale:{borderColor:'#1d3a5f'},
+    timeScale:{borderColor:'#1d3a5f',timeVisible:false,rightOffset:5,visible:!!showTime},
+    handleScroll:true,handleScale:true,
+  };
+}
+
+function initCharts(){
+  var m=document.getElementById('cv-main');
+  charts.main=LightweightCharts.createChart(m,baseOpts(m,false));
+  charts.main.priceScale('right').applyOptions({scaleMargins:{top:0.06,bottom:0.20}});
+  series.candle=charts.main.addCandlestickSeries({upColor:COL.up,downColor:COL.dn,borderUpColor:COL.up,borderDownColor:COL.dn,wickUpColor:COL.up,wickDownColor:COL.dn});
+  series.vol=charts.main.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'volume'});
+  charts.main.priceScale('volume').applyOptions({scaleMargins:{top:0.88,bottom:0}});
+  series.ema=charts.main.addLineSeries({color:COL.ema,lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
+  series.dema=charts.main.addLineSeries({color:COL.dema,lineWidth:2,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
+  series.tema=charts.main.addLineSeries({color:COL.tema,lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
+  charts.main.subscribeCrosshairMove(onCross);
+
+  var bc=document.getElementById('cv-barcode');
+  charts.barcode=LightweightCharts.createChart(bc,baseOpts(bc,false));
+  charts.barcode.priceScale('right').applyOptions({scaleMargins:{top:0.12,bottom:0.12}});
+  series.barcode=charts.barcode.addHistogramSeries({priceFormat:{type:'price',precision:0,minMove:1},base:0});
+
+  var ds=document.getElementById('cv-dist');
+  charts.dist=LightweightCharts.createChart(ds,baseOpts(ds,false));
+  charts.dist.priceScale('right').applyOptions({scaleMargins:{top:0.12,bottom:0.06}});
+  series.dist=charts.dist.addHistogramSeries({base:0,priceLineVisible:false,lastValueVisible:true});
+  series.tr=charts.dist.addLineSeries({color:'#5ec4e8',lineWidth:1,priceLineVisible:false,lastValueVisible:true,crosshairMarkerVisible:false});
+  series.thr=charts.dist.addLineSeries({color:COL.thr,lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:true,crosshairMarkerVisible:false});
+
+  var mo=document.getElementById('cv-mom');
+  charts.mom=LightweightCharts.createChart(mo,baseOpts(mo,true));
+  charts.mom.priceScale('right').applyOptions({scaleMargins:{top:0.12,bottom:0.12}});
+  series.zero=charts.mom.addLineSeries({color:'#1d3a5f',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
+  series.d13=charts.mom.addLineSeries({color:COL.d13,lineWidth:2,priceLineVisible:false,lastValueVisible:true,crosshairMarkerVisible:false});
+  series.j37=charts.mom.addLineSeries({color:COL.j37,lineWidth:2,lineStyle:0,priceLineVisible:false,lastValueVisible:true,crosshairMarkerVisible:false});
+
+  syncTime();
+  var ro=new ResizeObserver(function(){
+    Object.keys(charts).forEach(function(k){
+      var el=charts[k].chartElement?charts[k].chartElement():null;
+    });
+    resizeAll();
+  });
+  ro.observe(document.getElementById('stack'));
+}
+
+function resizeAll(){
+  var map={main:'cv-main',barcode:'cv-barcode',dist:'cv-dist',mom:'cv-mom'};
+  Object.keys(map).forEach(function(k){
+    var el=document.getElementById(map[k]);
+    if(el&&charts[k])charts[k].applyOptions({width:el.clientWidth,height:el.clientHeight});
+  });
+}
+
+function syncTime(){
+  var all=[charts.main,charts.barcode,charts.dist,charts.mom];
+  all.forEach(function(src){
+    src.timeScale().subscribeVisibleLogicalRangeChange(function(range){
+      if(syncing||!range)return; syncing=true;
+      all.forEach(function(dst){if(dst!==src)dst.timeScale().setVisibleLogicalRange(range);});
+      syncing=false;
+    });
+  });
+}
+
+function onCross(param){
+  var lg=document.getElementById('legend');
+  if(!param||!param.time||!param.seriesData){lg.innerHTML='';return;}
+  var d=param.seriesData.get(series.candle);
+  if(!d){lg.innerHTML='';return;}
+  var c=d.close>=d.open?COL.up:COL.dn;
+  var html='<div class="lg" style="color:'+c+'">O '+f(d.open)+'  H '+f(d.high)+'  L '+f(d.low)+'  C '+f(d.close)+'</div>';
+  if(STUDIES.trend.on){
+    var e=param.seriesData.get(series.ema),de=param.seriesData.get(series.dema),te=param.seriesData.get(series.tema);
+    if(e)html+='<div class="lg" style="color:'+COL.ema+'">EMA '+f(e.value)+'</div>';
+    if(de)html+='<div class="lg" style="color:'+COL.dema+'">DEMA '+f(de.value)+'</div>';
+    if(te)html+='<div class="lg" style="color:'+COL.tema+'">TEMA '+f(te.value)+'</div>';
+  }
+  lg.innerHTML=html;
+}
+function f(v){return v==null?'—':v.toFixed(2);}
+
+// ---------- render ----------
+function applyData(d){
+  lastData=d;
+  var S=d.studies||{};
+  var cd=d.candles.map(function(c,i){
+    var b={time:c.time,open:c.open,high:c.high,low:c.low,close:c.close};
+    if(STUDIES.barcolor.on&&S.bar_colors&&S.bar_colors[i]){b.color=S.bar_colors[i];b.borderColor=S.bar_colors[i];b.wickColor=S.bar_colors[i];}
+    return b;
+  });
+  series.candle.setData(cd);
+  series.vol.setData(d.candles.map(function(c){return{time:c.time,value:c.volume,color:c.close>=c.open?'rgba(46,204,113,.22)':'rgba(231,76,60,.22)'};}));
+
+  series.ema.setData(STUDIES.trend.on?S.ema:[]);
+  series.dema.setData(STUDIES.trend.on?S.dema:[]);
+  series.tema.setData(STUDIES.trend.on?S.tema:[]);
+
+  series.barcode.setData((S.barcode||[]).map(function(p){return{time:p.time,value:p.value,color:p.value>0?'rgba(46,204,113,.85)':(p.value<0?'rgba(231,76,60,.85)':'#3E5A7E')};}));
+
+  series.dist.setData((S.ema_dist&&S.ema_dist.dist||[]).map(function(p){return{time:p.time,value:p.value,color:p.color};}));
+  series.tr.setData(S.ema_dist&&S.ema_dist.true_range||[]);
+  series.thr.setData(S.ema_dist&&S.ema_dist.threshold||[]);
+  var dlast=(S.ema_dist&&S.ema_dist.dist||[]).slice(-1)[0];
+  var trlast=(S.ema_dist&&S.ema_dist.true_range||[]).slice(-1)[0];
+  var thrlast=(S.ema_dist&&S.ema_dist.threshold||[]).slice(-1)[0];
+  document.getElementById('dist-val').textContent=dlast?dlast.value.toFixed(2):'—';
+  document.getElementById('dist-tr').textContent=trlast?trlast.value.toFixed(2):'—';
+  document.getElementById('dist-thr').textContent=thrlast?thrlast.value.toFixed(2):'—';
+
+  var zero=(S.mom_d13||[]).map(function(p){return{time:p.time,value:0};});
+  series.zero.setData(zero);
+  series.d13.setData(STUDIES.mom.on?(S.mom_d13||[]):[]);
+  series.j37.setData(STUDIES.mom.on?(S.mom_j37||[]):[]);
+  var d13last=(S.mom_d13||[]).slice(-1)[0], j37last=(S.mom_j37||[]).slice(-1)[0];
+  document.getElementById('mom-d13').textContent=(d13last&&d13last.value!=null)?d13last.value.toFixed(2):'—';
+  document.getElementById('mom-j37').textContent=(j37last&&j37last.value!=null)?j37last.value.toFixed(2):'—';
+
+  drawLines(S);
+  charts.main.timeScale().fitContent();
+}
+
+function drawLines(S){
+  priceLines.forEach(function(pl){try{series.candle.removePriceLine(pl);}catch(e){}});
+  priceLines=[];
+  if(STUDIES.atr.on&&S.dyn_atr&&S.dyn_atr.levels){
+    var lbls=['0','1·ATR','1.5·ATR','2·ATR'];
+    S.dyn_atr.levels.forEach(function(lv,i){
+      priceLines.push(series.candle.createPriceLine({price:lv,color:'rgba(125,150,179,.55)',lineWidth:1,lineStyle:i===0?0:2,axisLabelVisible:true,title:'ATR '+lbls[i]}));
+    });
+  }
+  if(STUDIES.impulse.on&&S.impulses&&S.impulses.length){
+    var imp=S.impulses[S.impulses.length-1];var L=imp.levels;var up=imp.dir==='up';
+    var fib=[['0',L['0'],'#C9A02C'],['+100%',L.p100,up?COL.up:COL.dn],['+200%',L.p200,up?COL.up:COL.dn],['-100%',L.m100,'#E74C3C']];
+    fib.forEach(function(x){
+      priceLines.push(series.candle.createPriceLine({price:x[1],color:x[2],lineWidth:1,lineStyle:3,axisLabelVisible:true,title:'Fib '+x[0]}));
+    });
+  }
+}
+
+function renderStudyBtns(){
+  document.getElementById('studybtns').innerHTML=Object.keys(STUDIES).map(function(k){
+    return '<button class="'+(STUDIES[k].on?'on':'')+'" onclick="toggleStudy(\''+k+'\')">'+STUDIES[k].lbl+'</button>';
+  }).join('');
+}
+function toggleStudy(k){
+  STUDIES[k].on=!STUDIES[k].on;
+  renderStudyBtns();
+  if(k==='barcolor')renderColLegend();
+  if(SUBOF[k]){document.getElementById(SUBOF[k]).style.display=STUDIES[k].on?'':'none';resizeAll();}
+  if(lastData)applyData(lastData);
+}
+
+// legenda das cores das barras (DSPT_01 BarColor) — sem isso não dá pra ler o gráfico
+function renderColLegend(){
+  var items=[['#00E5FF','Compra (cruz.↑)'],['#FF3DFF','Venda (cruz.↓)'],['#2ECC71','FVG alta'],
+    ['#2E86FF','FVG alta · barra baixa'],['#E74C3C','FVG baixa'],['#C9A02C','FVG baixa · barra alta'],
+    ['#7FA8C9','Alta normal'],['#3E5A7E','Baixa normal']];
+  var el=document.getElementById('collegend');
+  el.innerHTML='<span style="color:var(--gold);font-weight:700;letter-spacing:.5px">COR DAS BARRAS</span>'
+    +items.map(function(x){return '<span class="ci"><span class="sw" style="background:'+x[0]+'"></span>'+x[1]+'</span>';}).join('');
+  el.style.display=STUDIES.barcolor.on?'flex':'none';
+}
+
+// posição do ativo na casa + ação recomendada (do ticket pendente)
+function loadPosition(){
+  fetch(API+'/v1/assets/position/'+TICKER,{headers:HEAD})
+  .then(function(r){return r.json();})
+  .then(function(p){
+    var el=document.getElementById('chpos'); if(!el)return;
+    var cls={AUMENTAR:'buy',COMPRAR:'buy',REDUZIR:'red',ZERAR:'zero',TROCAR:'zero',MANTER:'hold',FORA:'out'}[p.action]||'hold';
+    var alloc=p.has_position
+      ? '<b>'+p.total_weight_pct+'%</b> · US$ '+HDS.nfmt(p.total_value_usd)+(p.holdings[0]?' · '+p.holdings[0].portfolio:'')
+      : '<b>sem posição</b>';
+    el.innerHTML='Alocado: '+alloc+' <span class="ch-act '+cls+'">'+p.action+'</span>';
+  }).catch(function(){});
+}
+
+function renderRanges(){
+  document.getElementById('ranges').innerHTML=RANGES.map(function(r){
+    return '<button class="'+(r===RANGE?'on':'')+'" onclick="setRange(\''+r+'\')">'+r.toUpperCase()+'</button>';
+  }).join('');
+}
+function setRange(r){RANGE=r;renderRanges();loadChart();}
+
+function loadChart(){
+  fetch(API+'/v1/market/chart/'+TICKER+'?rng='+RANGE,{headers:HEAD})
+  .then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+  .then(function(d){
+    if(!d.ok||!d.candles.length){document.getElementById('meta').textContent='Sem dados para '+TICKER;return;}
+    document.getElementById('tname').textContent=d.name||TICKER;
+    var last=d.candles[d.candles.length-1];
+    var prev=d.candles.length>1?d.candles[d.candles.length-2].close:last.open;
+    var chg=last.close-prev, pct=chg/prev*100;
+    document.getElementById('tprice').textContent='$'+last.close.toFixed(2);
+    var pe=document.getElementById('tpct');
+    pe.textContent=(chg>=0?'+':'')+chg.toFixed(2)+' ('+(pct>=0?'+':'')+pct.toFixed(2)+'%)';
+    pe.className='ch-pct '+(chg>=0?'up':'dn');
+    applyData(d);
+    var m=d.meta||{},S=d.studies||{};
+    var imp=(S.impulses||[]).length;
+    document.getElementById('meta').innerHTML=
+      '<span>Barras: <b>'+m.bars+'</b></span>'+
+      '<span>EMA/DEMA/TEMA: <b>α=1/13 cascata (Diogo)</b></span>'+
+      '<span>Impulsos: <b>'+imp+'</b></span>'+
+      '<span>Momento: <b>D13</b> + <b>J37</b></span>'+
+      '<span>Fonte: <b>Yahoo EOD</b></span>'+
+      '<span class="ch-src">estudos DSPT computados local · sem TradingView</span>';
+  })
+  .catch(function(e){document.getElementById('meta').textContent='Erro: '+e.message;});
+}
+
+function settle(){resizeAll();try{charts.main.timeScale().fitContent();}catch(e){}}
+initCharts();
+renderStudyBtns();
+renderColLegend();
+renderRanges();
+loadChart();
+loadPosition();
+window.addEventListener('resize',resizeAll);
+window.addEventListener('load',function(){settle();setTimeout(settle,120);setTimeout(settle,400);});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(settle,60);});
+</script>
+</body></html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harpian Design System · style guide</title>
+<link rel="stylesheet" href="harpian-ds.css">
+</head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="hds-wrap">
+  <div class="hds-h1">Harpian Design System · v1</div>
+  <div class="hds-sub">Fonte única de verdade visual (engine-room). Os 3 front-ends — Cockpit Gestor · Terminal MFO · Vitrine — usam estes mesmos tokens e componentes.</div>
+
+  <div class="hds-card mb"><h2><span>Cores · semáforo</span></h2>
+    <div class="flex wrap" style="gap:10px">
+      <span class="hds-statechip g">RISK-ON</span><span class="hds-statechip a">WARNING</span>
+      <span class="hds-statechip r">RISK-OFF</span><span class="hds-statechip b">CÉU ABERTO</span>
+      <span class="hds-tag g">aprovado</span><span class="hds-tag a">vigiar</span><span class="hds-tag r">reprovado</span><span class="hds-tag b">info</span>
+      <span class="hds-side buy">COMPRAR</span><span class="hds-side sell">VENDER</span>
+    </div>
+  </div>
+
+  <div class="hds-grid hds-g4 mb" id="kpis"></div>
+
+  <div class="hds-grid hds-g2 mb">
+    <div class="hds-card"><h2><span>Medidor de regime · 4 estados</span></h2><div id="gauge"></div></div>
+    <div class="hds-card"><h2><span>Réguas-agulha · distância ao gatilho</span></h2><div id="bullets"></div></div>
+  </div>
+
+  <div class="hds-grid hds-g2 mb">
+    <div class="hds-card"><h2><span>KV · rótulo → valor</span></h2>
+      <div class="hds-kv"><span class="c-mut">NAV</span><span class="v">$ 22,10</span></div>
+      <div class="hds-kv"><span class="c-mut">Dia</span><span class="v c-g">+2,31%</span></div>
+      <div class="hds-kv"><span class="c-mut">Risk Number</span><span class="v c-a">38</span></div>
+    </div>
+    <div class="hds-card"><h2><span>Botões &amp; form</span></h2>
+      <div class="flex wrap" style="gap:8px;margin-bottom:10px"><button class="hds-btn">Primário</button><button class="hds-btn ghost">Secundário</button></div>
+      <input class="hds-input" placeholder="campo de texto" style="width:100%">
+    </div>
+  </div>
+
+  <div class="hds-card mb"><h2><span>Tabela</span></h2>
+    <table><thead><tr><th>Ativo</th><th>Lado</th><th style="text-align:right">Valor</th><th>Status</th></tr></thead><tbody>
+      <tr><td class="tk">NVDA</td><td><span class="hds-side buy">COMPRAR</span></td><td style="text-align:right">US$ 142k</td><td><span class="hds-tag a">pendente</span></td></tr>
+      <tr><td class="tk">XOM</td><td><span class="hds-side sell">VENDER</span></td><td style="text-align:right">US$ 263k</td><td><span class="hds-tag b">enviado</span></td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="hds-foot">harpian-ds · v1 · engine-room navy/gold · Segoe UI · use <code>harpian-ds.css</code> + <code>harpian-ds.js</code> (window.HDS) nos 3 front-ends.</div>
+</div>
+<script src="harpian-ds.js"></script>
+<script>
+document.getElementById('topbar').innerHTML = HDS.topbar({brand:'HARPIAN', small:'· DESIGN SYSTEM', ctx:'STYLE GUIDE', state:{text:'v1', sem:'g'}, user:'JD', clockId:'clk'});
+document.getElementById('navbar').innerHTML = HDS.nav([{id:'tokens',label:'Tokens',on:true},{id:'comp',label:'Componentes'},{id:'uso',label:'Como usar'}],'noop');
+function noop(){}
+HDS.clock('clk');
+document.getElementById('kpis').innerHTML =
+  HDS.kpi('Total alocado','US$ 84,2M','3 portfólios') +
+  HDS.kpi('Mudanças hoje','12','7 entradas · 5 saídas','c-a') +
+  HDS.kpi('Tickets pendentes','8','3 enviados IBKR','c-b') +
+  HDS.kpi('Regime global','RISK-ON','','c-g');
+document.getElementById('gauge').innerHTML = HDS.regimeGauge('RISK-ON','exposição de ataque: 96%');
+document.getElementById('bullets').innerHTML =
+  HDS.bullet('Inovação · SOXX','temp 0,448 / lim 0,45',55,'folga',HDS.COLORS.green) +
+  HDS.bullet('Líderes · QQQ','temp 0,554 / lim 0,40',45,'gatilho',HDS.COLORS.amber) +
+  HDS.bullet('Navegador · SPY','temp 0,403 / lim 0,45',60,'folga',HDS.COLORS.green);
+</script>
+</body></html>

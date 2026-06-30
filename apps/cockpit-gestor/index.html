@@ -1,0 +1,97 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HARPIAN · Cockpit Gestor</title>
+<link rel="stylesheet" href="../../design-system/harpian-ds.css?v=2">
+</head>
+<body class="hds">
+<div id="topbar"></div>
+<div id="navbar"></div>
+<div class="hds-wrap">
+  <div class="flex between mb">
+    <div><div class="hds-h1">Mission Control</div><div class="hds-sub">Estado ao vivo dos portfólios, mudanças do dia e tickets — direto da API <code>/v1</code>.</div></div>
+    <div id="conn" class="hds-tag b">conectando…</div>
+  </div>
+  <div class="hds-grid hds-g4 mb" id="kpis"></div>
+  <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--gold);margin:4px 0 10px">Portfólios</div>
+  <div class="hds-grid hds-g3 mb" id="ports"></div>
+  <div class="hds-grid hds-g2 mb">
+    <div class="hds-card"><h2><span>Tickets do dia · a executar</span></h2>
+      <table><thead><tr><th>Ativo</th><th>Lado</th><th>Portfólio</th><th style="text-align:right">Valor</th><th>Status</th></tr></thead><tbody id="tickets"></tbody></table>
+    </div>
+    <div class="hds-card"><h2><span>Mercado · ao vivo</span><span id="mkt-src" class="hds-tag b">Yahoo · EOD/last</span></h2>
+      <table><thead><tr><th>Ticker</th><th>Nome</th><th style="text-align:right">Último</th><th style="text-align:right">Dia</th></tr></thead><tbody id="market"></tbody></table>
+    </div>
+  </div>
+  <div class="hds-foot">Cockpit Gestor · v1 · consome a HQP API (/v1). Design system compartilhado (harpian-ds). Dados via mock adapters até plugar os motores.</div>
+</div>
+<script src="mock-api.js"></script>
+<script src="../../design-system/harpian-ds.js?v=2"></script>
+<script>
+var API = (location.search.match(/api=([^&]+)/)||[])[1] || 'http://localhost:8080';
+var HEAD = {'X-User-Role':'socio_gestor','X-User-Name':'João Daniel'};
+
+document.getElementById('topbar').innerHTML = HDS.topbar({brand:'HARPIAN', small:'· COCKPIT GESTOR', ctx:'MISSION CONTROL', user:'JD · sócio-gestor', clockId:'clk'});
+document.getElementById('navbar').innerHTML = '<div class="hds-nav">'
+  + '<span class="on">Mission Control</span>'
+  + '<a href="engine-room.html">Engine Room</a>'
+  + '<a href="ativos.html">Ativos</a>'
+  + '<a href="ticket.html">Tickets</a>'
+  + '<a href="estrategias.html">Estratégias</a>'
+  + '<a href="backtest.html">Backtest</a>'
+  + '<a href="calibracao.html">Calibração</a>'
+  + '<a href="protecao.html">Proteção</a>'
+  + '<a href="indicadores.html">Indicadores</a>'
+  + '<a href="reconciliacao.html">Reconciliação</a>'
+  + '<a href="observador.html">Observador</a>'
+  + '<a href="auditoria.html">Auditoria</a>'
+  + '<a href="admin.html">Admin</a></div>';
+function noop(){}
+HDS.clock('clk');
+
+function fmtUSD(n){ return 'US$ ' + (n/1e6).toFixed(1).replace('.',',') + 'M'; }
+function sem(regime){ return regime==='RISK-ON'?'g':regime==='WARNING'?'a':regime==='RISK-OFF'?'r':'b'; }
+
+fetch(API + '/v1/dashboard', {headers: HEAD})
+ .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+ .then(function(d){
+   document.getElementById('conn').className='hds-tag g';
+   document.getElementById('conn').textContent='● API ao vivo';
+   var R=d.resumo;
+   document.getElementById('kpis').innerHTML =
+     HDS.kpi('Total alocado', fmtUSD(R.total_alocado_usd), d.portfolios.length+' portfólios') +
+     HDS.kpi('Mudanças hoje', R.mudancas_hoje, '', 'c-a') +
+     HDS.kpi('Tickets pendentes', R.tickets_pendentes, '', 'c-b') +
+     HDS.kpi('Regime global', R.regime_global, '', 'c-g');
+   document.getElementById('ports').innerHTML = d.portfolios.map(function(p){
+     return '<div class="hds-card clickable"><div class="flex between" style="margin-bottom:10px"><div><b style="font-size:16px">'+p.nome+'</b><div class="c-mut" style="font-size:11px">'+p.descricao+'</div></div>'+HDS.stateChip(p.regime, sem(p.regime))+'</div>'
+       +'<div class="hds-kv"><span class="c-mut">Alocado</span><span class="v">'+fmtUSD(p.alocado_usd)+'</span></div>'
+       +'<div class="hds-kv"><span class="c-mut">Mudanças hoje</span><span class="v"><span class="c-g">▲'+p.mudancas_entradas+'</span> <span class="c-r">▼'+p.mudancas_saidas+'</span></span></div>'
+       +'<div class="hds-kv"><span class="c-mut">Exposição</span><span class="v">'+p.exposicao_pct+'%</span></div>'
+       +'<div class="hds-kv"><span class="c-mut">DD do mês</span><span class="v c-r">'+p.dd_mes_pct.toFixed(1).replace('.',',')+'%</span></div>'
+       +'<div class="hds-kv"><span class="c-mut">Risk Number</span><span class="v c-'+sem(p.regime)+'">'+p.risk_number+'</span></div></div>';
+   }).join('');
+   document.getElementById('tickets').innerHTML = d.tickets.map(function(t){
+     var nome={HPC11:'HPC11',HPC22:'HPC22',HCUST:'HC-US TOTAL'}[t.portfolio_id]||t.portfolio_id;
+     return '<tr><td class="tk"><a class="tk-link" href="chart.html?ticker='+t.ticker+'" title="Abrir gráfico">'+t.ticker+'</a></td><td><span class="hds-side '+t.side+'">'+(t.side==='buy'?'COMPRAR':'VENDER')+'</span></td><td>'+nome+'</td><td style="text-align:right">US$ '+(t.valor_usd/1000)+'k</td><td>'+HDS.tag(t.status, t.status==='enviado'?'b':'a')+'</td></tr>';
+   }).join('');
+ })
+ .catch(function(e){
+   document.getElementById('conn').className='hds-tag r';
+   document.getElementById('conn').textContent='✕ API offline ('+e.message+')';
+   document.getElementById('kpis').innerHTML='<div class="hds-ph" style="grid-column:1/-1"><b>API não respondeu</b>Suba a API: <code>uvicorn app.main:app --port 8080</code></div>';
+ });
+
+// Cotações REAIS (Yahoo via /v1/market)
+fetch(API + '/v1/market/quotes', {headers: HEAD})
+ .then(function(r){ return r.json(); })
+ .then(function(d){
+   document.getElementById('market').innerHTML = d.quotes.map(function(q){
+     if(!q.ok) return '<tr><td class="tk"><a class="tk-link" href="chart.html?ticker='+q.ticker+'" title="Abrir gráfico">'+q.ticker+'</a></td><td class="c-mut2" colspan="3">indisponível</td></tr>';
+     var dc = q.day_pct>=0 ? 'c-g' : 'c-r';
+     var sign = q.day_pct>=0 ? '+' : '';
+     return '<tr><td class="tk"><a class="tk-link" href="chart.html?ticker='+q.ticker+'" title="Abrir gráfico">'+q.ticker+'</a></td><td class="c-mut" style="font-size:11px">'+(q.name||'').slice(0,20)+'</td><td style="text-align:right">'+(q.last!=null?q.last.toLocaleString('pt-BR'):'—')+'</td><td style="text-align:right" class="'+dc+'">'+sign+(q.day_pct!=null?q.day_pct.toFixed(2).replace('.',','):'—')+'%</td></tr>';
+   }).join('');
+ })
+ .catch(function(){ document.getElementById('mkt-src').className='hds-tag r'; document.getElementById('mkt-src').textContent='mercado offline'; });
+</script>
+</body></html>

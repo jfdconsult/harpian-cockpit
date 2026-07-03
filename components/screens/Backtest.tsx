@@ -1,0 +1,277 @@
+"use client";
+import { useEffect, useState } from "react";
+import { apiGet, apiPost } from "@/lib/api";
+
+interface WindowMetrics { cagr?: number; sortino?: number; calmar?: number; max_dd?: number; risk_num?: number }
+interface Score { passed: number; total: number; pct: number | null }
+interface Motor { id: string; nome: string; status: string; versao?: string }
+interface Run {
+  id: string; alvo: string; motor_id?: string | null; estrategia: string; metodo: string; periodo: string;
+  custos_bps: number; rebalance: string; status: string; grade: string | null; ts: string;
+  engine?: string; engine_label?: string;
+  score?: Score | null; flag?: string | null; flag_nivel?: string | null;
+  reprovacoes?: string[]; aprovado_total?: boolean;
+  metricas?: { oos?: WindowMetrics; cheio?: WindowMetrics };
+  red_flags?: string[]; annual_returns?: Record<string, number>;
+  arena_run_name?: string | null; arena_verdict?: string | null;
+  homologacao_producao?: (WindowMetrics & { grade?: string; nota?: string }) | null;
+  eta_sec?: number; name?: string; date?: string;
+}
+
+type Engine = "delorean_local" | "modal" | "arena";
+const ENGINE_META: Record<Engine, { label: string; sub: string; live: boolean }> = {
+  delorean_local: { label: "DeLorean (local)", sub: "backtest real no backend · walk-forward PIT", live: true },
+  modal: { label: "Modal", sub: "backtest inicial · cloud (pendente)", live: false },
+  arena: { label: "Arena", sub: "homologação · 8 gates", live: true },
+};
+
+function gradeCls(g: string | null) { return g === "A" ? "A" : g === "B" ? "B" : g === "F" ? "F" : "rodando"; }
+
+// cor do flag por nível de aprovação — a nota SEMPRE acompanha o motor
+function flagStyle(nivel?: string | null): React.CSSProperties {
+  if (nivel === "aprovado") return { color: "#2ECC71", border: "1px solid #2ECC71", background: "var(--green-bg)" };
+  if (nivel === "com_reprovacoes") return { color: "#F39C12", border: "1px solid #F39C12", background: "var(--gold-bg)" };
+  if (nivel === "sem_homologacao") return { color: "var(--red-text)", border: "1px solid var(--red-text)", background: "var(--red-bg)" };
+  return { color: "var(--tx3)", border: "1px solid var(--line)", background: "transparent" }; // pendente
+}
+
+function ScoreBadge({ score }: { score?: Score | null }) {
+  if (!score || score.total === 0) return <span style={{ fontSize: 12, color: "var(--red-text)" }}>sem placar</span>;
+  const col = score.pct === 100 ? "#2ECC71" : (score.pct ?? 0) >= 62 ? "#F39C12" : "var(--red-text)";
+  return (
+    <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 20, color: col }}>
+      {score.passed}/{score.total}
+      <span style={{ fontSize: 11, marginLeft: 6, color: "var(--tx3)" }}>{score.pct}% dos gates</span>
+    </span>
+  );
+}
+
+function BarsSVG({ annualReturns }: { annualReturns?: Record<string, number> }) {
+  const ann = Object.entries(annualReturns || {}).map(([year, ret]) => ({ year, ret })).sort((a, b) => a.year.localeCompare(b.year));
+  if (!ann.length) return <div className="c-mut2" style={{ padding: 20, textAlign: "center", fontSize: 11 }}>sem dados anuais</div>;
+  const W = 440, H = 160, pad = 20, barGap = 2;
+  const mx = Math.max(...ann.map((a) => Math.abs(a.ret))) || 1;
+  const barW = (W - 2 * pad) / ann.length - barGap;
+  const zero = pad + (H - 2 * pad) * 0.5;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }}>
+      <line x1={pad} x2={W - pad} y1={zero} y2={zero} stroke="var(--line)" strokeWidth={1} />
+      {ann.map((a, i) => {
+        const bx = pad + i * (barW + barGap);
+        const bh = (Math.abs(a.ret) / mx) * ((H - 2 * pad) * 0.45);
+        const by = a.ret >= 0 ? zero - bh : zero;
+        const col = a.ret >= 0 ? "var(--green)" : "var(--red)";
+        return <g key={a.year}><rect x={bx} y={by} width={barW} height={bh} fill={col} rx={2} opacity={0.85} />{ann.length <= 20 && <text x={bx + barW / 2} y={H - 2} fill="var(--tx3)" fontSize={7} textAnchor="middle">{a.year}</text>}</g>;
+      })}
+    </svg>
+  );
+}
+
+export default function Backtest() {
+  const [runs, setRuns] = useState<Run[]>([]);
+  const [motores, setMotores] = useState<Motor[]>([]);
+  const [sel, setSel] = useState<number | null>(null);
+  const [conn, setConn] = useState<"loading" | "ok" | "error">("loading");
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [motorId, setMotorId] = useState("hc_us_31");
+  const [engine, setEngine] = useState<Engine>("arena");
+  const [period, setPeriod] = useState<"5y" | "10y" | "full">("full");
+  const [custos, setCustos] = useState(15);
+  const [submitting, setSubmitting] = useState(false);
+
+  function loadRuns() {
+    apiGet<{ runs: Run[] }>("/v1/backtest/runs").then((d) => { setRuns(d.runs || []); setConn("ok"); }).catch(() => setConn("error"));
+  }
+  useEffect(loadRuns, []);
+  useEffect(() => { apiGet<{ motores: Motor[] }>("/v1/registry/motores").then((d) => setMotores(d.motores || [])).catch(() => {}); }, []);
+  useEffect(() => { if (!toastMsg) return; const t = setTimeout(() => setToastMsg(null), 3200); return () => clearTimeout(t); }, [toastMsg]);
+
+  function pollRun(runId: string, tries = 0) {
+    if (tries > 20) return;
+    setTimeout(() => {
+      apiGet<{ runs: Run[] }>("/v1/backtest/runs").then((d) => {
+        const fresh = d.runs || [];
+        setRuns((prev) => prev.map((x) => fresh.find((f) => f.id === x.id) || x));
+        const rr = fresh.find((f) => f.id === runId);
+        if (rr && (rr.status === "rodando" || rr.status === "running")) pollRun(runId, tries + 1);
+        else if (rr) setToastMsg(rr.flag ? `${rr.id}: ${rr.flag}` : `${rr.id} concluído`);
+      }).catch(() => pollRun(runId, tries + 1));
+    }, 2000);
+  }
+
+  function submitBt() {
+    if (submitting) return;
+    const custosSafe = Number.isFinite(custos) && custos > 0 ? custos : 15;
+    if (custosSafe !== custos) setCustos(custosSafe);
+    setSubmitting(true);
+    const periodoMap = { "5y": "2021-2026", "10y": "2016-2026", full: "2007-2026" };
+    const motor = motores.find((m) => m.id === motorId);
+    apiPost<{ ok: boolean; run: Run }>("/v1/backtest/submit", {
+      engine, motor_id: motorId, alvo: motorId, estrategia: motor?.nome || motorId,
+      periodo: periodoMap[period], custos_bps: custosSafe, rebalance: "mensal + defesa diária",
+    })
+      .then((d) => {
+        setToastMsg(engine === "arena" ? "Homologando na Arena…" : `Rodando (${ENGINE_META[engine].label})…`);
+        setRuns((prev) => [{ ...d.run, name: `${motor?.nome || motorId} · ${ENGINE_META[engine].label}`, date: "agora" }, ...prev]);
+        setSel(0);
+        pollRun(d.run.id);
+      })
+      .catch((e) => setToastMsg("Erro: " + e.message))
+      .finally(() => setSubmitting(false));
+  }
+
+  const r = sel != null ? runs[sel] : null;
+
+  return (
+    <div className="screen">
+      <div className="flex between mb">
+        <div><div className="h1">Backtest Lab</div><div className="sub">Backtest inicial (DeLorean local ou Modal) → homologação na Arena. Todo motor carrega um placar (SCORE) e um flag.</div></div>
+        <div className={`tag ${conn === "ok" ? "b" : conn === "error" ? "r" : "b"}`}>{conn === "loading" ? "conectando…" : conn === "ok" ? "API ao vivo" : "API offline"}</div>
+      </div>
+
+      <div className="lay">
+        <div className="side">
+          <div className="card">
+            <h2><span>Configurar backtest</span></h2>
+            <div className="fg">
+              <label>Motor</label>
+              <select className="input" value={motorId} onChange={(e) => setMotorId(e.target.value)}>
+                {motores.map((m) => <option key={m.id} value={m.id}>{m.nome}{m.status !== "homologado" ? ` · ${m.status}` : ""}</option>)}
+              </select>
+            </div>
+            <div className="fg">
+              <label>Engine — onde rodar</label>
+              <div className="btchips" style={{ flexWrap: "wrap" }}>
+                {(Object.keys(ENGINE_META) as Engine[]).map((e) => (
+                  <span key={e} className={`btchip${engine === e ? " on" : ""}`} onClick={() => setEngine(e)}
+                    title={ENGINE_META[e].sub} style={{ position: "relative" }}>
+                    {ENGINE_META[e].label}
+                    {!ENGINE_META[e].live && <i className="ti ti-plug-connected-x" style={{ fontSize: 10, marginLeft: 4, color: "var(--tx3)" }} />}
+                  </span>
+                ))}
+              </div>
+              <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 4 }}>
+                {engine === "arena" ? "Arena ao vivo · homologação real (8 gates)"
+                  : engine === "delorean_local" ? "Backtest real no backend · dual-momentum no universo do motor (2 janelas)"
+                  : `${ENGINE_META[engine].label}: engine ainda não conectado ao backend`}
+              </div>
+            </div>
+            <div className="fg">
+              <label>Período</label>
+              <div className="btchips">
+                <span className={`btchip${period === "5y" ? " on" : ""}`} onClick={() => setPeriod("5y")}>5 anos</span>
+                <span className={`btchip${period === "10y" ? " on" : ""}`} onClick={() => setPeriod("10y")}>10 anos</span>
+                <span className={`btchip${period === "full" ? " on" : ""}`} onClick={() => setPeriod("full")}>Desde 2007</span>
+              </div>
+            </div>
+            <div className="fg"><label>Custos (bps)</label><input className="input" type="number" value={custos} onChange={(e) => setCustos(parseInt(e.target.value) || 15)} /></div>
+            <button className="btn-cyan" onClick={submitBt} disabled={submitting}>
+              {submitting ? <><i className="ti ti-loader-2 spin" style={{ marginRight: 6 }} />Enviando…</> : <><i className="ti ti-player-play" style={{ marginRight: 6 }} />{engine === "arena" ? "Homologar na Arena" : `Rodar (${ENGINE_META[engine].label})`}</>}
+            </button>
+          </div>
+
+          <div className="card">
+            <h2><span>Runs recentes</span></h2>
+            <div className="runs">
+              {conn === "loading" && <div className="c-mut2" style={{ padding: 16, textAlign: "center", fontSize: 12 }}>carregando…</div>}
+              {conn === "error" && <div className="c-mut2" style={{ padding: 16, textAlign: "center", fontSize: 12 }}>API não respondeu</div>}
+              {conn === "ok" && runs.length === 0 && <div className="c-mut2" style={{ padding: 16, textAlign: "center", fontSize: 12 }}>nenhum run registrado</div>}
+              {runs.map((run, i) => (
+                <div key={run.id + i} className={`run-item${sel === i ? " sel" : ""}`} onClick={() => setSel(i)}>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{run.name || `${run.estrategia}`}</div>
+                    <div className="c-mut2" style={{ fontSize: 10 }}>{run.engine_label || run.engine || ""} · {run.date || run.ts || ""}</div>
+                  </div>
+                  {run.score && run.score.total > 0
+                    ? <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 13, color: run.score.pct === 100 ? "#2ECC71" : (run.score.pct ?? 0) >= 62 ? "#F39C12" : "var(--red-text)" }}>{run.score.passed}/{run.score.total}</span>
+                    : <span className={`grade ${gradeCls(run.grade)}`}>{run.status === "rodando" ? "…" : run.grade || "—"}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          {!r ? (
+            <div className="ph" style={{ padding: 40 }}><b>Nenhum backtest selecionado</b>Selecione um run à esquerda ou submeta um novo.</div>
+          ) : r.status === "rodando" || r.status === "running" ? (
+            <div className="card">
+              <h2><span>{r.name || r.estrategia}</span><span className="tag a">rodando…</span></h2>
+              <div style={{ textAlign: "center", padding: 30, color: "var(--orange)", fontSize: 14 }}>
+                <i className="ti ti-loader-2 spin" style={{ fontSize: 18, verticalAlign: "middle", marginRight: 8 }} />
+                {r.engine === "arena" ? "Homologando na Arena ao vivo…" : `Rodando (${r.engine_label})…`}<br />
+                <span className="c-mut2" style={{ fontSize: 11 }}>ETA ~{r.eta_sec ?? 10}s{r.engine === "arena" ? " (Arena scale-to-zero pode cold-startar)" : ""}</span>
+              </div>
+            </div>
+          ) : r.status === "pendente_integracao" ? (
+            <div className="card">
+              <h2><span>{r.name || r.estrategia}</span><span className="tag" style={{ color: "var(--tx3)" }}>pendente</span></h2>
+              <div style={{ padding: 20, fontSize: 13, color: "var(--tx2)" }}>
+                <div style={{ ...flagStyle("pendente"), padding: "8px 12px", borderRadius: 4, marginBottom: 10, fontWeight: 600 }}>
+                  <i className="ti ti-plug-connected-x" style={{ marginRight: 6 }} />{r.flag}
+                </div>
+                {r.red_flags?.[0] || "Este engine não roda a partir do backend ainda. Use Arena para a homologação real."}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="card mb">
+                <h2><span>Placar de homologação · {r.engine_label || r.engine}</span>
+                  {r.arena_verdict && <span className="tag" style={{ color: r.arena_verdict === "ACCEPTED" ? "var(--green)" : "var(--red-text)" }}>Arena: {r.arena_verdict}</span>}
+                </h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
+                  <ScoreBadge score={r.score} />
+                  {r.grade && <div className={`grade-big ${gradeCls(r.grade)}`} style={{ margin: 0 }}>GRADE {r.grade}</div>}
+                </div>
+                {/* FLAG — sempre acompanha o motor, mesmo aprovado, mesmo com reprovações */}
+                {r.flag && (
+                  <div style={{ ...flagStyle(r.flag_nivel), padding: "8px 12px", borderRadius: 4, fontSize: 12, fontWeight: 600, marginBottom: 10 }}>
+                    <i className={`ti ${r.aprovado_total ? "ti-circle-check" : r.flag_nivel === "sem_homologacao" ? "ti-alert-triangle" : "ti-flag"}`} style={{ marginRight: 6 }} />{r.flag}
+                    {!r.aprovado_total && r.flag_nivel === "com_reprovacoes" && (
+                      <div style={{ marginTop: 4, fontWeight: 400, color: "var(--tx3)" }}>O gestor pode usar o motor mesmo assim — o flag e a nota acompanham a decisão.</div>
+                    )}
+                  </div>
+                )}
+                {r.arena_run_name && <div className="c-mut2" style={{ fontSize: 11, marginBottom: 8 }}>run Arena: <span style={{ fontFamily: "monospace" }}>{r.arena_run_name}</span></div>}
+
+                <table className="mtable">
+                  <thead><tr><th>Janela</th><th>CAGR</th><th>Sortino</th><th>Calmar</th><th>MaxDD</th></tr></thead>
+                  <tbody>
+                    <tr className="oos">
+                      <td style={{ fontWeight: 700, color: "var(--cyan)" }}>OOS · holdout</td>
+                      <td>{r.metricas?.oos?.cagr ?? "—"}%</td><td>{r.metricas?.oos?.sortino ?? "—"}</td><td>{r.metricas?.oos?.calmar ?? "—"}</td><td style={{ color: "var(--red)" }}>{r.metricas?.oos?.max_dd ?? "—"}%</td>
+                    </tr>
+                    <tr>
+                      <td style={{ fontWeight: 700 }}>In-sample</td>
+                      <td>{r.metricas?.cheio?.cagr ?? "—"}%</td><td>{r.metricas?.cheio?.sortino ?? "—"}</td><td>{r.metricas?.cheio?.calmar ?? "—"}</td><td style={{ color: "var(--red)" }}>{r.metricas?.cheio?.max_dd ?? "—"}%</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {r.homologacao_producao && r.homologacao_producao.cagr != null && (
+                  <div style={{ marginTop: 10, padding: 10, border: "1px solid var(--gold)", background: "var(--gold-bg)", borderRadius: 4, fontSize: 12 }}>
+                    <div style={{ color: "var(--gold)", fontWeight: 600, marginBottom: 4 }}>REFERÊNCIA DE PRODUÇÃO (DeLorean · config real do motor)</div>
+                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                      <span>CAGR <b>{r.homologacao_producao.cagr}%</b></span><span>Sortino <b>{r.homologacao_producao.sortino ?? "—"}</b></span>
+                      <span>Calmar <b>{r.homologacao_producao.calmar ?? "—"}</b></span><span>MaxDD <b>{r.homologacao_producao.max_dd ?? "—"}%</b></span><span>Grade <b>{r.homologacao_producao.grade ?? "—"}</b></span>
+                    </div>
+                    <div style={{ marginTop: 4, color: "var(--tx3)", fontSize: 11 }}>{r.homologacao_producao.nota || "Difere do backtest acima (config diferente). Ambos reais."}</div>
+                  </div>
+                )}
+
+                {r.red_flags && r.red_flags.length > 0 && (
+                  <div className="rf" style={{ marginTop: 10 }}><b>RED FLAGS</b><ul style={{ margin: "6px 0 0 16px" }}>{r.red_flags.map((f) => <li key={f}>{f}</li>)}</ul></div>
+                )}
+              </div>
+
+              <div className="charts"><div className="chart-box"><h3>Retornos Anuais</h3><BarsSVG annualReturns={r.annual_returns} /></div></div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="foot">Backtest Lab · engine escolhível (DeLorean local / Modal / Arena) · SCORE X/Y gates · o flag e a nota sempre acompanham o motor.</div>
+      <div className={`bt-toast${toastMsg ? " show" : ""}`}>{toastMsg}</div>
+    </div>
+  );
+}

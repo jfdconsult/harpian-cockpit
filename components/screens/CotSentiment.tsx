@@ -321,50 +321,43 @@ export default function CotSentiment() {
         </div>
       )}
 
-      {/* Summary strip */}
-      <div className="grid g4 mt" style={{ marginBottom: 10 }}>
-        <div className="card" style={{ textAlign: "center" }}>
-          <div className="muted" style={{ fontSize: 10 }}>COT Index Médio</div>
-          <div className="big" style={{ color: cotSignal(avgIdx).color, fontSize: 28 }}>{avgIdx}</div>
+      {/* Summary strip — faixa compacta de uma linha (KPIs + sinais contrários juntos) */}
+      <div className="card" style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "8px 14px", marginTop: 10, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+          <span className="muted" style={{ fontSize: 10 }}>COT Índice Médio</span>
+          <span style={{ fontSize: 19, fontWeight: 700, fontFamily: "var(--mono)", color: cotSignal(avgIdx).color }}>{avgIdx}</span>
         </div>
-        <div className="card" style={{ textAlign: "center" }}>
-          <div className="muted" style={{ fontSize: 10 }}>Mercados Monitorados</div>
-          <div className="big" style={{ fontSize: 28 }}>{data.length}</div>
+        <div style={{ width: 1, height: 18, background: "var(--line)" }} />
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+          <span className="muted" style={{ fontSize: 10 }}>Mercados</span>
+          <span style={{ fontSize: 19, fontWeight: 700, fontFamily: "var(--mono)" }}>{data.length}</span>
         </div>
-        <div className="card" style={{ textAlign: "center" }}>
-          <div className="muted" style={{ fontSize: 10 }}>Extremos Ativos</div>
-          <div className="big" style={{ color: extremes.length ? "var(--orange)" : "var(--green)", fontSize: 28 }}>{extremes.length}</div>
+        <div style={{ width: 1, height: 18, background: "var(--line)" }} />
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+          <span className="muted" style={{ fontSize: 10 }}>Extremos ativos</span>
+          <span style={{ fontSize: 19, fontWeight: 700, fontFamily: "var(--mono)", color: extremes.length ? "var(--orange)" : "var(--green)" }}>{extremes.length}</span>
         </div>
-        <div className="card" style={{ textAlign: "center" }}>
-          <div className="muted" style={{ fontSize: 10 }}>Atualização</div>
-          <div style={{ fontSize: 12, fontFamily: "var(--mono)", color: "var(--tx2)", marginTop: 6 }}>{data[0]?.date || "—"}</div>
-          <div style={{ fontSize: 9, color: "var(--tx3)" }}>CFTC semanal (sex.)</div>
-        </div>
-      </div>
-
-      {/* Extremes alert */}
-      {extremes.length > 0 && (
-        <div className="card" style={{ borderColor: "rgba(230,126,34,.25)", marginBottom: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-            <i className="ti ti-alert-triangle" style={{ color: "var(--orange)" }} />
-            <span style={{ fontWeight: 600, fontSize: 13, color: "var(--tx)" }}>Sinais contrários ativos</span>
-            <span className="muted" style={{ fontSize: 10 }}>· COT em extremo histórico (3 anos)</span>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {extremes.length > 0 && <div style={{ width: 1, height: 18, background: "var(--line)" }} />}
+        {extremes.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <i className="ti ti-alert-triangle" style={{ color: "var(--orange)", fontSize: 12 }} />
             {extremes.map((d) => {
               const sig = cotSignal(d.index);
               return (
-                <span key={d.market} style={{
-                  fontSize: 11, padding: "4px 10px", borderRadius: 6, fontFamily: "var(--mono)",
+                <span key={d.market} title="Sinal contrário · COT em extremo histórico (3 anos)" style={{
+                  fontSize: 10, padding: "2px 8px", borderRadius: 5, fontFamily: "var(--mono)",
                   background: sig.bg, color: sig.color, border: `1px solid ${sig.color}30`,
                 }}>
-                  {d.market} <b>{d.index}</b> {d.index >= 80 ? "↑ (bearish)" : "↓ (bullish)"}
+                  {d.market} <b>{d.index}</b> {d.index >= 80 ? "↑" : "↓"}
                 </span>
               );
             })}
           </div>
+        )}
+        <div style={{ marginLeft: "auto", fontSize: 10, color: "var(--tx3)", fontFamily: "var(--mono)" }}>
+          {data[0]?.date || "—"} · CFTC semanal (sex.)
         </div>
-      )}
+      </div>
 
       {/* Filters */}
       <div className="flex" style={{ gap: 6, marginBottom: 10, flexWrap: "wrap" }}>

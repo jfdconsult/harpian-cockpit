@@ -57,11 +57,11 @@ export default function NewsBroadcast() {
         </span>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, alignContent: "start" }}>
         {conn === "loading" && [0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton" style={{ height: 68, borderRadius: 6 }} />)}
-        {conn === "error" && <div style={{ textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 12 }}>Backend offline — suba a API na porta 8080.</div>}
+        {conn === "error" && <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 12 }}>Backend offline — suba a API na porta 8080.</div>}
         {conn === "ok" && items.length === 0 && (
-          <div style={{ textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 11 }}>Nenhuma manchete com esses filtros.</div>
+          <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 11 }}>Nenhuma manchete com esses filtros.</div>
         )}
         {conn === "ok" && items.map((h) => {
           const ic = IMPACT_COLOR[h.impact] || "rgba(255,255,255,0.3)";

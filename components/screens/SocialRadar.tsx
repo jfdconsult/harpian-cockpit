@@ -64,11 +64,11 @@ export default function SocialRadar() {
 
       <div className="sr-body">
         <div className={`sr-feed-col${active ? " has-panel" : ""}`}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "grid", gridTemplateColumns: active ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 8, alignContent: "start" }}>
             {conn === "loading" && [0, 1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ height: 88, borderRadius: 6 }} />)}
-            {conn === "error" && <div style={{ textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 11 }}>Backend offline — suba a API na porta 8080.</div>}
+            {conn === "error" && <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 11 }}>Backend offline — suba a API na porta 8080.</div>}
             {conn === "ok" && posts.length === 0 && (
-              <div style={{ textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 11 }}>Nenhum post com esses filtros.</div>
+              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 11 }}>Nenhum post com esses filtros.</div>
             )}
             {conn === "ok" && posts.map((p) => (
               <SocialCard key={p.id} p={p} selected={activeId === p.id} onClick={() => setActiveId(p.id)} />

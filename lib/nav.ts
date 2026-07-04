@@ -16,6 +16,7 @@ export type ScreenId =
   | "auditoria"
   | "admin"
   | "chart"
+  | "cotacoes"
   | "setores"
   | "alphadroid"
   | "strategies-strength"
@@ -100,18 +101,24 @@ export const MENUS: Menu[] = [
         items: [
           { id: "protecao", label: "Proteção & Defesa", icon: "ti-shield-check" },
           { id: "indicadores", label: "Indicadores sistêmicos", icon: "ti-activity" },
+          { id: "regime", label: "Regime de mercado", icon: "ti-activity" },
         ],
       },
     ],
   },
   {
     label: "Mercado",
-    icon: "ti-radar",
+    icon: "ti-chart-candle",
     columns: [
       {
+        label: "Cotações",
         items: [
-          { id: "regime", label: "Regime de mercado", icon: "ti-activity" },
-          { id: "noticias", label: "Notícias", icon: "ti-news" },
+          { id: "cotacoes", label: "Ações", icon: "ti-building-bank", param: "acoes" },
+          { id: "cotacoes", label: "ETFs", icon: "ti-layers-intersect", param: "etfs" },
+          { id: "cotacoes", label: "Commodities", icon: "ti-flame", param: "commodities" },
+          { id: "cotacoes", label: "Cripto", icon: "ti-currency-bitcoin", param: "cripto" },
+          { id: "cotacoes", label: "Índices internacionais", icon: "ti-world", param: "indices" },
+          { id: "cotacoes", label: "Forex (câmbio)", icon: "ti-arrows-exchange", param: "forex" },
         ],
       },
     ],

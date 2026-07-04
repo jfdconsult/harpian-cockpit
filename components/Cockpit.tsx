@@ -15,6 +15,7 @@ import Observador from "./screens/Observador";
 import Auditoria from "./screens/Auditoria";
 import Admin from "./screens/Admin";
 import Chart from "./screens/Chart";
+import Cotacoes from "./screens/Cotacoes";
 import Setores from "./screens/Setores";
 import AlphaDroid from "./screens/AlphaDroid";
 import StrategiesStrength from "./screens/StrategiesStrength";
@@ -35,6 +36,7 @@ import type { ScreenId } from "@/lib/nav";
 export default function Cockpit() {
   const [screen, setScreen] = useState<ScreenId>("mission-control");
   const [chartTicker, setChartTicker] = useState<string | undefined>(undefined);
+  const [cotacoesClasse, setCotacoesClasse] = useState<string>("acoes");
   const [portfolioId, setPortfolioId] = useState<string>("HPC22");
   const [studioPid, setStudioPid] = useState<string>("HPC22");
   const [previousScreen, setPreviousScreen] = useState<ScreenId>("admin");
@@ -46,6 +48,7 @@ export default function Cockpit() {
     }
     setScreen(id);
     if (id === "chart" && param) setChartTicker(param);
+    if (id === "cotacoes" && param) setCotacoesClasse(param);
     if (id === "portfolio" && param) setPortfolioId(param);
     if (typeof window !== "undefined") window.scrollTo(0, 0);
   };
@@ -80,6 +83,8 @@ export default function Cockpit() {
         return <Admin go={go} />;
       case "chart":
         return <Chart ticker={chartTicker || "NVDA"} go={go} />;
+      case "cotacoes":
+        return <Cotacoes classe={cotacoesClasse} go={go} />;
       case "setores":
         return <Setores go={go} />;
       case "alphadroid":

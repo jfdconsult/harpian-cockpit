@@ -63,6 +63,7 @@ export default function MissionControl({ go }: { go: (id: ScreenId, param?: stri
   const [mktStatus, setMktStatus] = useState<"ok" | "error">("ok");
   const [connError, setConnError] = useState("");
   const [execTicketId, setExecTicketId] = useState<string | null>(null);
+  const [hideInactive, setHideInactive] = useState(false);
 
   useEffect(() => {
     apiGet<DashboardData>("/v1/dashboard")
@@ -137,22 +138,18 @@ export default function MissionControl({ go }: { go: (id: ScreenId, param?: stri
       {dash && (
         <>
           <div className="grid g4 mb">
-            <div className="kpi">
-              <div className="l">Total alocado</div>
-              <div className="v">{fmtUSD(dash.resumo.total_alocado_usd)}</div>
+            <div className="kpi kpi-compact clickable" onClick={() => go("portfolio", dash.portfolios.find(p => p.mode === "active")?.id || dash.portfolios[0]?.id)}>
+              <div className="kpi-row"><span className="l">Total alocado</span><span className="v">{fmtUSD(dash.resumo.total_alocado_usd)}</span></div>
               <div className="s">{dash.portfolios.length} portfólios</div>
             </div>
-            <div className="kpi">
-              <div className="l">Mudanças hoje</div>
-              <div className="v c-a">{dash.resumo.mudancas_hoje}</div>
+            <div className="kpi kpi-compact clickable" onClick={() => go("ticket")}>
+              <div className="kpi-row"><span className="l">Mudanças hoje</span><span className="v c-a">{dash.resumo.mudancas_hoje}</span></div>
             </div>
-            <div className="kpi">
-              <div className="l">Tickets pendentes</div>
-              <div className="v c-b">{dash.resumo.tickets_pendentes}</div>
+            <div className="kpi kpi-compact clickable" onClick={() => go("ticket")}>
+              <div className="kpi-row"><span className="l">Tickets pendentes</span><span className="v c-b">{dash.resumo.tickets_pendentes}</span></div>
             </div>
-            <div className="kpi">
-              <div className="l">Regime global</div>
-              <div className="v c-g">{dash.resumo.regime_global}</div>
+            <div className="kpi kpi-compact clickable" onClick={() => go("regime")}>
+              <div className="kpi-row"><span className="l">Regime global</span><span className={`v c-${semColor(dash.resumo.regime_global)}`}>{dash.resumo.regime_global}</span></div>
             </div>
           </div>
 
@@ -161,10 +158,16 @@ export default function MissionControl({ go }: { go: (id: ScreenId, param?: stri
               Portfólios · {dash.portfolios.filter((p) => p.mode === "active").length} ativo{dash.portfolios.filter((p) => p.mode === "active").length !== 1 ? "s" : ""} ·{" "}
               {dash.portfolios.filter((p) => p.mode !== "active").length} modelo{dash.portfolios.filter((p) => p.mode !== "active").length !== 1 ? "s" : ""}
             </div>
-            <div style={{ fontSize: 10, color: "var(--tx3)", display: "flex", alignItems: "center", gap: 4 }}><i className="ti ti-arrows-horizontal" style={{ fontSize: 12 }} />role para ver mais portfolios</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <button className="btn ghost" style={{ padding: "3px 8px", fontSize: 10 }} onClick={() => setHideInactive(!hideInactive)}>
+                <i className={`ti ${hideInactive ? "ti-eye-off" : "ti-eye"}`} style={{ fontSize: 11 }} />
+                {hideInactive ? "Mostrar inativos" : "Ocultar inativos"}
+              </button>
+              <span style={{ fontSize: 10, color: "var(--tx3)", display: "flex", alignItems: "center", gap: 4 }}><i className="ti ti-arrows-horizontal" style={{ fontSize: 12 }} />role para ver mais</span>
+            </div>
           </div>
           <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 6, marginBottom: 12 }}>
-            {dash.portfolios.map((p) => {
+            {[...dash.portfolios].sort((a, b) => (a.mode === "active" ? 0 : 1) - (b.mode === "active" ? 0 : 1)).filter((p) => !hideInactive || p.mode === "active").map((p) => {
               const isModel = p.mode === "model";
               return (
               <div

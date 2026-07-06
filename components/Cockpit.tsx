@@ -32,6 +32,7 @@ import Construtor from "./screens/Construtor";
 import PortfolioStudioScreen from "./screens/PortfolioStudioScreen";
 import Placeholder from "./screens/Placeholder";
 import JimDrawer from "./JimDrawer";
+import NewsTicker from "./NewsTicker";
 import { DialogProvider } from "./ui/Dialog";
 import type { ScreenId } from "@/lib/nav";
 
@@ -124,6 +125,7 @@ export default function Cockpit() {
   return (
     <DialogProvider>
       <div className="app">
+        <NewsTicker go={go} />
         <Topbar go={go} jimOpen={jimOpen} onJimToggle={() => setJimOpen(!jimOpen)} />
         <div className="main">{renderScreen()}</div>
         <JimDrawer open={jimOpen} onClose={() => setJimOpen(false)} screen={screen} />

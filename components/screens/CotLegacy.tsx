@@ -68,19 +68,32 @@ export default function CotLegacy() {
       .catch(() => { setData(DEMO_ROWS); setOffline(true); });
   }, [weeks]);
 
-  useEffect(() => {
-    if (!data.length) return;
-    const mkts = new Set(data.map((r) => r.market || "").filter(Boolean));
-    publishScreenData(
-      "cot-legacy",
-      `${data.length} registros COT · ${mkts.size} mercados`,
-      data,
-      { briefing: `Dados brutos CFTC Legacy com ${data.length} registros cobrindo ${mkts.size} mercados.` }
-    );
-  }, [data]);
-
   const markets = [...new Set(data.map((r) => r.market || ""))].filter(Boolean).sort();
   const filtered = marketFilter ? data.filter((r) => r.market === marketFilter) : data;
+
+  useEffect(() => {
+    if (filtered.length === 0) return;
+    publishScreenData(
+      "cot-legacy",
+      `Dados brutos CFTC Legacy (janela ${weeks} semanas${marketFilter ? `, mercado ${shortName(marketFilter)}` : ", todos os mercados"}). Cada linha = data, mercado, Spec Net, Comm Net (e % do Open Interest), longs/shorts por grupo e Open Interest.`,
+      filtered.slice(0, 60).map((x) => ({
+        data: x.date, mercado: shortName(x.market || ""),
+        specNet: x.spec_net ?? (x.spec_long - x.spec_short),
+        commNet: x.comm_net ?? (x.comm_long - x.comm_short),
+        openInterest: x.open_interest,
+      })),
+      {
+        briefing:
+          `Você está vendo os dados brutos CFTC de ${markets.length} mercados (${filtered.length} registros, janela ${weeks} semanas). ` +
+          `Spec Net = posição líquida dos especuladores; Comm Net = dos hedgers.`,
+        suggestions: [
+          "Qual mercado mudou mais na semana?",
+          "Como leio Spec Net vs Comm Net?",
+          "O que o open interest indica aqui?",
+        ],
+      }
+    );
+  }, [filtered, weeks, marketFilter, markets.length]);
 
   return (
     <div className="screen">

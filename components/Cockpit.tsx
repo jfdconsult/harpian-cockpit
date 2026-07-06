@@ -28,6 +28,7 @@ import InsiderOrders from "./screens/InsiderOrders";
 import Institutional from "./screens/Institutional";
 import CotSentiment from "./screens/CotSentiment";
 import CotLegacy from "./screens/CotLegacy";
+import MarketDna from "./screens/MarketDna";
 import Construtor from "./screens/Construtor";
 import PortfolioStudioScreen from "./screens/PortfolioStudioScreen";
 import Placeholder from "./screens/Placeholder";
@@ -117,6 +118,8 @@ export default function Cockpit() {
         return <CotSentiment />;
       case "cot-legacy":
         return <CotLegacy />;
+      case "market-dna":
+        return <MarketDna />;
       case "construtor":
         return <Construtor go={go} />;
       case "portfolio-studio":

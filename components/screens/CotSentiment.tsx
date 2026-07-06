@@ -277,11 +277,28 @@ export default function CotSentiment() {
     if (!data.length) return;
     const extr = data.filter((d) => d.index >= 80 || d.index <= 20);
     const avg = Math.round(data.reduce((s, d) => s + d.index, 0) / data.length);
+    const extremosTxt = extr
+      .map((d) => `${d.market} ${d.index} (${d.index >= 80 ? "bearish" : "bullish"})`)
+      .join(", ");
     publishScreenData(
       "cot-sentiment",
-      `${data.length} mercados · ${extr.length} sinais extremos · COT Index médio ${avg}`,
-      data,
-      { briefing: `COT Intelligence com ${data.length} mercados analisados. ${extr.length} em extremo (contrário). Índice médio ${avg}.` }
+      "COT Intelligence (CFTC): COT Index 0–100 por mercado. >80 = extremo de alta (sinal contrário bearish); <20 = extremo de baixa (sinal contrário bullish). Grupos: Large Specs (smart money), Commercials (hedgers), Nonreportable (varejo). Defasagem 3 dias úteis.",
+      data.map((d) => ({
+        mercado: d.market, cotIndex: d.index, sinal: d.signal,
+        specNet: d.specNet, commNet: d.commNet, oi: d.oi, variacaoSemana: d.weekChange, data: d.date,
+      })),
+      {
+        briefing:
+          `Você está vendo o COT de ${data.length} mercados (índice médio **${avg}**). ` +
+          (extr.length
+            ? `**${extr.length} em extremo** (sinal contrário): ${extremosTxt}.`
+            : "Nenhum mercado em extremo agora."),
+        suggestions: [
+          extr.length ? "Quais mercados estão em extremo e o que significa?" : "Algum mercado perto de um extremo?",
+          "Onde o smart money está posicionado?",
+          "Como uso o COT numa decisão?",
+        ],
+      }
     );
   }, [data]);
 

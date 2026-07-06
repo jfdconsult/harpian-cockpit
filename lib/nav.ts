@@ -29,6 +29,7 @@ export type ScreenId =
   | "institutional"
   | "cot-sentiment"
   | "cot-legacy"
+  | "market-dna"
   | "portfolio-studio"
   | "construtor";
 
@@ -137,6 +138,7 @@ export const MENUS: Menu[] = [
           { id: "institutional", label: "13F Holdings", icon: "ti-report-money", tag: "SEC" },
           { id: "cot-sentiment", label: "COT Intelligence", icon: "ti-flame", tag: "CFTC" },
           { id: "cot-legacy", label: "COT Data Explorer", icon: "ti-chart-bar" },
+          { id: "market-dna", label: "Market DNA", icon: "ti-dna-2", tag: "novo" },
         ],
       },
     ],

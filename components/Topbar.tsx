@@ -14,7 +14,7 @@ function Clock() {
   return <div className="clock">{t}</div>;
 }
 
-export default function Topbar({ go }: { go: (id: ScreenId, param?: string) => void }) {
+export default function Topbar({ go, jimOpen, onJimToggle }: { go: (id: ScreenId, param?: string) => void; jimOpen?: boolean; onJimToggle?: () => void }) {
   // menu aberto por CLIQUE (hover continua funcionando via CSS; clique cobre touch/teclado)
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -105,11 +105,11 @@ export default function Topbar({ go }: { go: (id: ScreenId, param?: string) => v
 
       <div className="right">
         <div
-          className="jim"
+          className={`jim${jimOpen ? " active" : ""}`}
           role="button"
           tabIndex={0}
-          onClick={() => dialog.notify("JIM no Cockpit em desenvolvimento — por enquanto disponível no Terminal MFO.", "info")}
-          onKeyDown={(e) => e.key === "Enter" && dialog.notify("JIM no Cockpit em desenvolvimento — por enquanto disponível no Terminal MFO.", "info")}
+          onClick={() => onJimToggle?.()}
+          onKeyDown={(e) => e.key === "Enter" && onJimToggle?.()}
         >
           <i className="ti ti-sparkles" />Jim AI
         </div>

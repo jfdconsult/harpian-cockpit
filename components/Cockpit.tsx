@@ -31,6 +31,7 @@ import CotLegacy from "./screens/CotLegacy";
 import Construtor from "./screens/Construtor";
 import PortfolioStudioScreen from "./screens/PortfolioStudioScreen";
 import Placeholder from "./screens/Placeholder";
+import JimDrawer from "./JimDrawer";
 import { DialogProvider } from "./ui/Dialog";
 import type { ScreenId } from "@/lib/nav";
 
@@ -41,6 +42,7 @@ export default function Cockpit() {
   const [portfolioId, setPortfolioId] = useState<string>("HPC22");
   const [studioPid, setStudioPid] = useState<string>("HPC22");
   const [previousScreen, setPreviousScreen] = useState<ScreenId>("admin");
+  const [jimOpen, setJimOpen] = useState(false);
 
   const go = (id: ScreenId, param?: string) => {
     if (id === "portfolio-studio") {
@@ -122,8 +124,9 @@ export default function Cockpit() {
   return (
     <DialogProvider>
       <div className="app">
-        <Topbar go={go} />
+        <Topbar go={go} jimOpen={jimOpen} onJimToggle={() => setJimOpen(!jimOpen)} />
         <div className="main">{renderScreen()}</div>
+        <JimDrawer open={jimOpen} onClose={() => setJimOpen(false)} screen={screen} />
       </div>
     </DialogProvider>
   );

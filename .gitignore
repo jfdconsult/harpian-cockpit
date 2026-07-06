@@ -29,6 +29,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# JIM session data (runtime, server-side)
+/data/jim-sessions/
+
 # editor
 .vscode/
 .idea/

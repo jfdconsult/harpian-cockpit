@@ -594,3 +594,57 @@ button:focus-visible,.mtab:focus-visible,.dd-item:focus-visible,.pill:focus-visi
 .spin{display:inline-block;animation:spin360 .9s linear infinite}
 @keyframes spin360{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}}
+
+/* ================================================================
+   JIM DRAWER — Assistente IA (Cockpit mode)
+   ================================================================ */
+.jim-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:98;animation:jimFadeIn .2s ease}
+@keyframes jimFadeIn{from{opacity:0}to{opacity:1}}
+.jim-drawer{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:100vw;background:var(--bg2,#0d1b2a);border-left:1px solid rgba(201,160,44,.18);z-index:99;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease;box-shadow:-4px 0 24px rgba(0,0,0,.35)}
+.jim-drawer.open{transform:translateX(0)}
+.jim-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line,#1a2d42);flex-shrink:0}
+.jim-header-left{display:flex;align-items:center;gap:10px}
+.jim-logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,rgba(201,160,44,.2),rgba(201,160,44,.08));display:flex;align-items:center;justify-content:center;color:var(--gold,#c9a02c);font-size:17px}
+.jim-title{font-size:15px;font-weight:700;color:var(--tx,#e8e6e1);letter-spacing:.5px}
+.jim-subtitle{font-size:10px;color:var(--tx3,#6a7a8a);text-transform:uppercase;letter-spacing:.8px}
+.jim-header-actions{display:flex;gap:4px}
+.jim-hbtn{background:transparent;border:0;color:var(--tx3,#6a7a8a);cursor:pointer;padding:6px;border-radius:6px;font-size:15px;transition:color .15s,background .15s}
+.jim-hbtn:hover{color:var(--tx,#e8e6e1);background:rgba(255,255,255,.06)}
+.jim-ctx{display:flex;align-items:center;gap:6px;padding:6px 16px;border-bottom:1px solid var(--line,#1a2d42);font-size:11px;color:var(--tx3,#6a7a8a);flex-shrink:0;flex-wrap:wrap}
+.jim-ctx .ti{font-size:13px;color:var(--gold,#c9a02c)}
+.jim-model-toggle{margin-left:auto;display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:4px;background:rgba(201,160,44,.08);border:1px solid rgba(201,160,44,.2);cursor:pointer;color:var(--gold,#c9a02c);font-size:10px;transition:background .15s}
+.jim-model-toggle:hover{background:rgba(201,160,44,.15)}
+.jim-sources{display:flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);font-size:10px;color:#4ade80;cursor:default}
+.jim-sources .ti{font-size:11px}
+.jim-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;scrollbar-color:rgba(201,160,44,.15) transparent}
+.jim-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--tx3,#6a7a8a);text-align:center;padding:40px 20px;font-size:13px}
+.jim-empty .ti{font-size:28px;color:var(--gold,#c9a02c);opacity:.4}
+.jim-empty-sub{font-size:11px;color:var(--tx3,#6a7a8a);max-width:260px;line-height:1.5}
+.jim-msg{display:flex;gap:8px}
+.jim-msg-user{justify-content:flex-end}
+.jim-msg-user .jim-msg-content{background:rgba(201,160,44,.12);border:1px solid rgba(201,160,44,.18);border-radius:12px 12px 2px 12px;padding:8px 12px;max-width:82%;font-size:13px;color:var(--tx,#e8e6e1);line-height:1.5}
+.jim-msg-ai{align-items:flex-start}
+.jim-msg-avatar{width:26px;height:26px;border-radius:6px;background:rgba(201,160,44,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--gold,#c9a02c);font-size:13px;margin-top:2px}
+.jim-msg-body{max-width:85%;min-width:0}
+.jim-msg-body .jim-msg-content{background:var(--panel,#111d2e);border:1px solid var(--line,#1a2d42);border-radius:2px 12px 12px 12px;padding:10px 13px;font-size:13px;color:var(--tx,#e8e6e1);line-height:1.6;word-break:break-word}
+.jim-msg-meta{font-size:10px;color:var(--tx3,#6a7a8a);margin-top:4px;padding-left:2px}
+.jim-typing{display:inline-flex;gap:4px;padding:8px 0}
+.jim-typing span{width:6px;height:6px;border-radius:50%;background:var(--gold,#c9a02c);animation:jimDot .8s infinite ease-in-out}
+.jim-typing span:nth-child(2){animation-delay:.2s}
+.jim-typing span:nth-child(3){animation-delay:.4s}
+@keyframes jimDot{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}}
+.jim-chips{display:flex;flex-direction:column;gap:6px;padding:8px 16px 0;flex-shrink:0}
+.jim-chip{white-space:normal;text-align:left;background:var(--panel,#111d2e);border:1px solid rgba(201,160,44,.22);border-radius:8px;padding:8px 12px;color:var(--tx2,#b0a89a);font-size:11.5px;cursor:pointer;transition:background .15s,border-color .15s,color .15s;font-family:var(--sans);line-height:1.3}
+.jim-chip:hover{background:rgba(201,160,44,.1);border-color:rgba(201,160,44,.45);color:var(--tx,#e8e6e1)}
+.jim-chip::before{content:">";color:var(--gold,#c9a02c);margin-right:5px;font-weight:700}
+.jim-input-area{padding:12px 16px;border-top:1px solid var(--line,#1a2d42);background:var(--bg2,#0d1b2a);flex-shrink:0}
+.jim-input-wrap{display:flex;align-items:flex-end;gap:8px;background:var(--panel,#111d2e);border:1px solid var(--line2,#243447);border-radius:10px;padding:4px 4px 4px 14px;transition:border-color .15s}
+.jim-input-wrap:focus-within{border-color:rgba(201,160,44,.4)}
+.jim-input{flex:1;background:transparent;border:0;color:var(--tx,#e8e6e1);font-family:var(--sans);font-size:13px;padding:8px 0;resize:none;outline:none;max-height:100px;line-height:1.5}
+.jim-input::placeholder{color:var(--tx3,#6a7a8a)}
+.jim-send{width:32px;height:32px;border-radius:8px;border:0;background:transparent;color:var(--tx3,#6a7a8a);cursor:not-allowed;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:15px;flex-shrink:0}
+.jim-send.active{background:var(--gold,#c9a02c);color:#0a1a30;cursor:pointer}
+.jim-send.active:hover{filter:brightness(1.1)}
+.jim-disclaimer{text-align:center;font-size:10px;color:var(--tx3,#6a7a8a);margin-top:8px;opacity:.6}
+.jim.active{background:rgba(201,160,44,.18);border-color:var(--gold,#c9a02c)}
+@media(max-width:900px){.jim-drawer{width:100%}}

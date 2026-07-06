@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiGet, fmtUSD, semColor } from "@/lib/api";
+import ExecuteOrderModal from "@/components/ExecuteOrderModal";
 import type { ScreenId } from "@/lib/nav";
 
 interface Portfolio {
@@ -21,15 +22,6 @@ interface Portfolio {
   ibkr_account_id?: string | null;
   etp_listed?: boolean;
   isin?: string | null;
-}
-
-interface Ticket2 {
-  id: string;
-  ticker: string;
-  side: "buy" | "sell";
-  portfolio_id: string;
-  valor_usd: number;
-  status: string;
 }
 
 interface Ticket {
@@ -69,6 +61,7 @@ export default function MissionControl({ go }: { go: (id: ScreenId, param?: stri
   const [connStatus, setConnStatus] = useState<"connecting" | "ok" | "error">("connecting");
   const [mktStatus, setMktStatus] = useState<"ok" | "error">("ok");
   const [connError, setConnError] = useState("");
+  const [execTicketId, setExecTicketId] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<DashboardData>("/v1/dashboard")
@@ -242,7 +235,7 @@ export default function MissionControl({ go }: { go: (id: ScreenId, param?: stri
                 </select>
               </h2>
               <table>
-                <thead><tr><th>Ativo</th><th>Lado</th><th>Portfólio</th><th style={{ textAlign: "right" }}>Valor</th><th>Status</th></tr></thead>
+                <thead><tr><th>Ativo</th><th>Lado</th><th>Portfólio</th><th style={{ textAlign: "right" }}>Valor</th><th>Status</th><th></th></tr></thead>
                 <tbody>
                   {dash.tickets.filter((t) => !ticketFilter || t.portfolio_id === ticketFilter).map((t) => {
                     const port = dash.portfolios.find((p) => p.id === t.portfolio_id);
@@ -268,7 +261,16 @@ export default function MissionControl({ go }: { go: (id: ScreenId, param?: stri
                         </span>
                       </td>
                       <td style={{ textAlign: "right" }}>US$ {(t.valor_usd / 1000).toFixed(0)}k</td>
-                      <td><span className={`tag ${t.status === "enviado" ? "b" : "a"}`}>{t.status}</span></td>
+                      <td><span className={`tag ${t.status === "pendente" ? "a" : t.status === "rejeitado" ? "r" : "b"}`}>{t.status}</span></td>
+                      <td style={{ textAlign: "right" }}>
+                        {t.status === "pendente" ? (
+                          <button className="btn ghost" style={{ padding: "3px 9px", fontSize: 11 }} onClick={() => setExecTicketId(t.id)}>
+                            <i className="ti ti-send" />Executar
+                          </button>
+                        ) : (
+                          <span className="c-mut" style={{ fontSize: 10 }}>—</span>
+                        )}
+                      </td>
                     </tr>
                     );
                   })}
@@ -307,6 +309,20 @@ export default function MissionControl({ go }: { go: (id: ScreenId, param?: stri
       )}
 
       <div className="foot">Cockpit Gestor · v1 · consome a HQP API (/v1). Design system compartilhado (harpian-ds). Dados via mock adapters até plugar os motores.</div>
+
+      {execTicketId && (
+        <ExecuteOrderModal
+          ticketId={execTicketId}
+          onClose={() => setExecTicketId(null)}
+          onExecuted={(updated) => {
+            setDash((prev) => prev ? {
+              ...prev,
+              tickets: prev.tickets.map((t) => (t.id === updated.id ? { ...t, status: updated.status } : t)),
+              resumo: { ...prev.resumo, tickets_pendentes: Math.max(0, prev.resumo.tickets_pendentes - 1) },
+            } : prev);
+          }}
+        />
+      )}
     </div>
   );
 }

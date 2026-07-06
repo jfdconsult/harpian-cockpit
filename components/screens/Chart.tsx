@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { createChart, CrosshairMode, type IChartApi, type ISeriesApi } from "lightweight-charts";
 import { apiGet } from "@/lib/api";
 import TradingViewWidget from "./TradingViewWidget";
+import ExecuteOrderModal from "@/components/ExecuteOrderModal";
 import type { ScreenId } from "@/lib/nav";
 
 const RANGES = ["3mo", "6mo", "1y", "2y", "5y"] as const;
@@ -45,7 +46,7 @@ interface ChartResp {
 }
 interface PositionResp {
   has_position: boolean; total_weight_pct?: number; total_value_usd?: number;
-  holdings?: { portfolio: string }[]; action: string;
+  holdings?: { portfolio: string }[]; action: string; ticket_id?: string | null;
 }
 
 function fmt(v: number | null | undefined) { return v == null ? "—" : v.toFixed(2); }
@@ -73,6 +74,7 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
   const [distVals, setDistVals] = useState({ dist: "—", tr: "—", thr: "—" });
   const [momVals, setMomVals] = useState({ d13: "—", j37: "—" });
   const [position, setPosition] = useState<PositionResp | null>(null);
+  const [execTicketId, setExecTicketId] = useState<string | null>(null);
 
   // Init charts once
   useEffect(() => {
@@ -283,7 +285,16 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
                 {position.holdings?.[0] ? ` · ${position.holdings[0].portfolio}` : ""}
               </>
             ) : <b>sem posição</b>}{" "}
-            <span className={`ch-act ${posCls[position.action] || "hold"}`}>{position.action}</span>
+            {position.ticket_id ? (
+              <span
+                className={`ch-act ${posCls[position.action] || "hold"}`}
+                style={{ cursor: "pointer" }}
+                title="Executar esta ordem"
+                onClick={() => setExecTicketId(position.ticket_id!)}
+              >{position.action}</span>
+            ) : (
+              <span className={`ch-act ${posCls[position.action] || "hold"}`}>{position.action}</span>
+            )}
           </span>
         )}
         <div className="ch-right">
@@ -351,6 +362,14 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
         <span>Fonte: <b>Yahoo EOD</b></span>
         <span className="ch-src">estudos DSPT computados local · sem TradingView</span>
       </div>
+
+      {execTicketId && (
+        <ExecuteOrderModal
+          ticketId={execTicketId}
+          onClose={() => setExecTicketId(null)}
+          onExecuted={(updated) => setPosition((prev) => prev ? { ...prev, ticket_id: updated.status === "pendente" ? prev.ticket_id : null } : prev)}
+        />
+      )}
     </div>
   );
 }

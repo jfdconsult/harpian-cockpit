@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import MomentumBar from "@/components/MomentumBar";
 import AddBasketModal from "@/components/AddBasketModal";
 import { deleteBasket, loadBaskets, type CustomBasket } from "@/lib/customBaskets";
@@ -100,6 +101,18 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
       .catch(() => setConn("error"));
     refreshCustoms();
   }, [refreshCustoms]);
+
+  useEffect(() => {
+    if (!data) return;
+    publishScreenData(
+      "alphadroid",
+      `${data.n_sectors} setores, portfolio ref: ${data.portfolio_ref.name}`,
+      data.sectors,
+      {
+        briefing: `${data.n_sectors} setores monitorados com ${data.sectors.reduce((a, s) => a + s.n_ativos, 0)} ativos. Portfolio referência: ${data.portfolio_ref.name}.`,
+      }
+    );
+  }, [data]);
 
   return (
     <div className="screen">

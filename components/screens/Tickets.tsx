@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import { apiGet, apiPost } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import TicketChart from "@/components/TicketChart";
 import { useDialog } from "../ui/Dialog";
 import type { ScreenId } from "@/lib/nav";
@@ -58,6 +59,21 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
     const t = setTimeout(() => setOverlay(null), 2500);
     return () => clearTimeout(t);
   }, [overlay]);
+
+  useEffect(() => {
+    if (!tickets.length) return;
+    const pendente = tickets.filter((t) => t.status === "pendente").length;
+    const aprovado = tickets.filter((t) => t.status === "aprovado" || t.status === "enviado").length;
+    const rejeitado = tickets.filter((t) => t.status === "rejeitado").length;
+    const buy = tickets.filter((t) => t.side === "buy").length;
+    const sell = tickets.filter((t) => t.side === "sell").length;
+    publishScreenData(
+      "ticket",
+      `${tickets.length} tickets | ${pendente} pendente, ${aprovado} aprovado, ${rejeitado} rejeitado | ${buy} buy, ${sell} sell`,
+      tickets,
+      { briefing: `Há ${tickets.length} tickets hoje: ${pendente} aguardando decisão, ${aprovado} aprovados e ${rejeitado} rejeitados.` }
+    );
+  }, [tickets]);
 
   async function aprovar() {
     if (!selected || acting) return;

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fetchNews, IMPACT_COLOR, type NewsHeadline } from "@/lib/feeds";
+import { publishScreenData } from "@/lib/jim-data";
 import type { ScreenId } from "@/lib/nav";
 
 export default function Noticias({ go }: { go: (id: ScreenId, param?: string) => void }) {
@@ -23,6 +24,16 @@ export default function Noticias({ go }: { go: (id: ScreenId, param?: string) =>
       .catch(() => live && setConn("error"));
     return () => { live = false; };
   }, []);
+
+  useEffect(() => {
+    if (!items || items.length === 0) return;
+    const byImpact: Record<string, number> = {};
+    items.forEach((h) => { byImpact[h.impact] = (byImpact[h.impact] || 0) + 1; });
+    const impactSummary = Object.entries(byImpact).map(([k, v]) => `${k}:${v}`).join(", ");
+    publishScreenData("noticias", `${items.length} manchetes | ${impactSummary}`, items, {
+      briefing: `${items.length} notícias filtradas por impacto. Distribuição: ${impactSummary}.`,
+    });
+  }, [items]);
 
   return (
     <div className="screen">

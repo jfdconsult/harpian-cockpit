@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import { useDialog } from "../ui/Dialog";
 import type { ScreenId } from "@/lib/nav";
 
@@ -28,6 +29,17 @@ export default function Construtor({ go }: { go: (id: ScreenId, param?: string) 
       if (hom.length) setMotorId(hom[0].id);
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!portfolios && !motores.length) return;
+    const mods = (portfolios || []).filter((p) => p.mode === "model");
+    publishScreenData(
+      "construtor",
+      `${mods.length} estratégias em lab · ${motores.length} motores disponíveis`,
+      { portfolios, motores },
+      { briefing: `Construtor com ${mods.length} portfolios modelo e ${motores.length} motores cadastrados.` }
+    );
+  }, [portfolios, motores]);
 
   const modelos = (portfolios || []).filter((p) => p.mode === "model");
   const homologados = motores.filter((m) => m.status === "homologado");

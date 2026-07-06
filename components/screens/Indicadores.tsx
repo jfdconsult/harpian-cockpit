@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import { Bullet } from "@/components/RegimeGauge";
 
 interface IndicatorsState {
@@ -36,6 +37,18 @@ export default function Indicadores() {
       .then((data) => { setD(data.indicators); setConn("ok"); })
       .catch(() => { setD(DEFAULTS); setConn("error"); });
   }, []);
+
+  useEffect(() => {
+    const tempStatus = d.temperatura.valor >= 0.6 ? "defesa" : d.temperatura.valor >= 0.4 ? "alerta" : "normal";
+    const ccStatus = d.cross_correlation.valor >= 0.75 ? "crítico" : d.cross_correlation.valor >= 0.55 ? "elevado" : "normal";
+    const macVal = d.mac_score ? d.mac_score.valor : null;
+    publishScreenData(
+      "indicadores",
+      `Temperatura ${d.temperatura.valor.toFixed(2)} (${tempStatus}) | CC ${ccStatus} | MAC Score ${macVal ?? "N/A"}`,
+      d,
+      { briefing: `Temperatura em ${d.temperatura.valor.toFixed(2)} (${tempStatus}), cross-correlation ${ccStatus} e MAC Score em ${macVal ?? "não disponível"}.` }
+    );
+  }, [d]);
 
   const t = d.temperatura, cc = d.cross_correlation, ema = d.ema20, mac = d.mac_score;
   const tSt = statusLabel("temp", t.valor);

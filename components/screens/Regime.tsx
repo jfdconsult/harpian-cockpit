@@ -1,4 +1,6 @@
 "use client";
+import { useEffect } from "react";
+import { publishScreenData } from "@/lib/jim-data";
 
 // Ordem: Risk-Off → Cautela → Neutro → Risk-On (defensivo à esquerda, exposto à direita).
 const STATES = [
@@ -27,6 +29,13 @@ const POSTURE = [
 
 export default function Regime() {
   const cur = STATES.find((s) => s.key === CURRENT)!;
+
+  useEffect(() => {
+    publishScreenData("regime", `Regime atual: ${cur.label} (${CURRENT})`, { current: CURRENT, label: cur.label, states: STATES, posture: POSTURE }, {
+      briefing: `Regime de mercado atual é ${cur.label}. ${MEANING[CURRENT]}`,
+    });
+  }, []);
+
   return (
     <div className="screen">
       <div className="crumb">Mercado › <b>Regime de mercado</b></div>

@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
 import { apiGet, fmtUSD, semColor } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import MomentumBar from "@/components/MomentumBar";
 import type { ScreenId } from "@/lib/nav";
 
@@ -61,6 +62,18 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
       for (const a of est.ativos || []) flatAtivos.push({ ...a, esteira: est.nome });
     }
   }
+
+  useEffect(() => {
+    if (!p) return;
+    publishScreenData(
+      "portfolio",
+      `${p.nome}, US$ ${p.alocado_usd.toLocaleString("pt-BR")} alocado, regime ${p.regime}, Risk Number ${p.risk_number}, ${tickets.length} tickets`,
+      { portfolio: p, tickets, momentum: mom },
+      {
+        briefing: `Portfólio ${p.nome} com US$ ${p.alocado_usd.toLocaleString("pt-BR")} alocados em regime ${p.regime}. Exposição ${p.exposicao_pct}%, DD mês ${p.dd_mes_pct.toFixed(1)}%, ${tickets.length} tickets pendentes.`,
+      }
+    );
+  }, [p, tickets, mom]);
 
   const ganhadores = (mom?.esteiras || []).filter((e) => (e.mom_j37 ?? 0) > 0).sort((a, b) => (b.mom_j37 ?? 0) - (a.mom_j37 ?? 0));
   const perdedores = (mom?.esteiras || []).filter((e) => (e.mom_j37 ?? 0) <= 0).sort((a, b) => (a.mom_j37 ?? 0) - (b.mom_j37 ?? 0));

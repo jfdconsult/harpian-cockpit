@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { GOV_API, fmtN, fmtUSD } from "@/lib/data";
+import { publishScreenData } from "@/lib/jim-data";
 
 interface Fund { short: string; name: string; style: string; cik?: string; }
 interface Holding { issuer: string; title_of_class: string; cusip: string; value_x1000_usd: number; shares: number; put_call?: string; share_type?: string; }
@@ -26,6 +27,20 @@ export default function Institutional() {
       .then((d: FundData) => { setData(d); setOffline(false); })
       .catch(() => setOffline(true));
   }, [selected]);
+
+  useEffect(() => {
+    if (!data) return;
+    const h = data.all_holdings || [];
+    const aum = h.reduce((s, x) => s + (x.value_x1000_usd || 0), 0) * 1000;
+    const fName = funds.find((f) => f.short === selected)?.name || selected;
+    const fmtAum = aum >= 1e9 ? `US$ ${(aum / 1e9).toFixed(1)}B` : `US$ ${(aum / 1e6).toFixed(0)}M`;
+    publishScreenData(
+      "institutional",
+      `${fName} · AUM ${fmtAum} · ${data.num_holdings || h.length} holdings · filing ${data.filing_date || "—"}`,
+      data,
+      { briefing: `Visualizando 13F de ${fName} com ${data.num_holdings || h.length} posições e AUM de ${fmtAum}.` }
+    );
+  }, [data, selected]);
 
   const holdings = data?.all_holdings || [];
   const totalVal = holdings.reduce((s, x) => s + (x.value_x1000_usd || 0), 0) * 1000;

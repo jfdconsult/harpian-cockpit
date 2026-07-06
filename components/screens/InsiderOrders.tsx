@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { GOV_API, fmtN, fmtUSD } from "@/lib/data";
+import { publishScreenData } from "@/lib/jim-data";
 
 interface InsiderOrder {
   issuer: string;
@@ -34,6 +35,20 @@ export default function InsiderOrders() {
       .catch(() => live && setConn("offline"));
     return () => { live = false; };
   }, []);
+
+  useEffect(() => {
+    if (!orders.length) return;
+    const buys = orders.filter((o) => o.side === "BUY").length;
+    const sells = orders.filter((o) => o.side === "SELL").length;
+    const dates = orders.map((o) => o.date).filter(Boolean).sort();
+    const range = dates.length ? `${dates[0]} a ${dates[dates.length - 1]}` : "—";
+    publishScreenData(
+      "insider-orders",
+      `${orders.length} ordens · ${buys} compras · ${sells} vendas · ${range}`,
+      orders,
+      { briefing: `SEC Form 4 com ${orders.length} ordens de insiders. ${buys} compras e ${sells} vendas no período ${range}.` }
+    );
+  }, [orders]);
 
   const items = useMemo(
     () => orders.filter((o) => side === "all" || o.side === side),

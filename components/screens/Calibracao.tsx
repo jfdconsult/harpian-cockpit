@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 
 interface Formula { id: string; grupo: string; nome: string; desc?: string; valor_atual: string; unidade?: string; editavel: boolean }
 interface Alteracao { formula_id: string; nome?: string; de: string; para: string }
@@ -51,6 +52,19 @@ export default function Calibracao() {
     const t = setTimeout(() => setToastMsg(null), 2800);
     return () => clearTimeout(t);
   }, [toastMsg]);
+
+  useEffect(() => {
+    if (!formulas.length && !candidates.length) return;
+    const ready = candidates.filter((c) => c.status === "ready" || c.status === "validado").length;
+    const rejected = candidates.filter((c) => c.status === "rejected" || c.status === "rejeitado").length;
+    const promoted = candidates.filter((c) => c.status === "promovido").length;
+    publishScreenData(
+      "calibracao",
+      `${formulas.length} fórmulas | ${candidates.length} candidatos (${ready} prontos, ${rejected} rejeitados, ${promoted} promovidos)`,
+      { formulas, candidates },
+      { briefing: `Studio com ${formulas.length} fórmulas editáveis e ${candidates.length} candidatos criados. ${ready} prontos para promoção.` }
+    );
+  }, [formulas, candidates]);
 
   const groups: Record<string, Formula[]> = {};
   formulas.forEach((f) => { const g = f.grupo || "Outros"; (groups[g] ||= []).push(f); });

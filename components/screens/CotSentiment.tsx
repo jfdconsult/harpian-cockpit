@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { GOV_API, fmtN } from "@/lib/data";
+import { publishScreenData } from "@/lib/jim-data";
 
 // ---------- Types ----------
 interface CotMarket {
@@ -271,6 +272,18 @@ export default function CotSentiment() {
         setOffline(true);
       });
   }, []);
+
+  useEffect(() => {
+    if (!data.length) return;
+    const extr = data.filter((d) => d.index >= 80 || d.index <= 20);
+    const avg = Math.round(data.reduce((s, d) => s + d.index, 0) / data.length);
+    publishScreenData(
+      "cot-sentiment",
+      `${data.length} mercados · ${extr.length} sinais extremos · COT Index médio ${avg}`,
+      data,
+      { briefing: `COT Intelligence com ${data.length} mercados analisados. ${extr.length} em extremo (contrário). Índice médio ${avg}.` }
+    );
+  }, [data]);
 
   const filtered = filter === "Todos" ? data : data.filter((d) => (ASSET_CLASS[d.market] || "") === filter);
 

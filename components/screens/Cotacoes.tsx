@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import type { ScreenId } from "@/lib/nav";
 
 // Universos por classe de ativo — tickers Yahoo reais (mesma fonte dos motores).
@@ -64,6 +65,13 @@ export default function Cotacoes({ classe, go }: { classe?: string; go: (id: Scr
   useEffect(load, [active]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rows = useMemo(() => quotes.filter((q) => q.ok !== false), [quotes]);
+
+  useEffect(() => {
+    if (!quotes || quotes.length === 0) return;
+    publishScreenData("cotacoes", `${quotes.length} cotações · classe: ${uni.label}`, quotes, {
+      briefing: `Tela de cotações mostrando ${quotes.length} ativos da classe ${uni.label}.`,
+    });
+  }, [quotes, active, uni.label]);
 
   return (
     <div className="screen">

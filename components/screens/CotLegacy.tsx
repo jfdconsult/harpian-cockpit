@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { GOV_API, fmtN } from "@/lib/data";
+import { publishScreenData } from "@/lib/jim-data";
 
 interface CotRow {
   date?: string;
@@ -66,6 +67,17 @@ export default function CotLegacy() {
       .then((d: CotRow[]) => { setData(d); setOffline(false); })
       .catch(() => { setData(DEMO_ROWS); setOffline(true); });
   }, [weeks]);
+
+  useEffect(() => {
+    if (!data.length) return;
+    const mkts = new Set(data.map((r) => r.market || "").filter(Boolean));
+    publishScreenData(
+      "cot-legacy",
+      `${data.length} registros COT · ${mkts.size} mercados`,
+      data,
+      { briefing: `Dados brutos CFTC Legacy com ${data.length} registros cobrindo ${mkts.size} mercados.` }
+    );
+  }, [data]);
 
   const markets = [...new Set(data.map((r) => r.market || ""))].filter(Boolean).sort();
   const filtered = marketFilter ? data.filter((r) => r.market === marketFilter) : data;

@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import MomentumBar from "@/components/MomentumBar";
 import type { ScreenId } from "@/lib/nav";
 
@@ -49,6 +50,19 @@ export default function Setores({ go }: { go: (id: ScreenId, param?: string) => 
       .then((d) => { setData(d); setConn("ok"); })
       .catch(() => setConn("error"));
   }, [basket]);
+
+  useEffect(() => {
+    if (!data) return;
+    const leader = data.sectors[0]?.setor || "—";
+    publishScreenData(
+      "setores",
+      `${data.sectors.length} setores, ${data.n_ativos} ativos, líder: ${leader}`,
+      data.sectors,
+      {
+        briefing: `${data.sectors.length} setores com ${data.n_ativos} ativos monitorados. Setor líder: ${leader}.`,
+      }
+    );
+  }, [data]);
 
   return (
     <div className="screen">

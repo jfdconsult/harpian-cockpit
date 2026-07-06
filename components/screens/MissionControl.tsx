@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiGet, fmtUSD, semColor } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import ExecuteOrderModal from "@/components/ExecuteOrderModal";
 import type { ScreenId } from "@/lib/nav";
 
@@ -78,6 +79,18 @@ export default function MissionControl({ go }: { go: (id: ScreenId, param?: stri
       .then((d) => setQuotes(d.quotes))
       .catch(() => setMktStatus("error"));
   }, []);
+
+  useEffect(() => {
+    if (!dash) return;
+    publishScreenData(
+      "mission-control",
+      `US$ ${dash.resumo.total_alocado_usd.toLocaleString("pt-BR")} alocado, ${dash.resumo.mudancas_hoje} mudanças, ${dash.resumo.tickets_pendentes} tickets, regime ${dash.resumo.regime_global}`,
+      dash.portfolios,
+      {
+        briefing: `${dash.portfolios.length} portfólios com US$ ${dash.resumo.total_alocado_usd.toLocaleString("pt-BR")} alocados. Regime global ${dash.resumo.regime_global}, ${dash.resumo.mudancas_hoje} mudanças e ${dash.resumo.tickets_pendentes} tickets pendentes.`,
+      }
+    );
+  }, [dash]);
 
   return (
     <div className="screen">

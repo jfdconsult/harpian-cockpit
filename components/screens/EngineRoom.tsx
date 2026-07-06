@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import RegimeGauge, { Bullet } from "@/components/RegimeGauge";
 
 interface Pilar {
@@ -50,6 +51,19 @@ export default function EngineRoom() {
       .then((data) => { setD(data); setStatus("ok"); })
       .catch((e) => { setStatus("error"); setErr(e.message); });
   }, []);
+
+  useEffect(() => {
+    if (!d) return;
+    const emDefesa = d.pilares.filter((p) => p.status === "GATILHO").length;
+    publishScreenData(
+      "engine-room",
+      `Regime ${d.regime.estado}, ${emDefesa} pilar${emDefesa !== 1 ? "es" : ""} em defesa, exposição ataque ${d.regime.exposicao_ataque_pct}%, orientação: ${d.orientacao.map((o) => `${o.perfil} ${o.tag}`).join(", ")}`,
+      d,
+      {
+        briefing: `Motor em regime ${d.regime.estado} com CRS ${d.regime.crs.toFixed(3)}. ${emDefesa} pilar${emDefesa !== 1 ? "es" : ""} em defesa, exposição de ataque ${d.regime.exposicao_ataque_pct}%.`,
+      }
+    );
+  }, [d]);
 
   return (
     <div className="screen">

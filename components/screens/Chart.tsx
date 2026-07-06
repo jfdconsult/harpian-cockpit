@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, CrosshairMode, type IChartApi, type ISeriesApi } from "lightweight-charts";
 import { apiGet } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import TradingViewWidget from "./TradingViewWidget";
 import ExecuteOrderModal from "@/components/ExecuteOrderModal";
 import type { ScreenId } from "@/lib/nav";
@@ -255,6 +256,16 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
   useEffect(() => {
     apiGet<PositionResp>(`/v1/assets/position/${ticker}`).then(setPosition).catch(() => {});
   }, [ticker]);
+
+  useEffect(() => {
+    if (!price || price === "—") return;
+    const posInfo = position?.has_position
+      ? `alocado ${position.total_weight_pct}% · ${position.action}`
+      : "sem posição";
+    publishScreenData("chart", `${tname} (${ticker}) · ${price} · ${pct?.text ?? "—"} · ${posInfo}`, { ticker, name: tname, price, pct, position }, {
+      briefing: `Gráfico DSPT de ${tname} (${ticker}). Preço atual ${price}, variacao ${pct?.text ?? "—"}. ${posInfo}.`,
+    });
+  }, [price, pct, tname, position, ticker]);
 
   function toggleStudy(k: StudyKey) {
     setStudies((prev) => ({ ...prev, [k]: { ...prev[k], on: !prev[k].on } }));

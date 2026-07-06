@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { fetchNews, IMPACT_COLOR, type NewsHeadline } from "@/lib/feeds";
+import { publishScreenData } from "@/lib/jim-data";
 
 export default function NewsBroadcast() {
   const [all, setAll] = useState<NewsHeadline[]>([]);
@@ -24,6 +25,13 @@ export default function NewsBroadcast() {
       .catch(() => setConn("error"));
   }
   useEffect(load, []);
+
+  useEffect(() => {
+    if (!all || all.length === 0) return;
+    publishScreenData("news-broadcast", `${all.length} manchetes · ${sourcesLive.length} fontes ao vivo`, all, {
+      briefing: `News Broadcast com ${all.length} manchetes de ${sourcesLive.length} fontes ao vivo.`,
+    });
+  }, [all, sourcesLive]);
 
   const items = useMemo(() => all.filter((h) => {
     if (source !== "all" && h.source !== source) return false;

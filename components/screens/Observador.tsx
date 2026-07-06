@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 
 interface ScorecardEntry { acertos: number; erros: number; acuracia_pct: number }
 interface Alerta { tipo: string; pilar: string | null; desc: string; sev: string; ts: string }
@@ -32,6 +33,20 @@ export default function Observador() {
       .then((data) => { setD(data); setConn("ok"); })
       .catch(() => setConn("error"));
   }, []);
+
+  useEffect(() => {
+    if (!d) return;
+    const pilares = Object.entries(d.scorecard);
+    const avgAccuracy = pilares.length > 0
+      ? (pilares.reduce((sum, [, p]) => sum + p.acuracia_pct, 0) / pilares.length).toFixed(1)
+      : "N/A";
+    publishScreenData(
+      "observador",
+      `Acurácia média ${avgAccuracy}% | ${d.alertas.length} alertas | ${d.hipoteses.length} hipóteses`,
+      d,
+      { briefing: `Observador com acurácia média de ${avgAccuracy}% nos pilares, ${d.alertas.length} alertas ativos e ${d.hipoteses.length} hipóteses registradas.` }
+    );
+  }, [d]);
 
   const pilares = d ? Object.entries(d.scorecard) : [];
   const alerts = d?.alertas || [];

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import { Bullet } from "@/components/RegimeGauge";
 import type { ScreenId } from "@/lib/nav";
 
@@ -33,6 +34,18 @@ export default function Protecao({ go }: { go: (id: ScreenId, param?: string) =>
     apiGet<PilarD>("/v1/protection/pilar-d").then(setPilarD).catch(() => {});
     apiGet<ReentryState>(`/v1/protection/reentry?portfolio_id=${pid}`).then(setReentry).catch(() => {});
   }, [pid]);
+
+  useEffect(() => {
+    if (!defense) return;
+    const pilaresEmAlerta = Object.values(defense.pilares).filter((p) => p.status === "alerta" || p.status === "defesa").length;
+    const reentryStatus = reentry ? reentry.mode : defense.reentry.status;
+    publishScreenData(
+      "protecao",
+      `Regime ${defense.regime} | Defesa ${defense.defesa_pct}% | ${pilaresEmAlerta} pilares em alerta | Re-entry: ${reentryStatus}`,
+      { defense, pilarD, reentry },
+      { briefing: `Regime atual é ${defense.regime} com ${defense.defesa_pct}% de defesa ativa. ${pilaresEmAlerta} pilares em alerta e re-entry em modo ${reentryStatus}.` }
+    );
+  }, [defense, pilarD, reentry]);
 
   const regSem = defense ? (defense.regime === "RISK-ON" ? "g" : defense.regime === "WARNING" ? "a" : defense.regime === "RISK-OFF" ? "r" : "b") : "b";
 

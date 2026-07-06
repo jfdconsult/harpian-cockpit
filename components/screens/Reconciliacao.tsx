@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import type { ScreenId } from "@/lib/nav";
 
 interface Item {
@@ -23,6 +24,20 @@ export default function Reconciliacao({ go }: { go: (id: ScreenId, param?: strin
       .then((d) => { setItems(d.items || []); setResumo(d.resumo); setConn("ok"); })
       .catch(() => setConn("error"));
   }, []);
+
+  useEffect(() => {
+    if (!items.length && !resumo) return;
+    const ok = resumo?.ok ?? 0;
+    const parcial = resumo?.parcial ?? 0;
+    const pendente = resumo?.pendente ?? 0;
+    const totalDelta = resumo?.total_delta != null ? ` | delta total: ${resumo.total_delta}` : "";
+    publishScreenData(
+      "reconciliacao",
+      `${items.length} posições | ${ok} OK, ${parcial} parcial, ${pendente} pendente${totalDelta}`,
+      items,
+      { briefing: `Reconciliação com ${items.length} posições: ${ok} OK, ${parcial} parciais e ${pendente} pendentes de ação.` }
+    );
+  }, [items, resumo]);
 
   return (
     <div className="screen">

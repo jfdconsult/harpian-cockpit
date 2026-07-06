@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { fetchSocialTrending, IMPACT_COLOR, SENTIMENT_COLOR, type SocialPost } from "@/lib/feeds";
+import { publishScreenData } from "@/lib/jim-data";
 
 export default function SocialRadar() {
   const [all, setAll] = useState<SocialPost[]>([]);
@@ -21,6 +22,16 @@ export default function SocialRadar() {
       .catch(() => setConn("error"));
   }
   useEffect(load, []);
+
+  useEffect(() => {
+    if (!all || all.length === 0) return;
+    const bullish = all.filter((p) => p.sentiment === "Bullish").length;
+    const bearish = all.filter((p) => p.sentiment === "Bearish").length;
+    const neutral = all.filter((p) => p.sentiment === "Neutral").length;
+    publishScreenData("social-radar", `${all.length} posts · bullish:${bullish} bearish:${bearish} neutral:${neutral}`, all, {
+      briefing: `Social Radar com ${all.length} posts do StockTwits. Sentimento: ${bullish} bullish, ${bearish} bearish, ${neutral} neutral.`,
+    });
+  }, [all]);
 
   const posts = useMemo(() => all.filter((p) => {
     if (impact !== "all" && p.impact !== impact) return false;

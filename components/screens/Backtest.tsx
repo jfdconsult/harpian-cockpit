@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 
 interface WindowMetrics { cagr?: number; sortino?: number; calmar?: number; max_dd?: number; risk_num?: number }
 interface Score { passed: number; total: number; pct: number | null }
@@ -85,6 +86,20 @@ export default function Backtest() {
   useEffect(loadRuns, []);
   useEffect(() => { apiGet<{ motores: Motor[] }>("/v1/registry/motores").then((d) => setMotores(d.motores || [])).catch(() => {}); }, []);
   useEffect(() => { if (!toastMsg) return; const t = setTimeout(() => setToastMsg(null), 3200); return () => clearTimeout(t); }, [toastMsg]);
+
+  useEffect(() => {
+    if (!runs.length) return;
+    const gradeA = runs.filter((r) => r.grade === "A").length;
+    const gradeB = runs.filter((r) => r.grade === "B").length;
+    const gradeF = runs.filter((r) => r.grade === "F").length;
+    const running = runs.filter((r) => r.status === "rodando" || r.status === "running").length;
+    publishScreenData(
+      "backtest",
+      `${runs.length} runs | ${gradeA} grade A, ${gradeB} grade B, ${gradeF} grade F | ${running} rodando`,
+      runs,
+      { briefing: `${runs.length} backtests registrados: ${gradeA} com grade A, ${gradeB} com grade B e ${gradeF} reprovados. ${running} em execução agora.` }
+    );
+  }, [runs]);
 
   function pollRun(runId: string, tries = 0) {
     if (tries > 20) return;

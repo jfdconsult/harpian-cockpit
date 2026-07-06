@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import NewEtpWizard from "../wizards/NewEtpWizard";
 import { forkPortfolio } from "@/lib/portfolioComposicao";
 import { useDialog } from "../ui/Dialog";
@@ -128,6 +129,17 @@ export default function Admin({ go }: { go?: (id: ScreenId, param?: string) => v
       .catch(() => setConn("error"));
     refreshPortfolios();
   }, []);
+
+  useEffect(() => {
+    if (!etps?.length && !motores?.length) return;
+    const killStatus = killActive ? "ATIVO" : "normal";
+    publishScreenData(
+      "admin",
+      `${etps?.length || 0} ETPs · ${motores?.length || 0} motores · ${formulas?.length || 0} fórmulas · ${gestores?.length || 0} gestores · kill switch ${killStatus}`,
+      { etps, motores, formulas, gestores, clientes, config: cfg },
+      { briefing: `Centro de Controle com ${etps?.length || 0} ETPs, ${motores?.length || 0} motores e ${formulas?.length || 0} fórmulas. Kill switch ${killStatus}.` }
+    );
+  }, [etps, motores, formulas, gestores, clientes]);
 
   // Ações de alto risco: exigem confirmação explícita (kill-switch: digitada).
   async function toggleKill() {

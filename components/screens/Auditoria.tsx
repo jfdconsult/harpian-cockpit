@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import type { ScreenId } from "@/lib/nav";
 
 interface AuditEvent { ts: string; actor: string; role: string; tenant_id?: string; action: string; ref: string; detail: string }
@@ -60,6 +61,16 @@ export default function Auditoria({ go }: { go: (id: ScreenId, param?: string) =
   }, [events]);
 
   function clearFilters() { setFType(""); setFFrom(""); setFTo(""); setFActor(""); }
+
+  useEffect(() => {
+    if (!events || events.length === 0) return;
+    const byType: Record<string, number> = {};
+    events.forEach((e) => { const t = typeOf(e.action); byType[t] = (byType[t] || 0) + 1; });
+    const typeSummary = Object.entries(byType).map(([k, v]) => `${k}:${v}`).join(", ");
+    publishScreenData("auditoria", `${events.length} eventos | ${typeSummary}`, events, {
+      briefing: `Trilha de auditoria com ${events.length} eventos registrados. Tipos: ${typeSummary}.`,
+    });
+  }, [events]);
 
   return (
     <div className="screen">

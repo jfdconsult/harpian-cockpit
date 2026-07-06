@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import MomentumBar from "@/components/MomentumBar";
 import type { ScreenId } from "@/lib/nav";
 
@@ -114,6 +115,22 @@ export default function Ativos({ go }: { go: (id: ScreenId, param?: string) => v
     if (SORTERS[sortf]) rows = [...rows].sort(SORTERS[sortf]);
     return rows;
   }, [okRows, estf, setf, subf, movf, rsf, acf, q, sortf]);
+
+  useEffect(() => {
+    if (!data) return;
+    const nRev = data.resumo?.n_revisao || 0;
+    const mc = data.resumo?.mov_count || {};
+    const entradas = mc["ENTRADA"] || 0;
+    const saidas = mc["SAÍDA"] || 0;
+    publishScreenData(
+      "ativos",
+      `${okRows.length} ativos, ${nRev} precisam revisão, ${entradas} entradas, ${saidas} saídas`,
+      data.rows?.filter((r) => r.ok),
+      {
+        briefing: `Scanner com ${okRows.length} ativos ativos. ${nRev} precisam de revisão (${entradas} entradas, ${saidas} saídas). Universo: ${data.nome}.`,
+      }
+    );
+  }, [data]);
 
   const resumo = data?.resumo || {};
   const nRevisao = resumo.n_revisao || 0;

@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import MomentumBar from "@/components/MomentumBar";
 import AddBasketModal from "@/components/AddBasketModal";
 import { deleteBasket, loadBaskets, type CustomBasket } from "@/lib/customBaskets";
@@ -89,6 +90,18 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
       .catch(() => setConn("error"));
     refreshCustoms();
   }, [refreshCustoms]);
+
+  useEffect(() => {
+    if (!data) return;
+    publishScreenData(
+      "strategies-strength",
+      `${data.n_strategies} estratégias, portfolio ref: ${data.portfolio_ref.name}`,
+      data.strategies,
+      {
+        briefing: `${data.n_strategies} estratégias monitoradas com ${data.strategies.reduce((a, s) => a + s.n_ativos, 0)} ativos. Portfolio referência: ${data.portfolio_ref.name}.`,
+      }
+    );
+  }, [data]);
 
   return (
     <div className="screen">

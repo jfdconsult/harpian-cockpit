@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api";
+import { publishScreenData } from "@/lib/jim-data";
 import MomentumBar from "@/components/MomentumBar";
 import { useDialog } from "../ui/Dialog";
 import type { ScreenId } from "@/lib/nav";
@@ -64,6 +65,19 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
       .then((d) => { setMomData(d); setMomLoading(false); })
       .catch(() => setMomLoading(false));
   }, [currentId, view]);
+
+  useEffect(() => {
+    if (!portfolios.length) return;
+    const cur = portfolios.find((x) => x.id === currentId);
+    publishScreenData(
+      "estrategias",
+      `${portfolios.length} portfólios, atual: ${cur?.nome || currentId}, CAGR ${(cur?.cagr_pct || 0).toFixed(1)}%, Sortino ${(cur?.sortino || 0).toFixed(2)}, Risk Number ${cur?.risk_number ?? "—"}`,
+      portfolios,
+      {
+        briefing: `${portfolios.length} portfólios carregados. Portfólio selecionado: ${cur?.nome || currentId} com CAGR ${(cur?.cagr_pct || 0).toFixed(1)}% e Sortino ${(cur?.sortino || 0).toFixed(2)}.${momData ? ` Momentum: ${momData.n_esteiras} esteiras.` : ""}`,
+      }
+    );
+  }, [portfolios, momData]);
 
   const p = portfolios.find((x) => x.id === currentId);
 

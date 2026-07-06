@@ -258,7 +258,12 @@ export default function Admin({ go }: { go?: (id: ScreenId, param?: string) => v
 
           {subEstr === "portfolios" && (
             <div className="card mb">
-              <h2><span>Portfolios (modelos e ativos)</span></h2>
+              <h2>
+                <span>Portfolios (modelos e ativos)</span>
+                <button className="btn" style={{ marginLeft: "auto" }} onClick={() => go?.("construtor")}>
+                  <i className="ti ti-plus" style={{ fontSize: 13 }} /> Nova Estratégia
+                </button>
+              </h2>
               <table>
                 <thead>
                   <tr>

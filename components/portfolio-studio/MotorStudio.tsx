@@ -30,6 +30,9 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
   const dialog = useDialog();
   const [novaEsteiraPilar, setNovaEsteiraPilar] = useState<string | null>(null);
   const [novaEsteiraNome, setNovaEsteiraNome] = useState("");
+  const [novoPilarNome, setNovoPilarNome] = useState("");
+  const [novoPilarEsteira, setNovoPilarEsteira] = useState("");
+  const [showNovoPilar, setShowNovoPilar] = useState(false);
   const locked = motor.status === "prod";
 
   return (
@@ -58,12 +61,68 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
 
       {isAttackStocks(motor.estrutura) && (
         <div>
-          <div style={{ fontSize: 12, color: "var(--tx3)", marginBottom: 10 }}>
-            {motor.estrutura.pilares.length} pilares · pesos{" "}
-            {motor.estrutura.pilares.some((p) => p.peso_modo === "emergente")
-              ? "emergentes (ranking global do motor)"
-              : "fixos"}
-          </div>
+          {motor.estrutura.pilares.length > 0 && (
+            <div style={{ fontSize: 12, color: "var(--tx3)", marginBottom: 10 }}>
+              {motor.estrutura.pilares.length} pilares · pesos{" "}
+              {motor.estrutura.pilares.some((p) => p.peso_modo === "emergente")
+                ? "emergentes (ranking global do motor)"
+                : "fixos"}
+            </div>
+          )}
+
+          {/* Empty state — criar primeiro pilar */}
+          {motor.estrutura.pilares.length === 0 && !locked && (
+            <div className="card" style={{ padding: 20, borderColor: "var(--gold)", borderWidth: 1.5, marginBottom: 14 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--gold)", marginBottom: 4 }}>
+                Motor sem pilares
+              </div>
+              <div style={{ fontSize: 12, color: "var(--tx3)", marginBottom: 14, lineHeight: 1.5 }}>
+                Este motor não tem pilares nem estratégias. Crie o primeiro pilar e uma estratégia
+                para começar a adicionar ativos.
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Nome do pilar *</div>
+                  <input
+                    className="input"
+                    placeholder="Ex: Pilar A · Ataque"
+                    value={novoPilarNome}
+                    onChange={(e) => setNovoPilarNome(e.target.value)}
+                    style={{ fontSize: 12, width: "100%" }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Primeira estratégia *</div>
+                  <input
+                    className="input"
+                    placeholder="Ex: TECH_LEADERS"
+                    value={novoPilarEsteira}
+                    onChange={(e) => setNovoPilarEsteira(e.target.value.toUpperCase())}
+                    style={{ fontSize: 12, width: "100%" }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  className="btn"
+                  disabled={!novoPilarNome.trim() || !novoPilarEsteira.trim()}
+                  onClick={() => {
+                    onAddEsteira(novoPilarNome.trim(), novoPilarEsteira.trim(), 100);
+                    setNovoPilarNome("");
+                    setNovoPilarEsteira("");
+                  }}
+                  style={{ fontSize: 12 }}
+                >
+                  <i className="ti ti-plus" style={{ marginRight: 5 }} />
+                  Criar pilar + estratégia
+                </button>
+              </div>
+              <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 10, lineHeight: 1.5 }}>
+                Sugestões de pilares: <b>Pilar A · Ataque</b> (ações agressivas), <b>Pilar B · Líderes</b> (blue chips),
+                <b> Pilar C · Defesa</b> (proteção). A estratégia é a cesta de ativos dentro do pilar.
+              </div>
+            </div>
+          )}
 
           <div style={{ display: "grid", gap: 10 }}>
             {motor.estrutura.pilares.map((pilar) => (
@@ -175,6 +234,65 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
               </div>
             ))}
           </div>
+
+          {/* Novo pilar (quando já existem pilares) */}
+          {!locked && motor.estrutura.pilares.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              {!showNovoPilar ? (
+                <button
+                  className="btn ghost"
+                  style={{ fontSize: 11, padding: "5px 12px" }}
+                  onClick={() => setShowNovoPilar(true)}
+                >
+                  <i className="ti ti-plus" style={{ marginRight: 4 }} />Novo pilar
+                </button>
+              ) : (
+                <div className="card" style={{ padding: 10, display: "flex", gap: 8, alignItems: "flex-end" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Nome do pilar</div>
+                    <input
+                      className="input"
+                      placeholder="Ex: Pilar E · Novo"
+                      value={novoPilarNome}
+                      onChange={(e) => setNovoPilarNome(e.target.value)}
+                      style={{ fontSize: 11, width: "100%" }}
+                      autoFocus
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Primeira estratégia</div>
+                    <input
+                      className="input"
+                      placeholder="Ex: ETF_CORE"
+                      value={novoPilarEsteira}
+                      onChange={(e) => setNovoPilarEsteira(e.target.value.toUpperCase())}
+                      style={{ fontSize: 11, width: "100%" }}
+                    />
+                  </div>
+                  <button
+                    className="btn"
+                    style={{ fontSize: 11, padding: "5px 12px" }}
+                    disabled={!novoPilarNome.trim() || !novoPilarEsteira.trim()}
+                    onClick={() => {
+                      onAddEsteira(novoPilarNome.trim(), novoPilarEsteira.trim(), 10);
+                      setNovoPilarNome("");
+                      setNovoPilarEsteira("");
+                      setShowNovoPilar(false);
+                    }}
+                  >
+                    Criar
+                  </button>
+                  <button
+                    className="btn ghost"
+                    style={{ fontSize: 11, padding: "5px 10px" }}
+                    onClick={() => { setShowNovoPilar(false); setNovoPilarNome(""); setNovoPilarEsteira(""); }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {motor.estrutura.regras_internas && Object.keys(motor.estrutura.regras_internas).length > 0 && (
             <div className="card" style={{ padding: 10, marginTop: 12 }}>

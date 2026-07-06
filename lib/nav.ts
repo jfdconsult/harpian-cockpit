@@ -29,7 +29,8 @@ export type ScreenId =
   | "institutional"
   | "cot-sentiment"
   | "cot-legacy"
-  | "portfolio-studio";
+  | "portfolio-studio"
+  | "construtor";
 
 export interface MenuItem {
   id: ScreenId;
@@ -86,6 +87,7 @@ export const MENUS: Menu[] = [
     columns: [
       {
         items: [
+          { id: "construtor", label: "Construtor", icon: "ti-puzzle", tag: "criar" },
           { id: "backtest", label: "Backtest Lab", icon: "ti-history" },
           { id: "calibracao", label: "Calibração", icon: "ti-adjustments" },
           { id: "observador", label: "Observador (IA)", icon: "ti-eye-search" },

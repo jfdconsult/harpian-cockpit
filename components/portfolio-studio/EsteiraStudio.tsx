@@ -12,6 +12,14 @@ interface RegistryFormula {
   descricao: string;
 }
 
+interface CatalogItem {
+  ticker: string;
+  nome: string;
+  setor: string;
+  subsetor: string;
+  classe: string;
+}
+
 interface Props {
   esteira: EsteiraNo;
   onAddAtivo: (ticker: string, pesoPct: number, tipo: string) => void;
@@ -28,11 +36,17 @@ const REGRA_PESO_LABEL: Record<RegraPeso, string> = {
   cap: "Cap por posição",
 };
 
+const CLASSES = ["TODOS", "AÇÃO", "ETF", "COMMODITY", "ÍNDICE"] as const;
+
 export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSaveArena, onClose, locked = false }: Props) {
   const dialog = useDialog();
   const [ticker, setTicker] = useState("");
   const [peso, setPeso] = useState(10);
   const [tipo, setTipo] = useState("AÇÃO");
+  const [showPicker, setShowPicker] = useState(false);
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [pickerQ, setPickerQ] = useState("");
+  const [pickerClasse, setPickerClasse] = useState<string>("TODOS");
 
   // ---- Arena de competição ----
   const [rankers, setRankers] = useState<RegistryFormula[]>([]);
@@ -47,6 +61,9 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
     apiGet<{ formulas: RegistryFormula[] }>("/v1/registry/formulas")
       .then((d) => setRankers((d.formulas || []).filter((f) => f.categoria === "Ranker" && f.status === "homologada")))
       .catch(() => setRankers([]));
+    apiGet<{ items: CatalogItem[] }>("/v1/assets/catalog")
+      .then((d) => setCatalog(d.items || []))
+      .catch(() => setCatalog([]));
   }, []);
 
   useEffect(() => {
@@ -59,6 +76,16 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
   const somaAtivos = esteira.ativos.reduce((s, a) => s + a.peso_pct, 0);
   const universoTickers = universoTxt.split(/[,\n]/).map((t) => t.trim().toUpperCase()).filter(Boolean);
   const arenaConfigurada = !!esteira.arena;
+  const existingTickers = new Set(esteira.ativos.map((a) => a.ticker));
+  const filteredCatalog = catalog.filter((item) => {
+    if (existingTickers.has(item.ticker)) return false;
+    if (pickerClasse !== "TODOS" && item.classe !== pickerClasse) return false;
+    if (pickerQ) {
+      const ql = pickerQ.toLowerCase();
+      return item.ticker.toLowerCase().includes(ql) || item.nome.toLowerCase().includes(ql) || item.setor.toLowerCase().includes(ql);
+    }
+    return true;
+  });
 
   function handleSaveArena() {
     if (universoTickers.length > 500) {
@@ -261,31 +288,40 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
 
           {!locked && (
             <>
-              <div style={{ display: "flex", gap: 6 }}>
-                <input
-                  className="input"
-                  placeholder="TICKER"
-                  value={ticker}
-                  onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                  style={{ fontSize: 12, flex: 1 }}
-                />
-                <select className="input" value={tipo} onChange={(e) => setTipo(e.target.value)} style={{ fontSize: 12, width: 100 }}>
-                  <option value="AÇÃO">AÇÃO</option>
-                  <option value="ETF">ETF</option>
-                  <option value="COMMODITY">COMMODITY</option>
-                </select>
-                <input
-                  className="input"
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={peso}
-                  onChange={(e) => setPeso(Number(e.target.value))}
-                  style={{ fontSize: 12, width: 70 }}
-                />
+              <div style={{ display: "flex", gap: 6, alignItems: "flex-end" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 3 }}>Ticker</div>
+                  <input
+                    className="input"
+                    placeholder="TICKER"
+                    value={ticker}
+                    onChange={(e) => setTicker(e.target.value.toUpperCase())}
+                    style={{ fontSize: 12, width: "100%" }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 3 }}>Classe</div>
+                  <select className="input" value={tipo} onChange={(e) => setTipo(e.target.value)} style={{ fontSize: 12, width: 110 }}>
+                    <option value="AÇÃO">AÇÃO</option>
+                    <option value="ETF">ETF</option>
+                    <option value="COMMODITY">COMMODITY</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 3 }}>Peso %</div>
+                  <input
+                    className="input"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={peso}
+                    onChange={(e) => setPeso(Number(e.target.value))}
+                    style={{ fontSize: 12, width: 70 }}
+                  />
+                </div>
                 <button
                   className="btn"
-                  style={{ fontSize: 12 }}
+                  style={{ fontSize: 12, whiteSpace: "nowrap" }}
                   onClick={() => {
                     if (!ticker.trim()) return;
                     onAddAtivo(ticker.trim(), peso, tipo);
@@ -295,9 +331,104 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
                 >
                   + Add
                 </button>
+                <button
+                  className="btn ghost"
+                  style={{ fontSize: 11, whiteSpace: "nowrap", color: "var(--gold)" }}
+                  onClick={() => setShowPicker(!showPicker)}
+                >
+                  {showPicker ? "Fechar lista" : "Procurar ativos"}
+                </button>
               </div>
 
-              <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 12 }}>
+              {/* ===== ASSET PICKER ===== */}
+              {showPicker && (
+                <div style={{ marginTop: 10, border: "1px solid var(--gold)", borderRadius: 6, padding: 10, background: "rgba(201,160,44,.03)" }}>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8, alignItems: "center" }}>
+                    <input
+                      className="input"
+                      placeholder="Buscar ticker, nome ou setor..."
+                      value={pickerQ}
+                      onChange={(e) => setPickerQ(e.target.value)}
+                      style={{ fontSize: 12, flex: 1 }}
+                      autoFocus
+                    />
+                    {CLASSES.map((c) => (
+                      <button
+                        key={c}
+                        className="btn ghost"
+                        style={{
+                          fontSize: 10,
+                          padding: "3px 8px",
+                          color: pickerClasse === c ? "var(--gold)" : "var(--tx3)",
+                          borderColor: pickerClasse === c ? "var(--gold)" : "var(--line)",
+                          fontWeight: pickerClasse === c ? 700 : 400,
+                        }}
+                        onClick={() => setPickerClasse(c)}
+                      >
+                        {c === "TODOS" ? "Todos" : c}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ maxHeight: 220, overflowY: "auto", fontSize: 11 }}>
+                    {filteredCatalog.length === 0 ? (
+                      <div style={{ padding: 12, color: "var(--tx3)", textAlign: "center" }}>
+                        Nenhum ativo encontrado{pickerQ ? ` para "${pickerQ}"` : ""}.
+                      </div>
+                    ) : (
+                      <table style={{ width: "100%" }}>
+                        <thead>
+                          <tr style={{ color: "var(--tx3)", textAlign: "left", fontSize: 10 }}>
+                            <th style={{ padding: "4px 0" }}>Ticker</th>
+                            <th>Nome</th>
+                            <th>Setor</th>
+                            <th>Classe</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredCatalog.slice(0, 50).map((item) => (
+                            <tr
+                              key={item.ticker}
+                              style={{ borderTop: "1px solid var(--line)" }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(201,160,44,.06)")}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+                            >
+                              <td style={{ padding: "5px 0", fontWeight: 600, color: "var(--gold)" }}>{item.ticker}</td>
+                              <td style={{ color: "var(--tx2)" }}>{item.nome}</td>
+                              <td style={{ color: "var(--tx3)" }}>{item.setor}</td>
+                              <td>
+                                <span className={`tag ${item.classe === "ETF" ? "b" : item.classe === "AÇÃO" ? "g" : "a"}`} style={{ fontSize: 9 }}>
+                                  {item.classe}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: "right" }}>
+                                <button
+                                  className="btn"
+                                  style={{ fontSize: 10, padding: "2px 8px" }}
+                                  onClick={() => {
+                                    const classeMap: Record<string, string> = { "AÇÃO": "AÇÃO", "ETF": "ETF", "COMMODITY": "COMMODITY", "ÍNDICE": "ETF" };
+                                    onAddAtivo(item.ticker, peso, classeMap[item.classe] || "AÇÃO");
+                                  }}
+                                >
+                                  + Add
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                    {filteredCatalog.length > 50 && (
+                      <div style={{ padding: 6, color: "var(--tx3)", fontSize: 10, textAlign: "center" }}>
+                        Mostrando 50 de {filteredCatalog.length} — refine a busca.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 10 }}>
                 Adicionar/remover ativo grava direto no backend — não precisa clicar em &quot;Salvar&quot;.
               </div>
             </>

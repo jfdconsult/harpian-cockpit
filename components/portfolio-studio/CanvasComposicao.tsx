@@ -118,7 +118,7 @@ export default function CanvasComposicao({
       nome: rm.nome,
       versao: rm.versao,
       tipo,
-      status: rm.status === "homologado" ? "prod" : "lab",
+      status: "candidate",
       peso: { modo: tipo === "detector" ? "n/a" : "dinamico", regra_id: null, valor: null },
       estrutura: tipo === "detector" ? { formulas: [] } : { pilares: [] },
     };

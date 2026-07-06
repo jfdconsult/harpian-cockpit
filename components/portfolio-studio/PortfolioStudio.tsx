@@ -172,6 +172,20 @@ export default function PortfolioStudio({
   // motor/regra/perfil (ainda não salvas) não são perdidas por um reload completo.
   async function handleAddEsteiraMotor(motorId: string, pilarNome: string | null, esteiraNome: string, pesoPct: number) {
     try {
+      const motorPendente = diff.motoresAdded.find((m) => m.id === motorId);
+      if (motorPendente) {
+        await ignoreStatus(
+          addMotor(portfolioId, {
+            id: motorPendente.id,
+            ref_motor_id: motorPendente.ref_motor_id,
+            tipo: motorPendente.tipo,
+            peso_modo: motorPendente.peso.modo,
+            peso_regra_id: motorPendente.peso.regra_id,
+            peso_valor: motorPendente.peso.valor,
+          }),
+          [409],
+        );
+      }
       await addEsteiraToMotor(portfolioId, motorId, { nome: esteiraNome, peso_pct: pesoPct, pilar: pilarNome });
       dispatch({
         type: "ADD_ESTEIRA",

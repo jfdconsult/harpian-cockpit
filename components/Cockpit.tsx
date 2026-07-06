@@ -28,6 +28,7 @@ import InsiderOrders from "./screens/InsiderOrders";
 import Institutional from "./screens/Institutional";
 import CotSentiment from "./screens/CotSentiment";
 import CotLegacy from "./screens/CotLegacy";
+import Construtor from "./screens/Construtor";
 import PortfolioStudioScreen from "./screens/PortfolioStudioScreen";
 import Placeholder from "./screens/Placeholder";
 import { DialogProvider } from "./ui/Dialog";
@@ -109,6 +110,8 @@ export default function Cockpit() {
         return <CotSentiment />;
       case "cot-legacy":
         return <CotLegacy />;
+      case "construtor":
+        return <Construtor go={go} />;
       case "portfolio-studio":
         return <PortfolioStudioScreen portfolioId={studioPid} onExit={() => go(previousScreen)} />;
       default:

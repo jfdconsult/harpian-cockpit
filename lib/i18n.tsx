@@ -93,8 +93,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setLang = (l: Lang) => {
-    setLangState(l);
+    if (l === lang) return;
+    const msg = lang === "pt"
+      ? "O site será recarregado no novo idioma. Deseja continuar?"
+      : "The site will reload in the new language. Continue?";
+    if (!window.confirm(msg)) return;
     localStorage.setItem(STORAGE_KEY, l);
+    window.location.reload();
   };
 
   const t = useCallback((key: string): string => {

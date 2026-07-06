@@ -10,6 +10,7 @@ export type ScreenId =
   | "backtest"
   | "calibracao"
   | "protecao"
+  | "defesa-inteligente"
   | "indicadores"
   | "reconciliacao"
   | "observador"
@@ -102,6 +103,7 @@ export const MENUS: Menu[] = [
     columns: [
       {
         items: [
+          { id: "defesa-inteligente", label: "Defesa Inteligente", icon: "ti-shield-bolt", tag: "novo" },
           { id: "protecao", label: "Proteção & Defesa", icon: "ti-shield-check" },
           { id: "indicadores", label: "Indicadores sistêmicos", icon: "ti-activity" },
           { id: "regime", label: "Regime de mercado", icon: "ti-activity" },

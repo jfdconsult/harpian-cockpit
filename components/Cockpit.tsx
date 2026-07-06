@@ -33,7 +33,10 @@ import PortfolioStudioScreen from "./screens/PortfolioStudioScreen";
 import Placeholder from "./screens/Placeholder";
 import JimDrawer from "./JimDrawer";
 import NewsTicker from "./NewsTicker";
+import SettingsDrawer from "./SettingsDrawer";
 import { DialogProvider } from "./ui/Dialog";
+import { ThemeProvider } from "@/lib/theme";
+import { I18nProvider } from "@/lib/i18n";
 import type { ScreenId } from "@/lib/nav";
 
 export default function Cockpit() {
@@ -44,6 +47,7 @@ export default function Cockpit() {
   const [studioPid, setStudioPid] = useState<string>("HPC22");
   const [previousScreen, setPreviousScreen] = useState<ScreenId>("admin");
   const [jimOpen, setJimOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const go = (id: ScreenId, param?: string) => {
     if (id === "portfolio-studio") {
@@ -123,13 +127,18 @@ export default function Cockpit() {
   }
 
   return (
+    <ThemeProvider>
+    <I18nProvider>
     <DialogProvider>
       <div className="app">
         <NewsTicker go={go} />
-        <Topbar go={go} jimOpen={jimOpen} onJimToggle={() => setJimOpen(!jimOpen)} />
+        <Topbar go={go} jimOpen={jimOpen} onJimToggle={() => setJimOpen(!jimOpen)} onSettingsToggle={() => setSettingsOpen(!settingsOpen)} />
         <div className="main">{renderScreen()}</div>
         <JimDrawer open={jimOpen} onClose={() => setJimOpen(false)} screen={screen} />
+        <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </div>
     </DialogProvider>
+    </I18nProvider>
+    </ThemeProvider>
   );
 }

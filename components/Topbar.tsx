@@ -14,7 +14,7 @@ function Clock() {
   return <div className="clock">{t}</div>;
 }
 
-export default function Topbar({ go, jimOpen, onJimToggle }: { go: (id: ScreenId, param?: string) => void; jimOpen?: boolean; onJimToggle?: () => void }) {
+export default function Topbar({ go, jimOpen, onJimToggle, onSettingsToggle }: { go: (id: ScreenId, param?: string) => void; jimOpen?: boolean; onJimToggle?: () => void; onSettingsToggle?: () => void }) {
   // menu aberto por CLIQUE (hover continua funcionando via CSS; clique cobre touch/teclado)
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -112,6 +112,16 @@ export default function Topbar({ go, jimOpen, onJimToggle }: { go: (id: ScreenId
           onKeyDown={(e) => e.key === "Enter" && onJimToggle?.()}
         >
           <i className="ti ti-sparkles" />Jim AI
+        </div>
+        <div
+          className="jim"
+          role="button"
+          tabIndex={0}
+          onClick={() => onSettingsToggle?.()}
+          onKeyDown={(e) => e.key === "Enter" && onSettingsToggle?.()}
+          title="Configurações"
+        >
+          <i className="ti ti-settings" />
         </div>
         <div className="pillstate" style={{ cursor: "default" }}><span className="dot" />JD · sócio-gestor</div>
         <Clock />

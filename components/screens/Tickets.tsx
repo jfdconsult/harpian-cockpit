@@ -12,6 +12,18 @@ interface Ticket {
   status: string; score: number; mom_126d: number; pilar?: string; esteira?: string; troca_para?: string;
 }
 
+interface PortfolioInfo {
+  id: string; nome: string; ibkr_account_id?: string | null;
+  capital_usd?: number; mode?: string;
+}
+
+interface PortfolioGroup {
+  portfolio: PortfolioInfo;
+  tickets: Ticket[];
+  pendentes: number;
+  total_usd: number;
+}
+
 function jimMsgs(t: Ticket | null): string[] {
   if (!t) return ["Selecione um ticket para eu analisar a memória de cálculo dele."];
   if (t.tipo === "AUMENTO") return [
@@ -38,18 +50,24 @@ function kv(label: string, val: ReactNode, vcls?: string) {
 
 export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => void }) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [portfolios, setPortfolios] = useState<PortfolioInfo[]>([]);
   const [selected, setSelected] = useState<Ticket | null>(null);
   const [conn, setConn] = useState<"loading" | "ok" | "error">("loading");
   const [overlay, setOverlay] = useState<{ title: string; sub: string } | null>(null);
   const [acting, setActing] = useState(false);
+  const [batchActing, setBatchActing] = useState<string | null>(null);
   const dialog = useDialog();
 
   useEffect(() => {
-    apiGet<{ tickets: Ticket[] }>("/v1/tickets")
-      .then((d) => {
-        setTickets(d.tickets);
+    Promise.all([
+      apiGet<{ tickets: Ticket[] }>("/v1/tickets"),
+      apiGet<{ portfolios: { id: string; nome: string; ibkr_account_id?: string | null; capital_usd?: number; mode?: string }[] }>("/v1/dashboard"),
+    ])
+      .then(([td, dd]) => {
+        setTickets(td.tickets);
+        setPortfolios(dd.portfolios || []);
         setConn("ok");
-        if (d.tickets.length > 0) setSelected(d.tickets[0]);
+        if (td.tickets.length > 0) setSelected(td.tickets[0]);
       })
       .catch(() => setConn("error"));
   }, []);
@@ -75,12 +93,32 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
     );
   }, [tickets]);
 
+  const groups: PortfolioGroup[] = (() => {
+    const byPid = new Map<string, Ticket[]>();
+    for (const t of tickets) {
+      const arr = byPid.get(t.portfolio_id) || [];
+      arr.push(t);
+      byPid.set(t.portfolio_id, arr);
+    }
+    return [...byPid.entries()].map(([pid, tks]) => {
+      const pinfo = portfolios.find((p) => p.id === pid) || { id: pid, nome: pid };
+      return {
+        portfolio: pinfo,
+        tickets: tks,
+        pendentes: tks.filter((t) => t.status === "pendente").length,
+        total_usd: tks.reduce((s, t) => s + t.valor_usd, 0),
+      };
+    });
+  })();
+
   async function aprovar() {
     if (!selected || acting) return;
     if (selected.status === "enviado") { setOverlay({ title: "Já aprovado", sub: "Este ticket já foi enviado." }); return; }
+    const pinfo = portfolios.find((p) => p.id === selected.portfolio_id);
+    const ibkrLabel = pinfo?.ibkr_account_id ? ` · IBKR ${pinfo.ibkr_account_id}` : "";
     const ok = await dialog.confirm({
       title: `Aprovar ${selected.ticker}?`,
-      body: `${selected.side === "buy" ? "COMPRAR" : "VENDER"} ${selected.quantidade.toLocaleString("pt-BR")} unid. · US$ ${selected.valor_usd.toLocaleString("pt-BR")} · portfolio ${selected.portfolio_id}. A ordem será enviada à IBKR.`,
+      body: `${selected.side === "buy" ? "COMPRAR" : "VENDER"} ${selected.quantidade.toLocaleString("pt-BR")} unid. · US$ ${selected.valor_usd.toLocaleString("pt-BR")} · ${selected.portfolio_id}${ibkrLabel}`,
       confirmLabel: "Aprovar e enviar",
     });
     if (!ok) return;
@@ -90,13 +128,42 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
       const updated = { ...selected, status: "enviado" };
       setSelected(updated);
       setTickets((prev) => prev.map((t) => (t.ticker === updated.ticker ? updated : t)));
-      setOverlay({ title: `${selected.ticker} aprovado`, sub: "Ordem enviada a IBKR com sucesso." });
+      setOverlay({ title: `${selected.ticker} aprovado`, sub: `Ordem enviada a IBKR${ibkrLabel}` });
     } catch (e) {
       setOverlay({ title: "Erro", sub: String((e as Error).message || e) });
     } finally {
       setActing(false);
     }
   }
+
+  async function aprovarTodosPortfolio(pid: string) {
+    if (batchActing) return;
+    const grp = groups.find((g) => g.portfolio.id === pid);
+    if (!grp || grp.pendentes === 0) return;
+    const pinfo = grp.portfolio;
+    const ibkrLabel = pinfo.ibkr_account_id ? ` · IBKR ${pinfo.ibkr_account_id}` : "";
+    const totalUsd = grp.tickets.filter((t) => t.status === "pendente").reduce((s, t) => s + t.valor_usd, 0);
+    const ok = await dialog.confirm({
+      title: `Aprovar ${grp.pendentes} tickets · ${pinfo.nome}?`,
+      body: `Todos os ${grp.pendentes} tickets pendentes de ${pinfo.nome}${ibkrLabel} serão enviados à IBKR.\n\nValor total: US$ ${totalUsd.toLocaleString("pt-BR")}`,
+      confirmLabel: `Aprovar ${grp.pendentes} tickets`,
+    });
+    if (!ok) return;
+    setBatchActing(pid);
+    try {
+      await apiPost(`/v1/tickets/batch-approve?portfolio_id=${pid}`, { approver_id: "João Daniel" });
+      setTickets((prev) => prev.map((t) => t.portfolio_id === pid && t.status === "pendente" ? { ...t, status: "enviado" } : t));
+      if (selected && selected.portfolio_id === pid && selected.status === "pendente") {
+        setSelected({ ...selected, status: "enviado" });
+      }
+      setOverlay({ title: `${grp.pendentes} tickets aprovados`, sub: `${pinfo.nome}${ibkrLabel}` });
+    } catch (e) {
+      setOverlay({ title: "Erro", sub: String((e as Error).message || e) });
+    } finally {
+      setBatchActing(null);
+    }
+  }
+
   async function rejeitar() {
     if (!selected || acting) return;
     if (selected.status === "enviado") { dialog.notify("Ticket já enviado à IBKR — não pode ser rejeitado.", "error"); return; }
@@ -120,6 +187,7 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
       setActing(false);
     }
   }
+
   async function ajustar() {
     if (!selected || acting) return;
     const novaQtd = await dialog.prompt({
@@ -139,18 +207,6 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
     }
   }
 
-  const counts = (() => {
-    const c: Record<string, number> = {};
-    tickets.forEach((t) => { c[t.tipo] = (c[t.tipo] || 0) + 1; });
-    const parts: string[] = [];
-    if (c.AUMENTO) parts.push(`${c.AUMENTO} aum.`);
-    if (c["REDUÇÃO"]) parts.push(`${c["REDUÇÃO"]} red.`);
-    if (c.TROCA) parts.push(`${c.TROCA} troca`);
-    if (c.ENTRADA) parts.push(`${c.ENTRADA} ent.`);
-    if (c["SAÍDA"]) parts.push(`${c["SAÍDA"]} saída`);
-    return `${tickets.length} tickets | ${parts.join(" · ")}`;
-  })();
-
   const precoEst = selected ? selected.valor_usd / Math.max(selected.quantidade, 1) : 0;
   const sideTxt = selected?.side === "buy" ? "COMPRAR" : "VENDER";
   const momEq = selected ? [
@@ -167,7 +223,7 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
         <div className="flex between">
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: ".5px" }}>Tickets do Dia</div>
-            <div style={{ fontSize: 12, color: "var(--tx2)", marginTop: 2 }}>Ordens geradas pelo motor. Revise, aprove ou rejeite antes do envio a IBKR.</div>
+            <div style={{ fontSize: 12, color: "var(--tx2)", marginTop: 2 }}>Ordens por portfólio · cada portfólio = conta IBKR separada</div>
           </div>
           <div className={`tag ${conn === "ok" ? "b" : conn === "error" ? "r" : "b"}`}>
             {conn === "loading" ? "conectando..." : conn === "ok" ? "API ao vivo" : "API offline"}
@@ -177,20 +233,46 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
 
       <div className="tk-body">
         <div className="tk-list">
-          {tickets.map((t) => (
-            <div key={t.id} className={`tkt-item${selected?.id === t.id ? " sel" : ""}`} onClick={() => setSelected(t)}>
-              <div className="row">
-                <span className={`type-badge type-${t.tipo}`}>{t.tipo}</span>
-                {t.status === "enviado" && <span className="tag g" style={{ marginLeft: "auto" }}>ENVIADO</span>}
+          {groups.map((grp) => (
+            <div key={grp.portfolio.id} className="tk-portfolio-group">
+              <div className="tk-portfolio-header">
+                <div className="tk-portfolio-info">
+                  <div className="tk-portfolio-name">{grp.portfolio.nome || grp.portfolio.id}</div>
+                  {grp.portfolio.ibkr_account_id && (
+                    <div className="tk-portfolio-ibkr">IBKR {grp.portfolio.ibkr_account_id}</div>
+                  )}
+                </div>
+                <div className="tk-portfolio-stats">
+                  <span className="tk-portfolio-count">{grp.tickets.length} ticket{grp.tickets.length !== 1 ? "s" : ""}</span>
+                  {grp.pendentes > 0 && (
+                    <button
+                      className="btn sm"
+                      onClick={() => aprovarTodosPortfolio(grp.portfolio.id)}
+                      disabled={!!batchActing}
+                    >
+                      {batchActing === grp.portfolio.id ? "Enviando…" : `Aprovar ${grp.pendentes}`}
+                    </button>
+                  )}
+                  {grp.pendentes === 0 && <span className="tag g" style={{ fontSize: 10 }}>TODOS ENVIADOS</span>}
+                </div>
               </div>
-              <div className="row">
-                <span className="tk-link" onClick={(e) => { e.stopPropagation(); go("chart", t.ticker); }} title="Abrir gráfico">{t.ticker}</span>
-                <span className="nm">{t.nome || ""}</span>
-              </div>
-              <div className="row">
-                <span className={`side ${t.side === "buy" ? "buy" : "sell"}`}>{t.side === "buy" ? "COMPRAR" : "VENDER"}</span>
-                <span className="val">US$ {(t.valor_usd / 1000).toFixed(0)}k</span>
-              </div>
+              {grp.tickets.map((t) => (
+                <div key={t.id} className={`tkt-item${selected?.id === t.id ? " sel" : ""}`} onClick={() => setSelected(t)}>
+                  <div className="row">
+                    <span className={`type-badge type-${t.tipo}`}>{t.tipo}</span>
+                    {t.status === "enviado" && <span className="tag g" style={{ marginLeft: "auto", fontSize: 10 }}>ENVIADO</span>}
+                    {t.status === "rejeitado" && <span className="tag r" style={{ marginLeft: "auto", fontSize: 10 }}>REJEITADO</span>}
+                  </div>
+                  <div className="row">
+                    <span className="tk-link" onClick={(e) => { e.stopPropagation(); go("chart", t.ticker); }} title="Abrir gráfico">{t.ticker}</span>
+                    <span className="nm">{t.nome || ""}</span>
+                  </div>
+                  <div className="row">
+                    <span className={`side ${t.side === "buy" ? "buy" : "sell"}`}>{t.side === "buy" ? "COMPRAR" : "VENDER"}</span>
+                    <span className="val">US$ {(t.valor_usd / 1000).toFixed(0)}k</span>
+                  </div>
+                </div>
+              ))}
             </div>
           ))}
           {tickets.length === 0 && conn === "ok" && (
@@ -231,9 +313,13 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
                   <h2>Identificação</h2>
                   {kv("Nome", selected.nome || selected.ticker)}
                   {kv("Portfolio", selected.portfolio_id)}
+                  {(() => {
+                    const pinfo = portfolios.find((p) => p.id === selected.portfolio_id);
+                    return pinfo?.ibkr_account_id ? kv("Conta IBKR", pinfo.ibkr_account_id) : null;
+                  })()}
                   {kv("Pilar", selected.pilar || "—")}
                   {kv("Esteira", selected.esteira || "—")}
-                  <div className="kv"><span className="c-mut">Status</span><span className="v"><span className={`tag ${selected.status === "enviado" ? "g" : "a"}`}>{selected.status}</span></span></div>
+                  <div className="kv"><span className="c-mut">Status</span><span className="v"><span className={`tag ${selected.status === "enviado" ? "g" : selected.status === "rejeitado" ? "r" : "a"}`}>{selected.status}</span></span></div>
                 </div>
                 <div className="detail-card">
                   <h2>Memória de cálculo</h2>
@@ -278,10 +364,14 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
 
       {selected && (
         <div className="action-bar">
-          <button className="btn" onClick={aprovar} disabled={acting}>{acting ? "Enviando…" : "Aprovar Ticket"}</button>
-          <button className="btn ghost" onClick={rejeitar} disabled={acting}>Rejeitar</button>
-          <button className="btn ghost" onClick={ajustar} disabled={acting}>Ajustar</button>
-          <div className="counts">{counts}</div>
+          <button className="btn" onClick={aprovar} disabled={acting || selected.status !== "pendente"}>
+            {acting ? "Enviando…" : selected.status === "pendente" ? "Aprovar Ticket" : "Já processado"}
+          </button>
+          <button className="btn ghost" onClick={rejeitar} disabled={acting || selected.status !== "pendente"}>Rejeitar</button>
+          <button className="btn ghost" onClick={ajustar} disabled={acting || selected.status !== "pendente"}>Ajustar</button>
+          <div className="counts">
+            {tickets.filter((t) => t.status === "pendente").length} pendentes · {groups.length} portfólio{groups.length !== 1 ? "s" : ""}
+          </div>
         </div>
       )}
 

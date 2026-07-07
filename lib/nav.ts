@@ -32,7 +32,8 @@ export type ScreenId =
   | "cot-legacy"
   | "market-dna"
   | "portfolio-studio"
-  | "construtor";
+  | "construtor"
+  | "ticket-news";
 
 export interface MenuItem {
   id: ScreenId;
@@ -78,6 +79,7 @@ export const MENUS: Menu[] = [
       {
         items: [
           { id: "ticket", label: "Tickets do dia", icon: "ti-ticket", tag: "IBKR" },
+          { id: "ticket-news", label: "Ticket News", icon: "ti-news", tag: "novo" },
           { id: "reconciliacao", label: "Reconciliação", icon: "ti-checks" },
         ],
       },

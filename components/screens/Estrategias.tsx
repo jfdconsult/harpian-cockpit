@@ -28,10 +28,12 @@ function sparklinePoints() {
   return pts.join(" ");
 }
 
+interface AtivoMom { ticker: string; mom_j37: number | null; mom_d13: number | null; active_buy?: boolean }
 interface EsteiraMom {
   nome: string; pilar: string | null; peso_pct: number;
   mom_j37: number | null; mom_d13: number | null;
   long_n: number; short_n: number; n_ativos: number; tickers: string[];
+  ativos?: AtivoMom[];
 }
 interface MomentumResp {
   portfolio_id: string; nome: string; motor: string; regime: string;
@@ -237,27 +239,51 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
                             <td></td>
                             <td colSpan={7} style={{ padding: "8px 12px" }}>
                               <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
-                                Ativos da esteira
+                                Momentum por ativo
                               </div>
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                                {e.tickers.map((tk) => (
-                                  <span
-                                    key={tk}
-                                    className="tk-link"
-                                    onClick={(ev) => { ev.stopPropagation(); go("chart", tk); }}
-                                    style={{
-                                      background: "rgba(201,160,44,.08)",
-                                      border: "1px solid rgba(201,160,44,.25)",
-                                      borderRadius: 6,
-                                      padding: "3px 10px",
-                                      fontSize: 12,
-                                      fontWeight: 700,
-                                    }}
-                                  >
-                                    {tk}
-                                  </span>
-                                ))}
-                              </div>
+                              {e.ativos && e.ativos.length > 0 ? (
+                                <table style={{ width: "100%", fontSize: 12 }}>
+                                  <thead>
+                                    <tr>
+                                      <th style={{ textAlign: "left", paddingLeft: 8 }}>Ativo</th>
+                                      <th style={{ textAlign: "center", minWidth: 160 }}>J37</th>
+                                      <th style={{ textAlign: "center", minWidth: 160 }}>D13</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {e.ativos.map((a) => (
+                                      <tr key={a.ticker} style={a.active_buy ? { background: "rgba(74,144,217,0.08)" } : undefined}>
+                                        <td style={{ paddingLeft: 8 }}>
+                                          <span className="tk-link" onClick={(ev) => { ev.stopPropagation(); go("chart", a.ticker); }} style={{ fontWeight: 700 }}>{a.ticker}</span>
+                                          {a.active_buy && <span className="tag g" style={{ fontSize: 8, marginLeft: 6, fontWeight: 700 }}>ACTIVE BUY</span>}
+                                        </td>
+                                        <td style={{ minWidth: 160 }}><MomentumBar value={a.mom_j37} scale={20} suffix="" height={14} /></td>
+                                        <td style={{ minWidth: 160 }}><MomentumBar value={a.mom_d13} scale={30} suffix="" height={14} /></td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              ) : (
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                  {e.tickers.map((tk) => (
+                                    <span
+                                      key={tk}
+                                      className="tk-link"
+                                      onClick={(ev) => { ev.stopPropagation(); go("chart", tk); }}
+                                      style={{
+                                        background: "rgba(201,160,44,.08)",
+                                        border: "1px solid rgba(201,160,44,.25)",
+                                        borderRadius: 6,
+                                        padding: "3px 10px",
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      {tk}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </td>
                           </tr>
                         )}

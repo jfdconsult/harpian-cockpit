@@ -50,7 +50,8 @@ export interface SocialResp {
 }
 
 export const fetchNews = () => apiGet<NewsResp>("/v1/news");
-export const fetchNewsTicker = (sym: string) => apiGet<NewsResp>(`/v1/news/ticker/${sym}`);
+export const fetchNewsTicker = (sym: string, days = 0) =>
+  apiGet<NewsResp>(`/v1/news/ticker/${sym}${days > 0 ? `?days=${days}` : ""}`);
 export const fetchSocialTrending = () => apiGet<SocialResp>("/v1/social/trending");
 export const fetchSocialSymbol = (sym: string) => apiGet<SocialResp>(`/v1/social/symbol/${sym}`);
 

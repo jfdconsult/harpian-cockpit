@@ -31,6 +31,7 @@ import CotSentiment from "./screens/CotSentiment";
 import CotLegacy from "./screens/CotLegacy";
 import MarketDna from "./screens/MarketDna";
 import Construtor from "./screens/Construtor";
+import TicketNews from "./screens/TicketNews";
 import PortfolioStudioScreen from "./screens/PortfolioStudioScreen";
 import Placeholder from "./screens/Placeholder";
 import JimDrawer from "./JimDrawer";
@@ -125,6 +126,8 @@ export default function Cockpit() {
         return <MarketDna />;
       case "construtor":
         return <Construtor go={go} />;
+      case "ticket-news":
+        return <TicketNews go={go} />;
       case "portfolio-studio":
         return <PortfolioStudioScreen portfolioId={studioPid} onExit={() => go(previousScreen)} />;
       default:

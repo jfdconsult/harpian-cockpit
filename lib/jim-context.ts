@@ -122,6 +122,14 @@ export const SCREEN_MAP: Record<ScreenId, ScreenContext> = {
     title: "Construtor",
     description: "Lista de portfólios existentes — escolha um para abrir no Studio ou crie um novo.",
   },
+  "defesa-inteligente": {
+    title: "Defesa Inteligente",
+    description: "Painel de defesa sistêmica — HSA v6, temperatura por pilar, gate de cross-correlation, re-entry monitor.",
+  },
+  "market-dna": {
+    title: "Market DNA",
+    description: "DNA do mercado — estrutura interna, breadth, dispersão, correlação entre classes, sinais de regime.",
+  },
 };
 
 export const SCREEN_SUGGESTIONS: Record<ScreenId, string[]> = {
@@ -269,6 +277,16 @@ export const SCREEN_SUGGESTIONS: Record<ScreenId, string[]> = {
     "Quais portfólios existem hoje?",
     "Como criar um novo portfólio?",
     "Qual portfólio tem mais estratégias?",
+  ],
+  "defesa-inteligente": [
+    "A defesa está ativada agora?",
+    "Qual pilar está mais quente?",
+    "Como funciona o gate de cross-correlation?",
+  ],
+  "market-dna": [
+    "Qual a dispersão interna do mercado?",
+    "As correlações estão subindo?",
+    "Algum sinal de mudança de regime no DNA?",
   ],
 };
 

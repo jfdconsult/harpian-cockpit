@@ -1,8 +1,10 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { getScreenContext, getScreenSuggestions } from "@/lib/jim-context";
+import { getScreenContext, getScreenSuggestions, buildSystemPrompt } from "@/lib/jim-context";
 import { readScreenData, subscribeScreenData, type ScreenSnapshot } from "@/lib/jim-data";
 import type { ScreenId } from "@/lib/nav";
+
+const API_URL = process.env.NEXT_PUBLIC_HQP_API_URL || "http://localhost:8080";
 
 interface Msg {
   role: "user" | "assistant";
@@ -14,33 +16,27 @@ interface Msg {
   screen?: string;
 }
 
-const SESSION_ID = "default";
+const STORAGE_KEY = "jim-session";
 
-async function loadSessionMessages(): Promise<Msg[]> {
+function loadSessionMessages(): Msg[] {
   try {
-    const res = await fetch(`/api/jim/sessions?id=${SESSION_ID}`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.messages || [];
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as Msg[];
   } catch {
     return [];
   }
 }
 
-async function saveSessionMessages(msgs: Msg[], screens: string[]): Promise<void> {
+function saveSessionMessages(msgs: Msg[]): void {
   try {
-    await fetch("/api/jim/sessions", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: SESSION_ID, messages: msgs, screens }),
-    });
+    const keep = msgs.slice(-100);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(keep));
   } catch {}
 }
 
-async function deleteSession(): Promise<void> {
-  try {
-    await fetch(`/api/jim/sessions?id=${SESSION_ID}`, { method: "DELETE" });
-  } catch {}
+function deleteSession(): void {
+  localStorage.removeItem(STORAGE_KEY);
 }
 
 interface Props {
@@ -123,16 +119,15 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
 
   useEffect(() => {
     if (sessionLoaded) return;
-    loadSessionMessages().then((saved) => {
-      if (saved.length > 0) {
-        setMessages(saved);
-        const screens = new Set(saved.map((m) => m.screen).filter(Boolean) as string[]);
-        screens.forEach((s) => visitedScreens.current.add(s));
-        const lastGreetedScreen = [...saved].reverse().find((m) => m.greeting)?.screen;
-        if (lastGreetedScreen) setGreeted(lastGreetedScreen as ScreenId);
-      }
-      setSessionLoaded(true);
-    });
+    const saved = loadSessionMessages();
+    if (saved.length > 0) {
+      setMessages(saved);
+      const screens = new Set(saved.map((m) => m.screen).filter(Boolean) as string[]);
+      screens.forEach((s) => visitedScreens.current.add(s));
+      const lastGreetedScreen = [...saved].reverse().find((m) => m.greeting)?.screen;
+      if (lastGreetedScreen) setGreeted(lastGreetedScreen as ScreenId);
+    }
+    setSessionLoaded(true);
   }, [sessionLoaded]);
 
   useEffect(() => {
@@ -156,7 +151,7 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
       visitedScreens.current.add(screen);
       setMessages((prev) => {
         const next = [...prev, greeting];
-        saveSessionMessages(next, [...visitedScreens.current]);
+        saveSessionMessages(next);
         return next;
       });
       setGreeted(screen);
@@ -202,7 +197,8 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
     const cur = readScreenData(screen);
 
     try {
-      const res = await fetch("/api/jim/chat", {
+      const ctx = getScreenContext(screen);
+      const res = await fetch(`${API_URL}/v1/jim/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -211,6 +207,7 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
           model: usesSonnet ? "sonnet" : "haiku",
           screenData: cur?.rows ?? null,
           screenSummary: cur?.summary ?? null,
+          systemPrompt: buildSystemPrompt(ctx),
         }),
       });
 
@@ -236,7 +233,7 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
 
       setMessages((prev) => {
         const next = [...prev, aiMsg];
-        saveSessionMessages(next, [...visitedScreens.current]);
+        saveSessionMessages(next);
         return next;
       });
     } catch (e) {
@@ -248,7 +245,7 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
       };
       setMessages((prev) => {
         const next = [...prev, errMsg];
-        saveSessionMessages(next, [...visitedScreens.current]);
+        saveSessionMessages(next);
         return next;
       });
     } finally {

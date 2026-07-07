@@ -9,7 +9,7 @@ interface Ticket {
   status: string; troca_para?: string;
 }
 
-const PORT_LABEL: Record<string, string> = { HPC11: "HPC11", HPC22: "HPC22", HCUST: "HC-US TOTAL" };
+const PORT_LABEL: Record<string, string> = { HPC11: "HPC11", HPC22: "HPC22", LCORE22: "Lynk Core22 HPC", HCUST: "HC-US TOTAL" };
 
 // Popup de execução individual — usado tanto pelo botão "Executar" do Mission Control
 // quanto pelo badge de ação (AUMENTAR/REDUZIR/...) do gráfico do ativo. Mostra o

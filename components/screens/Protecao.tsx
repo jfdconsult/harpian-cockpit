@@ -59,7 +59,7 @@ export default function Protecao({ go }: { go: (id: ScreenId, param?: string) =>
       </div>
 
       <div className="pills mb">
-        {["HPC22", "HPC11"].map((p) => (
+        {["HPC22", "HPC11", "LCORE22"].map((p) => (
           <div key={p} className={`prot-pill${p === pid ? " on" : ""}`} onClick={() => setPid(p)}>{p}</div>
         ))}
       </div>

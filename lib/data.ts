@@ -78,6 +78,7 @@ export const TICKER_GROUPS: TickerGroup[] = [
     items: [
       { lbl: "HPC11", v: "+7.5% YTD", dir: "up" },
       { lbl: "HPC22", v: "+24.3% YTD", dir: "up" },
+      { lbl: "LCORE22", v: "— YTD", dir: "nu" },
     ],
   },
 ];

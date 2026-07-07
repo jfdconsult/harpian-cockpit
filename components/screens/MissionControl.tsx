@@ -53,7 +53,7 @@ interface Quote {
   ok: boolean;
 }
 
-const PORT_LABEL: Record<string, string> = { HPC11: "HPC11", HPC22: "HPC22", HCUST: "HC-US TOTAL" };
+const PORT_LABEL: Record<string, string> = { HPC11: "HPC11", HPC22: "HPC22", LCORE22: "Lynk Core22 HPC", HCUST: "HC-US TOTAL" };
 
 export default function MissionControl({ go }: { go: (id: ScreenId, param?: string) => void }) {
   const [dash, setDash] = useState<DashboardData | null>(null);

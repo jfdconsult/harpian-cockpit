@@ -76,7 +76,7 @@ export default function Ativos({ go }: { go: (id: ScreenId, param?: string) => v
 
   useEffect(() => {
     apiGet<{ baskets: Basket[] }>("/v1/assets/baskets")
-      .then((d) => { setBaskets(d.baskets); if (d.baskets[0]) setBasket(d.baskets[0].id); })
+      .then((d) => { const b = d.baskets || []; setBaskets(b); if (b[0]) setBasket(b[0].id); })
       .catch(() => setConn("error"));
   }, []);
 

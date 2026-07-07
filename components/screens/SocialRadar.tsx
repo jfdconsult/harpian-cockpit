@@ -117,7 +117,7 @@ function SocialCard({ p, selected, onClick }: { p: SocialPost; selected: boolean
       </div>
       <div style={{ fontSize: 14, fontWeight: 500, color: "var(--tx)", lineHeight: 1.45 }}>{p.body}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-        {p.symbols.slice(0, 5).map((t) => (
+        {(p.symbols || []).slice(0, 5).map((t) => (
           <span key={t} style={{ fontFamily: "var(--mono)", fontSize: 11, background: "rgba(201,160,44,0.08)", border: "1px solid rgba(201,160,44,0.15)", color: "var(--gold)", padding: "2px 7px", borderRadius: 3 }}>${t}</span>
         ))}
         <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5 }}>
@@ -159,7 +159,7 @@ function IntelPanel({ p, onClose }: { p: SocialPost; onClose: () => void }) {
         <div style={{ fontSize: 14, fontWeight: 500, color: "var(--tx)", lineHeight: 1.5 }}>{p.body}</div>
       </div>
 
-      {p.symbols.length > 0 && (
+      {(p.symbols?.length ?? 0) > 0 && (
         <div>
           <div style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: ".10em", textTransform: "uppercase", color: "var(--tx3)", marginBottom: 6 }}>Ativos citados</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>

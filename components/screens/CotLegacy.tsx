@@ -64,7 +64,7 @@ export default function CotLegacy() {
   useEffect(() => {
     fetch(`${GOV_API}/api/cot/legacy?weeks=${weeks}`)
       .then((r) => r.json())
-      .then((d: CotRow[]) => { setData(d); setOffline(false); })
+      .then((d: CotRow[]) => { setData(Array.isArray(d) ? d : DEMO_ROWS); setOffline(!Array.isArray(d)); })
       .catch(() => { setData(DEMO_ROWS); setOffline(true); });
   }, [weeks]);
 

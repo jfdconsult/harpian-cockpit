@@ -31,11 +31,11 @@ export function saveBasket(b: Omit<CustomBasket, "id" | "created_at">): CustomBa
     created_at: new Date().toISOString(),
   };
   all.push(nb);
-  window.localStorage.setItem(KEY, JSON.stringify(all));
+  if (typeof window !== "undefined") window.localStorage.setItem(KEY, JSON.stringify(all));
   return nb;
 }
 
 export function deleteBasket(id: string): void {
   const all = loadBaskets().filter((b) => b.id !== id);
-  window.localStorage.setItem(KEY, JSON.stringify(all));
+  if (typeof window !== "undefined") window.localStorage.setItem(KEY, JSON.stringify(all));
 }

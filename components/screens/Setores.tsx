@@ -40,7 +40,7 @@ export default function Setores({ go }: { go: (id: ScreenId, param?: string) => 
 
   useEffect(() => {
     apiGet<{ baskets: Basket[] }>("/v1/assets/baskets")
-      .then((d) => setBaskets(d.baskets))
+      .then((d) => setBaskets(d.baskets || []))
       .catch(() => {});
   }, []);
 

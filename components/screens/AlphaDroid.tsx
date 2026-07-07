@@ -106,10 +106,10 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
     if (!data) return;
     publishScreenData(
       "alphadroid",
-      `${data.n_sectors} setores, portfolio ref: ${data.portfolio_ref.name}`,
+      `${data.n_sectors} setores, portfolio ref: ${data.portfolio_ref?.name ?? "?"}`,
       data.sectors,
       {
-        briefing: `${data.n_sectors} setores monitorados com ${data.sectors.reduce((a, s) => a + s.n_ativos, 0)} ativos. Portfolio referência: ${data.portfolio_ref.name}.`,
+        briefing: `${data.n_sectors} setores monitorados com ${(data.sectors || []).reduce((a, s) => a + s.n_ativos, 0)} ativos. Portfolio referência: ${data.portfolio_ref?.name ?? "?"}.`,
       }
     );
   }, [data]);
@@ -121,7 +121,7 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
           <div className="h1">Setores · Forças</div>
           <div className="sub">
             Força dos setores · momentum agregado das cestas · GICS institucional + seus custom ·
-            portfolio alvo: <b style={{ color: "var(--gold)" }}>{data?.portfolio_ref.name}</b>
+            portfolio alvo: <b style={{ color: "var(--gold)" }}>{data?.portfolio_ref?.name}</b>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -365,7 +365,7 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
 
       <div className="foot">
         Sectors Strengths · momentum agregado (média J37/D13) dos ativos de cada cesta setorial ·{" "}
-        Portfolio ref: <b>{data?.portfolio_ref.name}</b> (#{data?.portfolio_ref.portfolio_num}) · Fonte: Yahoo EOD + DSPT
+        Portfolio ref: <b>{data?.portfolio_ref?.name}</b> (#{data?.portfolio_ref.portfolio_num}) · Fonte: Yahoo EOD + DSPT
       </div>
     </div>
   );

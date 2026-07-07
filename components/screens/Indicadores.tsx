@@ -20,7 +20,7 @@ const DEFAULTS: IndicatorsState = {
 
 function f2(n: number) { return Number(n).toFixed(2).replace(".", ","); }
 function pct01(v: number) { return Math.max(0, Math.min(100, v * 100)); }
-function tempColor(v: number) { return v >= 0.6 ? "#E74C3C" : v >= 0.4 ? "#F39C12" : "#2ECC71"; }
+function tempColor(v: number) { return v >= 0.8 ? "#E74C3C" : v >= 0.6 ? "#E67E22" : v >= 0.4 ? "#E5B800" : v >= 0.2 ? "#2ECC71" : "#1A8FE3"; }
 function ccColor(v: number) { return v >= 0.75 ? "#E74C3C" : v >= 0.55 ? "#F39C12" : "#2ECC71"; }
 function statusLabel(type: "temp" | "cc" | "mac", v: number): [string, string] {
   if (type === "temp") return v >= 0.6 ? ["defesa", "r"] : v >= 0.4 ? ["alerta", "a"] : ["normal", "g"];
@@ -52,7 +52,8 @@ export default function Indicadores() {
 
   const t = d.temperatura, cc = d.cross_correlation, ema = d.ema20, mac = d.mac_score;
   const tSt = statusLabel("temp", t.valor);
-  const gFactor = Math.max(0, Math.min(1, (cc.valor - cc.limiar_low) / (cc.limiar_high - cc.limiar_low)));
+  const ccRange = cc.limiar_high - cc.limiar_low;
+  const gFactor = ccRange ? Math.max(0, Math.min(1, (cc.valor - cc.limiar_low) / ccRange)) : 0;
   const ccSt = statusLabel("cc", cc.valor);
   const emaAbove = ema.valor === "acima";
   const macSt = mac ? statusLabel("mac", mac.valor) : ["não disponível", "b"] as [string, string];

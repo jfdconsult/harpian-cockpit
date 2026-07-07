@@ -8,10 +8,15 @@ const HEADERS = {
   "X-User-Name": "João Daniel",
 };
 
+async function parseBody<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  return text ? JSON.parse(text) : ({} as T);
+}
+
 export async function apiGet<T = unknown>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, { headers: HEADERS, cache: "no-store" });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
+  return parseBody<T>(res);
 }
 
 export async function apiPost<T = unknown>(path: string, body?: unknown): Promise<T> {
@@ -21,7 +26,7 @@ export async function apiPost<T = unknown>(path: string, body?: unknown): Promis
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
+  return parseBody<T>(res);
 }
 
 export async function apiPatch<T = unknown>(path: string, body?: unknown): Promise<T> {
@@ -31,7 +36,7 @@ export async function apiPatch<T = unknown>(path: string, body?: unknown): Promi
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
+  return parseBody<T>(res);
 }
 
 export async function apiDelete<T = unknown>(path: string): Promise<T> {
@@ -40,7 +45,7 @@ export async function apiDelete<T = unknown>(path: string): Promise<T> {
     headers: HEADERS,
   });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
+  return parseBody<T>(res);
 }
 
 export function fmtUSD(n: number): string {

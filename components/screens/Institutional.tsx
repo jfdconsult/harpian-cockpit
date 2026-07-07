@@ -15,7 +15,7 @@ export default function Institutional() {
 
   useEffect(() => {
     fetch(`${GOV_API}/api/funds`)
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then((d: Fund[]) => { setFunds(d); if (d.length) setSelected(d[0].short); })
       .catch(() => setOffline(true));
   }, []);
@@ -23,7 +23,7 @@ export default function Institutional() {
   useEffect(() => {
     if (!selected) return;
     fetch(`${GOV_API}/api/fund/${selected}`)
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then((d: FundData) => { setData(d); setOffline(false); })
       .catch(() => setOffline(true));
   }, [selected]);

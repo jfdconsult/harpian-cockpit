@@ -77,7 +77,7 @@ export default function MissionControl({ go }: { go: (id: ScreenId, param?: stri
       });
 
     apiGet<{ quotes: Quote[] }>("/v1/market/quotes")
-      .then((d) => setQuotes(d.quotes))
+      .then((d) => setQuotes(d.quotes || []))
       .catch(() => setMktStatus("error"));
   }, []);
 

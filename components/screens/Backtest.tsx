@@ -101,9 +101,11 @@ export default function Backtest() {
     );
   }, [runs]);
 
+  const pollRef = React.useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => { if (pollRef.current) clearTimeout(pollRef.current); }, []);
   function pollRun(runId: string, tries = 0) {
     if (tries > 20) return;
-    setTimeout(() => {
+    pollRef.current = setTimeout(() => {
       apiGet<{ runs: Run[] }>("/v1/backtest/runs").then((d) => {
         const fresh = d.runs || [];
         setRuns((prev) => prev.map((x) => fresh.find((f) => f.id === x.id) || x));

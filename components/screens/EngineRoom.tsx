@@ -54,13 +54,13 @@ export default function EngineRoom() {
 
   useEffect(() => {
     if (!d) return;
-    const emDefesa = d.pilares.filter((p) => p.status === "GATILHO").length;
+    const emDefesa = (d.pilares || []).filter((p) => p.status === "GATILHO").length;
     publishScreenData(
       "engine-room",
-      `Regime ${d.regime.estado}, ${emDefesa} pilar${emDefesa !== 1 ? "es" : ""} em defesa, exposição ataque ${d.regime.exposicao_ataque_pct}%, orientação: ${d.orientacao.map((o) => `${o.perfil} ${o.tag}`).join(", ")}`,
+      `Regime ${d.regime?.estado ?? "?"}, ${emDefesa} pilar${emDefesa !== 1 ? "es" : ""} em defesa, exposição ataque ${d.regime?.exposicao_ataque_pct ?? "?"}%, orientação: ${(d.orientacao || []).map((o) => `${o.perfil} ${o.tag}`).join(", ")}`,
       d,
       {
-        briefing: `Motor em regime ${d.regime.estado} com CRS ${d.regime.crs.toFixed(3)}. ${emDefesa} pilar${emDefesa !== 1 ? "es" : ""} em defesa, exposição de ataque ${d.regime.exposicao_ataque_pct}%.`,
+        briefing: `Motor em regime ${d.regime?.estado ?? "?"} com CRS ${d.regime?.crs?.toFixed(3) ?? "?"}. ${emDefesa} pilar${emDefesa !== 1 ? "es" : ""} em defesa, exposição de ataque ${d.regime?.exposicao_ataque_pct ?? "?"}%.`,
       }
     );
   }, [d]);
@@ -92,7 +92,7 @@ export default function EngineRoom() {
 
             <div className="card s4">
               <h2>Temperatura por Pilar · distância ao gatilho</h2>
-              {d.pilares.map((p) => {
+              {(d.pilares || []).map((p) => {
                 const np = (1 - p.temp) * 100;
                 const dc = p.status === "GATILHO" ? "var(--orange)" : "var(--green)";
                 const dt = p.status === "GATILHO" ? `GATILHO +${f3(Math.abs(p.folga))}` : `folga ${f3(p.folga)}`;
@@ -120,7 +120,7 @@ export default function EngineRoom() {
 
             <div className="card s4">
               <h2>Indicadores Sistêmicos · distância ao gatilho</h2>
-              {d.indicadores.map((ind) => (
+              {(d.indicadores || []).map((ind) => (
                 <div className="irow" key={ind.nome}>
                   <div className="ilab">{ind.nome}</div>
                   {ind.tipo === "chips" ? (
@@ -161,7 +161,7 @@ export default function EngineRoom() {
           <div className="g12">
             <div className="card s7">
               <h2>Distribuição de Carga · A · B por perfil</h2>
-              {d.carga.perfis.map((p) => (
+              {(d.carga?.perfis || []).map((p) => (
                 <div className="lrow" key={p.nome}>
                   <div className="lname"><span className="sw" style={{ background: p.cor }} />{p.nome}</div>
                   <div className="lbar">
@@ -175,7 +175,7 @@ export default function EngineRoom() {
 
             <div className="card s5">
               <h2>Orientação do dia · ontem → hoje</h2>
-              {d.orientacao.map((o) => (
+              {(d.orientacao || []).map((o) => (
                 <div className="orow" key={o.perfil}>
                   <div className="olabel"><span className="sw" style={{ background: o.cor }} />{o.perfil}</div>
                   <div className={`odelta ${o.dir}`}>{o.delta}</div>
@@ -186,23 +186,23 @@ export default function EngineRoom() {
 
               <div className="pdbox">
                 <div className="pdhead">
-                  <h3>▲ PILAR D · DEFESA · {d.pilar_d.lane_vencedora}</h3>
-                  <div className="sub">Carga: {d.pilar_d.carga}</div>
+                  <h3>▲ PILAR D · DEFESA · {d.pilar_d?.lane_vencedora}</h3>
+                  <div className="sub">Carga: {d.pilar_d?.carga}</div>
                 </div>
-                <div className="pdwinner">Lane vencedora (WTA ROC 6m): <b>{d.pilar_d.lane_vencedora}</b></div>
+                <div className="pdwinner">Lane vencedora (WTA ROC 6m): <b>{d.pilar_d?.lane_vencedora}</b></div>
                 <div className="pdholdings">
-                  {d.pilar_d.holdings.map((h) => (
+                  {(d.pilar_d?.holdings || []).map((h) => (
                     <span className="pdh" key={h.ticker}><b>{h.ticker}</b>{h.peso_pct}%</span>
                   ))}
                 </div>
                 <div className="pdrocs">
-                  {d.pilar_d.rocs.map((r) => (
+                  {(d.pilar_d?.rocs || []).map((r) => (
                     <span key={r.lane} style={r.winner ? { color: "var(--red-text)", fontWeight: 800 } : undefined}>
                       {r.lane} ROC <b>{r.roc}</b>
                     </span>
                   ))}
                 </div>
-                <div className="pdwarn">{d.pilar_d.nota}</div>
+                <div className="pdwarn">{d.pilar_d?.nota}</div>
               </div>
             </div>
           </div>

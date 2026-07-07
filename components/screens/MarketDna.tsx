@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { GOV_API } from "@/lib/data";
 import { publishScreenData } from "@/lib/jim-data";
 
 // ---------- Types ----------
@@ -134,7 +135,6 @@ function generateJimInsight(layers: IntelLayer[]): JimInsight {
 }
 
 // ---------- API Integration ----------
-const GOV_API = process.env.NEXT_PUBLIC_GOV_API || "http://localhost:8877";
 
 function fmtNum(v: number | null | undefined, dec = 1): string {
   if (v == null) return "—";
@@ -545,7 +545,7 @@ export default function MarketDna() {
 
   useEffect(() => {
     fetch(`${GOV_API}/api/market-dna`)
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then((data) => { setLayers(buildLayersFromApi(data)); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);

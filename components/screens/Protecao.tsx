@@ -15,7 +15,7 @@ interface PilarD { universo: string[]; top4_atual: string[]; cap_pct: number | n
 interface ReentryState { mode: string; days: number; ema_cross: boolean; velocity: number; sizing_pct: number }
 
 function sem(s: string) { return s === "ataque" ? "g" : s === "alerta" ? "a" : s === "defesa" ? "r" : "b"; }
-function tempColor(v: number) { return v >= 0.6 ? "#E74C3C" : v >= 0.4 ? "#F39C12" : "#2ECC71"; }
+function tempColor(v: number) { return v >= 0.8 ? "#E74C3C" : v >= 0.6 ? "#E67E22" : v >= 0.4 ? "#E5B800" : v >= 0.2 ? "#2ECC71" : "#1A8FE3"; }
 function pct01(v: number) { return Math.max(0, Math.min(100, v * 100)); }
 function f2(n: number | null | undefined) { return n == null ? "—" : Number(n).toFixed(2).replace(".", ","); }
 

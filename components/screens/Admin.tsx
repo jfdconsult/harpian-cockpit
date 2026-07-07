@@ -341,9 +341,9 @@ export default function Admin({ go }: { go?: (id: ScreenId, param?: string) => v
                       <td><SeloBadge selo={seloMotorCatalogo(m.status)} size="sm" /></td>
                       <td style={{ fontSize: 11 }}>{m.formulas.length} · <span className="c-mut2">{m.formulas.slice(0, 3).join(", ")}{m.formulas.length > 3 ? "…" : ""}</span></td>
                       <td className="c-mut" style={{ fontSize: 11 }}>{m.usado_em.length ? m.usado_em.join(", ") : "—"}</td>
-                      <td className="c-g" style={{ fontVariantNumeric: "tabular-nums" }}>{m.metricas_homologacao.cagr ?? "—"}%</td>
+                      <td className="c-g" style={{ fontVariantNumeric: "tabular-nums" }}>{m.metricas_homologacao.cagr != null ? m.metricas_homologacao.cagr + "%" : "—"}</td>
                       <td style={{ fontVariantNumeric: "tabular-nums" }}>{m.metricas_homologacao.sortino ?? "—"}</td>
-                      <td className="c-r" style={{ fontVariantNumeric: "tabular-nums" }}>{m.metricas_homologacao.max_dd ?? "—"}%</td>
+                      <td className="c-r" style={{ fontVariantNumeric: "tabular-nums" }}>{m.metricas_homologacao.max_dd != null ? m.metricas_homologacao.max_dd + "%" : "—"}</td>
                       <td><span className={`grade ${m.metricas_homologacao.grade === "A" || m.metricas_homologacao.grade === "B" ? m.metricas_homologacao.grade : "rodando"}`}>{m.metricas_homologacao.grade || "—"}</span></td>
                     </tr>
                   ))}

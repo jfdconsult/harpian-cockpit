@@ -226,7 +226,7 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
   useEffect(() => {
     apiGet<ChartResp>(`/v1/market/chart/${ticker}?rng=${range}`)
       .then((d) => {
-        if (!d.ok || !d.candles.length) { setMeta(`Sem dados para ${ticker}`); return; }
+        if (!d.ok || !d.candles?.length) { setMeta(`Sem dados para ${ticker}`); return; }
         setTname(d.name || ticker);
         const last = d.candles[d.candles.length - 1];
         const prev = d.candles.length > 1 ? d.candles[d.candles.length - 2].close : last.open;

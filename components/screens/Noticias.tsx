@@ -14,10 +14,10 @@ export default function Noticias({ go }: { go: (id: ScreenId, param?: string) =>
     fetchNews()
       .then((d) => {
         if (!live) return;
-        const filtered = d.headlines
+        const filtered = (d.headlines || [])
           .filter((h) => h.impact === "Market Moving" || h.impact === "High")
           .slice(0, 10);
-        setItems(filtered.length ? filtered : d.headlines.slice(0, 10));
+        setItems(filtered.length ? filtered : (d.headlines || []).slice(0, 10));
         setColors(d.source_color || {});
         setConn("ok");
       })
@@ -64,7 +64,7 @@ export default function Noticias({ go }: { go: (id: ScreenId, param?: string) =>
                 <span style={{ marginLeft: "auto", fontFamily: "var(--mono)", fontSize: 10, color: "var(--tx3)" }}>{h.ts}</span>
               </div>
               <div style={{ fontSize: 14, fontWeight: 500, color: "var(--tx)", lineHeight: 1.45 }}>{h.headline}</div>
-              {h.tags.length > 0 && (
+              {(h.tags?.length ?? 0) > 0 && (
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {h.tags.map((t) => <span key={t} style={{ fontFamily: "var(--mono)", fontSize: 10, background: "rgba(201,160,44,0.08)", border: "1px solid rgba(201,160,44,0.15)", color: "var(--gold)", padding: "2px 6px", borderRadius: 3 }}>{t}</span>)}
                 </div>

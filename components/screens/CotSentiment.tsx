@@ -262,7 +262,7 @@ export default function CotSentiment() {
 
   useEffect(() => {
     fetch(`${GOV_API}/api/cot/legacy?weeks=156`)
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then((rows: LegacyRow[]) => {
         setData(computeCotData(rows));
         setOffline(false);

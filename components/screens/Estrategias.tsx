@@ -54,7 +54,7 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
 
   function refreshData() {
     apiGet<{ portfolios: Portfolio[] }>("/v1/strategies/")
-      .then((d) => { setPortfolios(d.portfolios); setConn("ok"); })
+      .then((d) => { setPortfolios(d.portfolios || []); setConn("ok"); })
       .catch(() => setConn("error"));
   }
   useEffect(refreshData, []);
@@ -104,13 +104,9 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
       confirmLabel: "Remover ativo",
     });
     if (!ok) return;
-    fetch(`${process.env.NEXT_PUBLIC_HQP_API_URL || "http://localhost:8080"}/v1/strategies/${portId}/esteira/${esteiraNome}/ativo/${ticker}`, {
-      method: "DELETE",
-      headers: { "X-User-Role": "socio_gestor", "X-User-Name": "João Daniel" },
-    })
-      .then((r) => r.json())
+    apiPost(`/v1/strategies/${portId}/esteira/${esteiraNome}/ativo/${ticker}/remove`, {})
       .then(() => refreshData())
-      .catch((e) => dialog.notify("Erro: " + e.message, "error"));
+      .catch((e: unknown) => dialog.notify("Erro: " + ((e as Error).message || e), "error"));
   }
 
   function renderEsteira(port: Portfolio, est: Esteira, key: string) {

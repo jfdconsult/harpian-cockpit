@@ -130,6 +130,10 @@ export const SCREEN_MAP: Record<ScreenId, ScreenContext> = {
     title: "Market DNA",
     description: "DNA do mercado — estrutura interna, breadth, dispersão, correlação entre classes, sinais de regime.",
   },
+  "ticket-news": {
+    title: "Ticket News",
+    description: "Notícias específicas dos ativos em carteira — headlines filtradas por ticker, impacto potencial, veredito IA.",
+  },
 };
 
 export const SCREEN_SUGGESTIONS: Record<ScreenId, string[]> = {
@@ -287,6 +291,11 @@ export const SCREEN_SUGGESTIONS: Record<ScreenId, string[]> = {
     "Qual a dispersão interna do mercado?",
     "As correlações estão subindo?",
     "Algum sinal de mudança de regime no DNA?",
+  ],
+  "ticket-news": [
+    "Alguma notícia impacta os ativos em carteira?",
+    "Quais tickers têm headlines relevantes?",
+    "O JIM detectou impacto em algum ativo?",
   ],
 };
 

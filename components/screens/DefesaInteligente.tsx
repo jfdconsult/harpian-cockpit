@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
 import { publishScreenData } from "@/lib/jim-data";
+import { Bullet } from "@/components/RegimeGauge";
 
 // ---------- Types ----------
 interface IndicatorsState {
@@ -11,9 +12,14 @@ interface IndicatorsState {
   mac_score?: { valor: number; limiar: number; status: string; f13?: number; cot?: number; fed?: number } | null;
 }
 
-interface MarketDnaLayer {
-  key: string; label: string; score: number; status: string; color: string; icon: string;
+interface PilarDef { nome: string; temp: number; turb: number; trend_break: number; jerk: number; limiar: number | null; status: string }
+interface DefenseState {
+  portfolio_id: string; regime: string; defesa_pct: number; pilares: Record<string, PilarDef>;
+  cc: number; cc_gate_low: number; cc_gate_high: number; g: number; ema20_acima: boolean; velocity: number | null;
+  reentry: { status: string; days_in_defense: number; target_pct: number | null };
 }
+interface PilarD { universo: string[]; top4_atual: string[]; cap_pct: number | null; rotacao_freq: string; contribuicao_ytd_pct: number | null }
+interface ReentryState { mode: string; days: number; ema_cross: boolean; velocity: number; sizing_pct: number }
 
 const REGIMES = [
   { key: "BEAR", label: "Risk-Off", color: "#E74C3C", icon: "ti-shield-off" },
@@ -36,19 +42,14 @@ const DEFAULTS: IndicatorsState = {
   mac_score: { valor: 68, limiar: 50, status: "positivo" },
 };
 
-const GOV_API = process.env.NEXT_PUBLIC_GOV_API || "http://localhost:8877";
-
 // ---------- Helpers ----------
 function f2(n: number | null | undefined) { return n == null ? "—" : Number(n).toFixed(2).replace(".", ","); }
-function tempColor(v: number) { return v >= 0.6 ? "#E74C3C" : v >= 0.4 ? "#E5B800" : v >= 0.2 ? "#7d96b3" : "#2ECC71"; }
+function tempColor(v: number) { return v >= 0.8 ? "#E74C3C" : v >= 0.6 ? "#E67E22" : v >= 0.4 ? "#E5B800" : v >= 0.2 ? "#2ECC71" : "#1A8FE3"; }
+function tempZoneLabel(v: number) { return v >= 0.8 ? "DEFESA" : v >= 0.6 ? "ALERTA" : v >= 0.4 ? "CAUTELA" : v >= 0.2 ? "NEUTRO" : "ATAQUE"; }
+function balPct(v: number): string { return Math.max(0, Math.round(100 - 125 * v)) + "%"; }
 function ccColor(v: number) { return v >= 0.75 ? "#E74C3C" : v >= 0.55 ? "#F39C12" : "#2ECC71"; }
-function scoreColor(s: number): string {
-  if (s >= 80) return "#E74C3C";
-  if (s >= 65) return "#E67E22";
-  if (s >= 45) return "#C9A02C";
-  if (s >= 25) return "#4A90D9";
-  return "#2ECC71";
-}
+function pct01(v: number) { return Math.max(0, Math.min(100, v * 100)); }
+function sem(s: string) { return s === "ataque" ? "g" : s === "alerta" ? "a" : s === "defesa" ? "r" : "b"; }
 
 function trendArrow(dir: "up" | "down" | "flat"): { icon: string; color: string; label: string } {
   if (dir === "up") return { icon: "ti-trending-up", color: "#E74C3C", label: "subindo" };
@@ -62,92 +63,156 @@ function computeTrend(current: number, previous: number): "up" | "down" | "flat"
   return delta > 0 ? "up" : "down";
 }
 
-// ---------- 180-degree Gauge (inverted: Defense LEFT, Risk-On RIGHT) ----------
+// ---------- 180° Gauge — 5 zonas, 4 pontos de controle (balanceamento 0-100%) ----------
 function TempGauge180({ value, trend1d, trend1w }: { value: number; trend1d: "up" | "down" | "flat"; trend1w: "up" | "down" | "flat" }) {
-  const cx = 150, cy = 140, r = 110;
-  // Inverted: value=1 → left (PI), value=0 → right (0)
-  const angle = value * Math.PI;
-  const needleX = cx + r * 0.85 * Math.cos(angle);
-  const needleY = cy - r * 0.85 * Math.sin(angle);
+  const cx = 150, cy = 148, r = 110;
+  const deg2rad = (d: number) => (d * Math.PI) / 180;
+
+  const zones = [
+    { vStart: 0.0,  vEnd: 0.2,  degStart: 0,    degEnd: 28,   color: "#1A8FE3", label: "ATAQUE",  bal: "100%" },
+    { vStart: 0.2,  vEnd: 0.4,  degStart: 28,   degEnd: 62,   color: "#2ECC71", label: "NEUTRO",  bal: "75%" },
+    { vStart: 0.4,  vEnd: 0.6,  degStart: 62,   degEnd: 102,  color: "#E5B800", label: "CAUTELA", bal: "50%" },
+    { vStart: 0.6,  vEnd: 0.8,  degStart: 102,  degEnd: 145,  color: "#E67E22", label: "ALERTA",  bal: "25%" },
+    { vStart: 0.8,  vEnd: 1.0,  degStart: 145,  degEnd: 180,  color: "#E74C3C", label: "DEFESA",  bal: "0%" },
+  ];
+
+  function v2a(v: number): number {
+    const c = Math.max(0, Math.min(1, v));
+    for (const z of zones) {
+      if (c <= z.vEnd) {
+        const t = (c - z.vStart) / (z.vEnd - z.vStart);
+        return deg2rad(z.degStart + t * (z.degEnd - z.degStart));
+      }
+    }
+    return Math.PI;
+  }
+
+  const angle = v2a(value);
   const col = tempColor(value);
+  const activeZone = zones.find(z => value >= z.vStart && value < z.vEnd) || zones[zones.length - 1];
+  const zLabel = tempZoneLabel(value);
+  const bal = balPct(value);
   const t1d = trendArrow(trend1d);
   const t1w = trendArrow(trend1w);
 
-  // 4 zones: Defense (red) → Low Risk (yellow) → Neutral (gray) → Risk-On (green)
-  const zones = [
-    { start: 0.6, end: 1.0, color: "#E74C3C", label: "Defense" },
-    { start: 0.4, end: 0.6, color: "#E5B800", label: "Low Risk" },
-    { start: 0.2, end: 0.4, color: "#7d96b3", label: "Neutral" },
-    { start: 0.0, end: 0.2, color: "#2ECC71", label: "Risk-On" },
-  ];
+  const needleX = cx + r * 0.82 * Math.cos(angle);
+  const needleY = cy - r * 0.82 * Math.sin(angle);
+
+  const numR = r * 0.48;
+  const numX = cx + numR * Math.cos(angle);
+  const numY = cy - numR * Math.sin(angle);
 
   return (
     <div style={{ textAlign: "center" }}>
-      <svg width={300} height={180} viewBox="0 0 300 180">
-        {/* Background arcs (inverted: high temp = left) */}
+      <svg width={300} height={190} viewBox="0 0 300 190">
         {zones.map((z) => {
-          const a1 = z.start * Math.PI;
-          const a2 = z.end * Math.PI;
+          const a1 = deg2rad(z.degStart);
+          const a2 = deg2rad(z.degEnd);
           const x1 = cx + r * Math.cos(a1);
           const y1 = cy - r * Math.sin(a1);
           const x2 = cx + r * Math.cos(a2);
           const y2 = cy - r * Math.sin(a2);
-          const largeArc = (z.end - z.start) > 0.5 ? 1 : 0;
+          const large = (z.degEnd - z.degStart) > 90 ? 1 : 0;
+          const isActive = z.label === activeZone.label;
           return (
             <path key={z.label}
-              d={`M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 0 ${x2} ${y2}`}
-              fill="none" stroke={z.color} strokeWidth={18} strokeLinecap="butt" opacity={0.15}
+              d={`M ${x1} ${y1} A ${r} ${r} 0 ${large} 0 ${x2} ${y2}`}
+              fill="none" stroke={z.color}
+              strokeWidth={isActive ? 24 : 18} strokeLinecap="butt"
+              opacity={isActive ? 0.38 : 0.12}
+              style={isActive ? { filter: `drop-shadow(0 0 8px ${z.color}40)` } : undefined}
             />
           );
         })}
-        {/* Active arc: fills from right (0) to current value */}
-        {(() => {
-          const activeEnd = value * Math.PI;
-          const x1 = cx + r * Math.cos(0);
-          const y1 = cy - r * Math.sin(0);
-          const x2 = cx + r * Math.cos(activeEnd);
-          const y2 = cy - r * Math.sin(activeEnd);
-          const largeArc = value > 0.5 ? 1 : 0;
+
+        {value > 0.01 && zones.map((z) => {
+          if (value <= z.vStart) return null;
+          const segStart = Math.max(z.vStart, 0);
+          const segEnd = Math.min(value, z.vEnd);
+          if (segEnd <= segStart) return null;
+          const a1 = v2a(segStart);
+          const a2 = v2a(segEnd);
+          const x1 = cx + r * Math.cos(a1);
+          const y1 = cy - r * Math.sin(a1);
+          const x2 = cx + r * Math.cos(a2);
+          const y2 = cy - r * Math.sin(a2);
+          const degSpan = (a2 - a1) * 180 / Math.PI;
+          const large = degSpan > 90 ? 1 : 0;
+          const isFirst = z.vStart === 0;
+          const isLast = value <= z.vEnd;
           return (
-            <path
-              d={`M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 0 ${x2} ${y2}`}
-              fill="none" stroke={col} strokeWidth={18} strokeLinecap="round"
-              style={{ filter: `drop-shadow(0 0 6px ${col}40)` }}
+            <path key={`fill-${z.label}`}
+              d={`M ${x1} ${y1} A ${r} ${r} 0 ${large} 0 ${x2} ${y2}`}
+              fill="none" stroke={z.color} strokeWidth={22}
+              strokeLinecap={isFirst || isLast ? "round" : "butt"}
+              style={{ filter: `drop-shadow(0 0 6px ${z.color}40)` }}
             />
           );
-        })()}
-        {/* Tick marks (inverted: 1.0 left, 0.0 right) */}
-        {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map((v) => {
-          const a = v * Math.PI;
-          const ix = cx + (r + 14) * Math.cos(a);
-          const iy = cy - (r + 14) * Math.sin(a);
+        })}
+
+        {[0.0, 0.2, 0.4, 0.6, 0.8, 1.0].map((v) => {
+          const a = v2a(v);
+          const isBoundary = v > 0 && v < 1;
+          const t1 = r - 13, t2 = r + 13;
           return (
-            <text key={v} x={ix} y={iy} textAnchor="middle" dominantBaseline="middle"
-              fill="var(--tx3)" fontSize={9} fontFamily="var(--mono)">
-              {v.toFixed(1)}
-            </text>
+            <g key={v}>
+              <line
+                x1={cx + t1 * Math.cos(a)} y1={cy - t1 * Math.sin(a)}
+                x2={cx + t2 * Math.cos(a)} y2={cy - t2 * Math.sin(a)}
+                stroke={isBoundary ? "var(--tx2)" : "var(--tx3)"} strokeWidth={isBoundary ? 2 : 1} opacity={isBoundary ? 0.4 : 0.2}
+              />
+              <text
+                x={cx + (t2 + 10) * Math.cos(a)} y={cy - (t2 + 10) * Math.sin(a)}
+                textAnchor="middle" dominantBaseline="middle"
+                fill="var(--tx3)" fontSize={8} fontFamily="var(--mono)">
+                {v.toFixed(1)}
+              </text>
+            </g>
           );
         })}
-        {/* Zone labels: Defense left, Risk-On right */}
-        <text x={50} y={130} fill="#E74C3C" fontSize={9} fontFamily="var(--mono)" fontWeight={600}>DEFENSE</text>
-        <text x={95} y={55} fill="#E5B800" fontSize={8} fontFamily="var(--mono)" fontWeight={600}>LOW RISK</text>
-        <text x={190} y={55} fill="#7d96b3" fontSize={8} fontFamily="var(--mono)" fontWeight={600}>NEUTRAL</text>
-        <text x={225} y={130} fill="#2ECC71" fontSize={9} fontFamily="var(--mono)" fontWeight={600}>RISK-ON</text>
-        {/* Needle */}
+
+        {zones.map((z) => {
+          const midA = deg2rad((z.degStart + z.degEnd) / 2);
+          const lr = r + 26;
+          const isActive = z.label === activeZone.label;
+          return (
+            <g key={`lbl-${z.label}`}>
+              <text
+                x={cx + lr * Math.cos(midA)} y={cy - lr * Math.sin(midA) - 5}
+                textAnchor="middle" dominantBaseline="middle"
+                fill={z.color} fontSize={isActive ? 9 : 7} fontWeight={isActive ? 800 : 600}
+                fontFamily="var(--mono)" opacity={isActive ? 1 : 0.45}>
+                {z.label}
+              </text>
+              <text
+                x={cx + lr * Math.cos(midA)} y={cy - lr * Math.sin(midA) + 6}
+                textAnchor="middle" dominantBaseline="middle"
+                fill={z.color} fontSize={7} fontWeight={500}
+                fontFamily="var(--mono)" opacity={isActive ? 0.7 : 0.3}>
+                {z.bal}
+              </text>
+            </g>
+          );
+        })}
+
         <line x1={cx} y1={cy} x2={needleX} y2={needleY}
           stroke={col} strokeWidth={3} strokeLinecap="round"
           style={{ filter: `drop-shadow(0 0 4px ${col})` }}
         />
         <circle cx={cx} cy={cy} r={6} fill={col} stroke="var(--bg1)" strokeWidth={3} />
-        {/* Value */}
-        <text x={cx} y={cy + 28} textAnchor="middle" fill={col}
-          fontSize={28} fontWeight={800} fontFamily="var(--mono)">
+
+        <text x={numX} y={numY - 8} textAnchor="middle" dominantBaseline="middle"
+          fill={col} fontSize={26} fontWeight={800} fontFamily="var(--mono)"
+          style={{ filter: `drop-shadow(0 1px 3px var(--bg1))` }}>
           {f2(value)}
+        </text>
+        <text x={numX} y={numY + 10} textAnchor="middle" dominantBaseline="middle"
+          fill={col} fontSize={9} fontWeight={700} fontFamily="var(--mono)" opacity={0.85}>
+          {zLabel} · {bal}
         </text>
       </svg>
 
-      {/* Trend indicators below gauge */}
-      <div style={{ display: "flex", justifyContent: "center", gap: 20, marginTop: 4 }}>
+      <div style={{ display: "flex", justifyContent: "center", gap: 20, marginTop: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
           <i className={`ti ${t1d.icon}`} style={{ color: t1d.color, fontSize: 16 }} />
           <span style={{ color: "var(--tx3)", fontFamily: "var(--mono)" }}>1d</span>
@@ -160,50 +225,6 @@ function TempGauge180({ value, trend1d, trend1w }: { value: number; trend1d: "up
         </div>
       </div>
     </div>
-  );
-}
-
-// ---------- Mini Radar (defense-relevant layers) ----------
-function DefenseRadar({ layers }: { layers: MarketDnaLayer[] }) {
-  const n = layers.length;
-  if (n === 0) return null;
-  const cx = 120, cy = 120, maxR = 95;
-  const angleStep = (2 * Math.PI) / n;
-
-  const points = layers.map((l, i) => {
-    const a = -Math.PI / 2 + i * angleStep;
-    const rr = (l.score / 100) * maxR;
-    return { x: cx + rr * Math.cos(a), y: cy + rr * Math.sin(a) };
-  });
-  const polygon = points.map((p) => `${p.x},${p.y}`).join(" ");
-
-  return (
-    <svg width={240} height={240} viewBox="0 0 240 240" style={{ display: "block", margin: "0 auto" }}>
-      {[20, 40, 60, 80, 100].map((lv) => (
-        <circle key={lv} cx={cx} cy={cy} r={(lv / 100) * maxR}
-          fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
-      ))}
-      {layers.map((l, i) => {
-        const a = -Math.PI / 2 + i * angleStep;
-        const ex = cx + maxR * Math.cos(a);
-        const ey = cy + maxR * Math.sin(a);
-        const lx = cx + (maxR + 14) * Math.cos(a);
-        const ly = cy + (maxR + 14) * Math.sin(a);
-        return (
-          <g key={l.key}>
-            <line x1={cx} y1={cy} x2={ex} y2={ey} stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
-            <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle"
-              fill={l.color} fontSize={7} fontFamily="var(--mono)" fontWeight={600}>
-              {l.label.substring(0, 5).toUpperCase()}
-            </text>
-          </g>
-        );
-      })}
-      <polygon points={polygon} fill="rgba(201,160,44,.12)" stroke="var(--gold)" strokeWidth={2} strokeLinejoin="round" />
-      {points.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={3.5} fill={scoreColor(layers[i].score)} stroke="var(--bg1)" strokeWidth={2} />
-      ))}
-    </svg>
   );
 }
 
@@ -248,8 +269,9 @@ function SensorCard({ title, icon, value, unit, color, statusLabel, statusTone, 
 }
 
 // ---------- JIM Defense Panel ----------
-function JimDefensePanel({ regime, temp, cc, ema, mac, dnaScore }: {
-  regime: string; temp: number; cc: number; ema: string; mac: number | null; dnaScore: number;
+function JimDefensePanel({ regime, temp, cc, ema, mac, defenseState, reentry }: {
+  regime: string; temp: number; cc: number; ema: string; mac: number | null;
+  defenseState: DefenseState | null; reentry: ReentryState | null;
 }) {
   const insights: { type: "pos" | "neg" | "alert"; text: string }[] = [];
 
@@ -273,8 +295,16 @@ function JimDefensePanel({ regime, temp, cc, ema, mac, dnaScore }: {
     else if (mac < 30) insights.push({ type: "neg", text: `MAC Score negativo (${mac}/100) — ambiente macro desfavoravel.` });
   }
 
-  if (dnaScore >= 70) insights.push({ type: "pos", text: `Market DNA Conviction ${dnaScore} — multiplas camadas sustentam exposicao.` });
-  else if (dnaScore < 40) insights.push({ type: "neg", text: `Market DNA Conviction ${dnaScore} — multiplas camadas pedem cautela.` });
+  if (defenseState) {
+    const pilaresEmAlerta = Object.values(defenseState.pilares).filter(p => p.status === "alerta" || p.status === "defesa").length;
+    if (pilaresEmAlerta === 0) insights.push({ type: "pos", text: "Nenhum pilar em alerta — todos os motores operando normalmente." });
+    else insights.push({ type: "neg", text: `${pilaresEmAlerta} pilar${pilaresEmAlerta > 1 ? "es" : ""} em alerta ou defesa — monitorar decomposicao.` });
+  }
+
+  if (reentry) {
+    if (reentry.mode === "re-entering") insights.push({ type: "pos", text: `Re-entry em andamento — sizing ${reentry.sizing_pct}%, velocidade ${f2(reentry.velocity)}.` });
+    else if (reentry.days > 5) insights.push({ type: "alert", text: `${reentry.days} dias em defesa — aguardando condicoes de re-entry.` });
+  }
 
   const positives = insights.filter((i) => i.type === "pos");
   const negatives = insights.filter((i) => i.type === "neg");
@@ -328,56 +358,43 @@ function JimDefensePanel({ regime, temp, cc, ema, mac, dnaScore }: {
 export default function DefesaInteligente() {
   const [ind, setInd] = useState<IndicatorsState>(DEFAULTS);
   const [conn, setConn] = useState<"loading" | "ok" | "error">("loading");
-  const [dnaLayers, setDnaLayers] = useState<MarketDnaLayer[]>([]);
-  const [dnaScore, setDnaScore] = useState(50);
   const [tempHistory, setTempHistory] = useState<{ d1: number; d7: number }>({ d1: 0.42, d7: 0.45 });
+  const [defenseState, setDefenseState] = useState<DefenseState | null>(null);
+  const [pilarD, setPilarD] = useState<PilarD | null>(null);
+  const [reentry, setReentry] = useState<ReentryState | null>(null);
+  const pid = "HPC22";
 
-  const CURRENT_REGIME = "BULL";
-  const curRegime = REGIMES.find((r) => r.key === CURRENT_REGIME)!;
+  const CURRENT_REGIME = defenseState?.regime || "BULL";
+  const curRegime = REGIMES.find((r) => r.key === CURRENT_REGIME) || REGIMES[3];
 
   useEffect(() => {
     apiGet<{ indicators: IndicatorsState }>("/v1/protection/indicators")
       .then((data) => { setInd(data.indicators); setConn("ok"); })
       .catch(() => { setInd(DEFAULTS); setConn("error"); });
 
-    fetch(`${GOV_API}/api/market-dna`)
-      .then((r) => r.json())
-      .then((data) => {
-        const layers = data?.layers || {};
-        const mapped: MarketDnaLayer[] = [];
-        const defs: { key: string; label: string; color: string; icon: string }[] = [
-          { key: "positioning", label: "Positioning", color: "#4A90D9", icon: "ti-users-group" },
-          { key: "volatility", label: "Volatility", color: "#E74C3C", icon: "ti-bolt" },
-          { key: "options", label: "Options", color: "#9B59B6", icon: "ti-chart-dots-3" },
-          { key: "liquidity", label: "Liquidity", color: "#1ABC9C", icon: "ti-droplet-half-2" },
-          { key: "breadth", label: "Breadth", color: "#3498DB", icon: "ti-chart-histogram" },
-          { key: "sentiment", label: "Sentiment", color: "#E67E22", icon: "ti-mood-smile" },
-          { key: "macro", label: "Macro", color: "#7B68EE", icon: "ti-building-bank" },
-        ];
-        for (const d of defs) {
-          const l = layers[d.key];
-          mapped.push({
-            key: d.key, label: d.label, color: d.color, icon: d.icon,
-            score: l?.data ? extractScore(d.key, l.data) : 50,
-            status: l ? "live" : "planned",
-          });
-        }
-        setDnaLayers(mapped);
-        const avg = Math.round(mapped.reduce((s, l) => s + l.score, 0) / mapped.length);
-        setDnaScore(avg);
-      })
-      .catch(() => {});
-
     apiGet<{ temp_1d_ago: number; temp_7d_ago: number }>("/v1/protection/temp-history")
       .then((h) => setTempHistory({ d1: h.temp_1d_ago, d7: h.temp_7d_ago }))
       .catch(() => {});
-  }, []);
+
+    apiGet<DefenseState>(`/v1/protection/defense?portfolio_id=${pid}`)
+      .then(setDefenseState)
+      .catch(() => {});
+
+    apiGet<PilarD>("/v1/protection/pilar-d")
+      .then(setPilarD)
+      .catch(() => {});
+
+    apiGet<ReentryState>(`/v1/protection/reentry?portfolio_id=${pid}`)
+      .then(setReentry)
+      .catch(() => {});
+  }, [pid]);
 
   const t = ind.temperatura;
   const cc = ind.cross_correlation;
   const ema = ind.ema20;
   const mac = ind.mac_score;
-  const gFactor = Math.max(0, Math.min(1, (cc.valor - cc.limiar_low) / (cc.limiar_high - cc.limiar_low)));
+  const ccRange = cc.limiar_high - cc.limiar_low;
+  const gFactor = ccRange ? Math.max(0, Math.min(1, (cc.valor - cc.limiar_low) / ccRange)) : 0;
   const trend1d = computeTrend(t.valor, tempHistory.d1);
   const trend1w = computeTrend(t.valor, tempHistory.d7);
 
@@ -385,27 +402,32 @@ export default function DefesaInteligente() {
   const ccSt = cc.valor >= 0.75 ? ["critico", "r"] : cc.valor >= 0.55 ? ["elevado", "a"] : ["normal", "g"];
   const macSt = mac ? (mac.valor >= 50 ? ["positivo", "g"] : mac.valor >= 30 ? ["neutro", "a"] : ["negativo", "r"]) : ["N/A", "b"];
 
+  const pilaresEmAlerta = defenseState ? Object.values(defenseState.pilares).filter(p => p.status === "alerta" || p.status === "defesa").length : 0;
+
   useEffect(() => {
     publishScreenData(
       "defesa-inteligente",
-      "Defesa Inteligente: regime + 4 sensores + Market DNA radar. Temperatura com direcao (1d/7d). Cross-correlation e gate sistemico. JIM analisa todas as camadas de protecao.",
+      "Defesa Inteligente: regime + 4 sensores + temperatura por pilar + re-entry + Pilar D. Instrumentos exclusivos de defesa.",
       {
         regime: CURRENT_REGIME, temperatura: t.valor, trend1d, trend1w,
         cc: cc.valor, gFactor, ema: ema.valor, mac: mac?.valor ?? null,
-        dnaScore, dnaLayers: dnaLayers.map((l) => ({ camada: l.label, score: l.score })),
+        pilaresEmAlerta,
+        defenseState: defenseState ? { defesa_pct: defenseState.defesa_pct, pilares: defenseState.pilares } : null,
+        reentry: reentry ? { mode: reentry.mode, days: reentry.days, sizing_pct: reentry.sizing_pct } : null,
       },
       {
         briefing:
           `Regime **${curRegime.label}**. Temperatura **${f2(t.valor)}** (${tSt[0]}, ${trendArrow(trend1d).label} no dia, ${trendArrow(trend1w).label} na semana). ` +
-          `CC **${f2(cc.valor)}** (${ccSt[0]}). EMA 20 **${ema.valor}**. DNA Conviction **${dnaScore}**.`,
+          `CC **${f2(cc.valor)}** (${ccSt[0]}). EMA 20 **${ema.valor}**. ` +
+          `${pilaresEmAlerta} pilares em alerta. Re-entry: ${reentry?.mode ?? "N/A"}.`,
         suggestions: [
           "A defesa precisa ser ativada agora?",
-          "Qual sensor esta mais critico?",
-          "O que mudou na ultima semana?",
+          "Qual pilar esta mais critico?",
+          "O re-entry pode comecar?",
         ],
       }
     );
-  }, [t.valor, cc.valor, ema.valor, mac?.valor, dnaScore, trend1d, trend1w]);
+  }, [t.valor, cc.valor, ema.valor, mac?.valor, trend1d, trend1w, defenseState, reentry, CURRENT_REGIME, curRegime.label, pilaresEmAlerta]);
 
   return (
     <div className="screen">
@@ -414,7 +436,7 @@ export default function DefesaInteligente() {
         <div>
           <div className="h1">Defesa Inteligente</div>
           <div className="sub">
-            Regime + sensores + radar de inteligencia &middot; Termometro com direcao &middot; Analise JIM proativa
+            Preciso ativar defesa? Quanto? &middot; Instrumentos de protecao &middot; Analise JIM proativa
           </div>
         </div>
         <div className={`tag ${conn === "ok" ? "b" : conn === "error" ? "r" : "b"}`}>
@@ -441,17 +463,22 @@ export default function DefesaInteligente() {
           <span style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--mono)", color: ccColor(cc.valor) }}>{f2(cc.valor)}</span>
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-          <span style={{ fontSize: 11, color: "var(--tx3)", fontFamily: "var(--mono)" }}>DNA</span>
-          <span style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--mono)", color: scoreColor(dnaScore) }}>{dnaScore}</span>
+          <span style={{ fontSize: 11, color: "var(--tx3)", fontFamily: "var(--mono)" }}>DEFESA</span>
+          <span style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--mono)", color: "var(--gold)" }}>{defenseState ? `${defenseState.defesa_pct}%` : "—"}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+          <span style={{ fontSize: 11, color: "var(--tx3)", fontFamily: "var(--mono)" }}>PILARES</span>
+          <span style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--mono)", color: pilaresEmAlerta > 0 ? "#E74C3C" : "#2ECC71" }}>
+            {pilaresEmAlerta > 0 ? `${pilaresEmAlerta} alerta` : "ok"}
+          </span>
         </div>
         <span style={{ fontSize: 12, color: "var(--tx3)", marginLeft: "auto", fontStyle: "italic" }}>
           {REGIME_MEANING[CURRENT_REGIME]}
         </span>
       </div>
 
-      {/* Row 1: Gauge + Radar + JIM */}
-      <div style={{ display: "grid", gridTemplateColumns: "300px 260px 1fr", gap: 14, marginBottom: 14 }}>
-        {/* 180-degree Temperature Gauge */}
+      {/* Row 1: Gauge + JIM */}
+      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 14, marginBottom: 14 }}>
         <div className="card" style={{ padding: 12, display: "flex", flexDirection: "column", alignItems: "center" }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: "var(--tx2)", marginBottom: 2, fontFamily: "var(--mono)", letterSpacing: ".06em" }}>
             TERMOMETRO DE DEFESA
@@ -459,27 +486,14 @@ export default function DefesaInteligente() {
           <TempGauge180 value={t.valor} trend1d={trend1d} trend1w={trend1w} />
         </div>
 
-        {/* Defense Radar */}
-        <div className="card" style={{ padding: 12, display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--tx2)", marginBottom: 2, fontFamily: "var(--mono)", letterSpacing: ".06em" }}>
-            RADAR INTELLIGENCE
-          </div>
-          {dnaLayers.length > 0 ? <DefenseRadar layers={dnaLayers} /> : (
-            <div style={{ height: 200, display: "flex", alignItems: "center", color: "var(--tx3)", fontSize: 12 }}>Carregando...</div>
-          )}
-          <div style={{ fontSize: 10, fontFamily: "var(--mono)", color: "var(--tx3)", marginTop: 2 }}>
-            Conviction: <span style={{ color: scoreColor(dnaScore), fontWeight: 700 }}>{dnaScore}</span>
-          </div>
-        </div>
-
-        {/* JIM Defense Intelligence */}
         <JimDefensePanel
           regime={CURRENT_REGIME}
           temp={t.valor}
           cc={cc.valor}
           ema={ema.valor}
           mac={mac?.valor ?? null}
-          dnaScore={dnaScore}
+          defenseState={defenseState}
+          reentry={reentry}
         />
       </div>
 
@@ -542,6 +556,218 @@ export default function DefesaInteligente() {
         </SensorCard>
       </div>
 
+      {/* Row 3: Temperatura por pilar */}
+      {defenseState && (
+        <div className="card" style={{ padding: "14px 16px", marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <h3 style={{ margin: 0 }}>
+              <i className="ti ti-flame" style={{ marginRight: 6 }} />
+              Temperatura por Pilar
+            </h3>
+            <span style={{ fontSize: 10, color: "var(--tx3)", fontFamily: "var(--mono)" }}>
+              Layer 1 &middot; Decomposicao turb/trend_break/jerk &middot; {pid}
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
+            {Object.entries(defenseState.pilares).map(([key, p]) => {
+              const col = tempColor(p.temp);
+              const st = sem(p.status);
+              return (
+                <div key={key} style={{
+                  padding: "12px 14px", borderRadius: 8,
+                  border: `1px solid ${col}25`,
+                  background: `${col}08`,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: col, fontFamily: "var(--mono)" }}>
+                        Pilar {p.nome}
+                      </span>
+                      <span style={{
+                        fontSize: 9, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
+                        background: st === "g" ? "rgba(46,204,113,.12)" : st === "r" ? "rgba(231,76,60,.12)" : st === "a" ? "rgba(243,156,18,.12)" : "rgba(100,140,180,.12)",
+                        color: st === "g" ? "#2ECC71" : st === "r" ? "#E74C3C" : st === "a" ? "#F39C12" : "var(--tx3)",
+                        fontFamily: "var(--mono)",
+                      }}>
+                        {p.status}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--mono)", color: col }}>
+                      {f2(p.temp)}
+                    </span>
+                  </div>
+
+                  <div style={{ marginBottom: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 2 }}>
+                      <span style={{ color: "var(--tx3)" }}>Pilar {p.nome} <span style={{ opacity: 0.6 }}>limiar {f2(p.limiar)}</span></span>
+                      <span style={{ color: col, fontWeight: 600, fontFamily: "var(--mono)" }}>{f2(p.temp)}</span>
+                    </div>
+                    <Bullet pct={pct01(p.temp)} />
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, fontSize: 10 }}>
+                    <div style={{ textAlign: "center", padding: "4px 0", borderRadius: 4, background: "rgba(255,255,255,0.03)" }}>
+                      <div style={{ color: "var(--tx3)", marginBottom: 2 }}>turb</div>
+                      <div style={{ fontWeight: 700, fontFamily: "var(--mono)", color: "var(--tx)" }}>{f2(p.turb)}</div>
+                      <div style={{ color: "var(--tx3)", fontSize: 8 }}>× 0.40</div>
+                    </div>
+                    <div style={{ textAlign: "center", padding: "4px 0", borderRadius: 4, background: "rgba(255,255,255,0.03)" }}>
+                      <div style={{ color: "var(--tx3)", marginBottom: 2 }}>trend_break</div>
+                      <div style={{ fontWeight: 700, fontFamily: "var(--mono)", color: "var(--tx)" }}>{f2(p.trend_break)}</div>
+                      <div style={{ color: "var(--tx3)", fontSize: 8 }}>× 0.35</div>
+                    </div>
+                    <div style={{ textAlign: "center", padding: "4px 0", borderRadius: 4, background: "rgba(255,255,255,0.03)" }}>
+                      <div style={{ color: "var(--tx3)", marginBottom: 2 }}>jerk</div>
+                      <div style={{ fontWeight: 700, fontFamily: "var(--mono)", color: "var(--tx)" }}>{f2(p.jerk)}</div>
+                      <div style={{ color: "var(--tx3)", fontSize: 8 }}>× 0.25</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Row 4: Re-entry Monitor + Pilar D */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+        {/* Re-entry Monitor */}
+        <div className="card" style={{ padding: "14px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <h3 style={{ margin: 0 }}>
+              <i className="ti ti-arrow-back-up" style={{ marginRight: 6 }} />
+              Re-Entry Monitor
+            </h3>
+            <span style={{ fontSize: 10, color: "var(--tx3)", fontFamily: "var(--mono)" }}>Layer 3 &middot; {pid}</span>
+          </div>
+
+          {reentry ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div style={{ padding: "8px 10px", borderRadius: 6, background: "rgba(255,255,255,0.03)" }}>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", marginBottom: 2 }}>Mode</div>
+                  <div style={{
+                    fontSize: 16, fontWeight: 800, fontFamily: "var(--mono)",
+                    color: reentry.mode === "re-entering" ? "#2ECC71" : reentry.mode === "monitorando" ? "#F39C12" : "var(--tx2)",
+                  }}>
+                    {reentry.mode}
+                  </div>
+                </div>
+                <div style={{ padding: "8px 10px", borderRadius: 6, background: "rgba(255,255,255,0.03)" }}>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", marginBottom: 2 }}>Dias em defesa</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "var(--mono)", color: reentry.days > 5 ? "#F39C12" : "var(--tx)" }}>
+                    {reentry.days}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div style={{ padding: "8px 10px", borderRadius: 6, background: "rgba(255,255,255,0.03)" }}>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", marginBottom: 2 }}>EMA cross</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--mono)", color: reentry.ema_cross ? "#2ECC71" : "#E74C3C" }}>
+                    {reentry.ema_cross ? "SIM" : "NAO"}
+                  </div>
+                </div>
+                <div style={{ padding: "8px 10px", borderRadius: 6, background: "rgba(255,255,255,0.03)" }}>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", marginBottom: 2 }}>Sizing</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--mono)", color: "var(--gold)" }}>
+                    {reentry.sizing_pct}%
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 2 }}>
+                  <span style={{ color: "var(--tx3)" }}>Velocidade</span>
+                  <span style={{ color: reentry.velocity >= 0 ? "#2ECC71" : "#E74C3C", fontWeight: 600, fontFamily: "var(--mono)" }}>
+                    {reentry.velocity >= 0 ? "+" : ""}{reentry.velocity.toFixed(2).replace(".", ",")}
+                  </span>
+                </div>
+                <Bullet pct={pct01(Math.abs(reentry.velocity) / 3)} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: "20px 0", textAlign: "center", color: "var(--tx3)", fontSize: 12 }}>
+              Re-entry monitor indisponivel — API nao respondeu
+            </div>
+          )}
+        </div>
+
+        {/* Pilar D */}
+        <div className="card" style={{ padding: "14px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <h3 style={{ margin: 0 }}>
+              <i className="ti ti-shield-check" style={{ marginRight: 6 }} />
+              Pilar D · Rotacao Defensiva
+            </h3>
+            {pilarD && (
+              <span style={{
+                fontSize: 9, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
+                background: "rgba(243,156,18,.12)", color: "#F39C12", fontFamily: "var(--mono)",
+              }}>
+                cap {pilarD.cap_pct != null ? `${pilarD.cap_pct}%` : "—"}
+              </span>
+            )}
+          </div>
+
+          {pilarD ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ fontSize: 10, color: "var(--tx2)", textTransform: "uppercase", letterSpacing: ".8px" }}>
+                Universo &middot; {pilarD.universo.length} ETFs &middot; Freq: {pilarD.rotacao_freq}
+              </div>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {pilarD.universo.map((tk) => {
+                  const isTop = pilarD.top4_atual.includes(tk);
+                  return (
+                    <span key={tk} style={{
+                      fontSize: 10, fontWeight: isTop ? 800 : 500, fontFamily: "var(--mono)",
+                      padding: "3px 8px", borderRadius: 4,
+                      background: isTop ? "rgba(201,160,44,.15)" : "rgba(255,255,255,0.04)",
+                      color: isTop ? "var(--gold)" : "var(--tx3)",
+                      border: isTop ? "1px solid rgba(201,160,44,.3)" : "1px solid transparent",
+                    }}>
+                      {tk}
+                    </span>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderTop: "1px solid var(--line)" }}>
+                <span style={{ fontSize: 10, color: "var(--tx3)" }}>Top 4 atual</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {pilarD.top4_atual.map((tk) => (
+                    <span key={tk} style={{
+                      fontSize: 11, fontWeight: 700, fontFamily: "var(--mono)", color: "var(--gold)",
+                      padding: "2px 6px", borderRadius: 3, background: "rgba(201,160,44,.12)",
+                    }}>
+                      {tk}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 10, color: "var(--tx3)" }}>Contribution YTD</span>
+                <span style={{
+                  fontSize: 14, fontWeight: 700, fontFamily: "var(--mono)",
+                  color: (pilarD.contribuicao_ytd_pct ?? 0) >= 0 ? "#2ECC71" : "#E74C3C",
+                }}>
+                  {pilarD.contribuicao_ytd_pct != null
+                    ? `${pilarD.contribuicao_ytd_pct >= 0 ? "+" : ""}${pilarD.contribuicao_ytd_pct.toFixed(2).replace(".", ",")}%`
+                    : "—"}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: "20px 0", textAlign: "center", color: "var(--tx3)", fontSize: 12 }}>
+              Pilar D indisponivel — API nao respondeu
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Regime posture table */}
       <div className="card">
         <h3><i className="ti ti-shield-half" style={{ marginRight: 6 }} />Postura por regime</h3>
@@ -570,31 +796,8 @@ export default function DefesaInteligente() {
       </div>
 
       <div className="legend mt">
-        <span className="muted">Harpian Defense Intelligence &middot; JIM proactive analysis &middot; Cockpit Gestor</span>
+        <span className="muted">Harpian Defense Intelligence &middot; Instrumentos de defesa exclusivos &middot; Cockpit Gestor</span>
       </div>
     </div>
   );
-}
-
-// ---------- Score extraction from API ----------
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractScore(key: string, data: any): number {
-  if (key === "positioning") return data?.avg_cot_index != null ? Math.round(data.avg_cot_index) : 50;
-  if (key === "volatility") {
-    const vix = data?.vix?.current;
-    if (vix == null) return 50;
-    if (vix >= 35) return 95; if (vix >= 25) return 75; if (vix >= 20) return 55; if (vix >= 15) return 35; return 15;
-  }
-  if (key === "options") return data ? Math.round(50 + (data.skew ? (data.skew - 130) / 2 : 0)) : 50;
-  if (key === "liquidity") return data?.summary?.dark_pool_pct != null ? Math.round(100 - data.summary.dark_pool_pct) : 50;
-  if (key === "breadth") return data?.pct_above_200ma != null ? Math.round(data.pct_above_200ma) : 50;
-  if (key === "sentiment") return data?.score != null ? Math.round(data.score) : 50;
-  if (key === "macro") {
-    let s = 50;
-    if (data?.yield_curve_signal === "Normal") s += 15; if (data?.yield_curve_signal === "Inverted") s -= 20;
-    if (data?.credit_signal === "Tight") s += 15; if (data?.credit_signal === "Normal") s += 5;
-    if (data?.credit_signal === "Wide") s -= 10; if (data?.credit_signal === "Stress") s -= 25;
-    return Math.max(0, Math.min(100, s));
-  }
-  return 50;
 }

@@ -25,7 +25,7 @@ export default function InsiderOrders() {
   useEffect(() => {
     let live = true;
     fetch(`${GOV_API}/api/insider?limit=60`)
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then((d: { orders: InsiderOrder[]; collected_at?: string }) => {
         if (!live) return;
         setOrders(d.orders || []);
@@ -111,7 +111,7 @@ export default function InsiderOrders() {
                       <td style={{ fontWeight: 600, color: "var(--gold)" }}>{x.ticker || "—"}</td>
                       <td style={{ textAlign: "center", fontWeight: 700, color: tc }}>{x.side === "BUY" ? "COMPRA" : "VENDA"}</td>
                       <td className="num" style={{ color: "var(--tx2)" }}>{fmtN(x.shares)}</td>
-                      <td className="num" style={{ color: "var(--tx2)" }}>${x.price.toFixed(2)}</td>
+                      <td className="num" style={{ color: "var(--tx2)" }}>${x.price?.toFixed(2) ?? "—"}</td>
                       <td className="num" style={{ color: tc, fontWeight: 600 }}>{fmtUSD(x.value_usd)}</td>
                     </tr>
                   );

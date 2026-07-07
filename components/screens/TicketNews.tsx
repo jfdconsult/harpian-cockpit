@@ -23,7 +23,7 @@ interface TickerNewsBlock {
   headlines: NewsHeadline[];
   loading: boolean;
   error: boolean;
-  jim: JimVerdict;
+  jim?: JimVerdict;
 }
 
 const SIDE_LABEL: Record<string, string> = { buy: "COMPRA", sell: "VENDA" };
@@ -141,7 +141,7 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
   useEffect(() => {
     if (loading || blocks.length === 0) return;
     const totalHeadlines = blocks.reduce((s, b) => s + b.headlines.length, 0);
-    const comImpacto = blocks.filter((b) => b.jim.impacto === "PODE TER IMPACTO").length;
+    const comImpacto = blocks.filter((b) => b.jim?.impacto === "PODE TER IMPACTO").length;
     publishScreenData(
       "ticket-news",
       `${blocks.length} ativos, ${totalHeadlines} notícias, ${comImpacto} com impacto potencial`,
@@ -149,11 +149,11 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
         ticker: b.ticker,
         action: b.tickets.map((t) => t.tipo).join(", "),
         n_headlines: b.headlines.length,
-        jim_impacto: b.jim.impacto,
-        jim_resumo: b.jim.resumo,
+        jim_impacto: b.jim?.impacto,
+        jim_resumo: b.jim?.resumo,
       })),
       {
-        briefing: `Ticket News: ${blocks.length} ativos nos tickets de hoje. ${comImpacto > 0 ? `ATENÇÃO: ${comImpacto} ativo(s) com PODE TER IMPACTO.` : "Nenhum impacto relevante identificado."} ${blocks.filter((b) => b.jim.impacto).map((b) => `${b.ticker}: ${b.jim.impacto} — ${b.jim.resumo}`).join("; ")}`,
+        briefing: `Ticket News: ${blocks.length} ativos nos tickets de hoje. ${comImpacto > 0 ? `ATENÇÃO: ${comImpacto} ativo(s) com PODE TER IMPACTO.` : "Nenhum impacto relevante identificado."} ${blocks.filter((b) => b.jim?.impacto).map((b) => `${b.ticker}: ${b.jim?.impacto} — ${b.jim?.resumo}`).join("; ")}`,
       }
     );
   }, [blocks, loading]);
@@ -242,9 +242,9 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
                 gap: 10,
                 padding: "10px 16px",
                 borderBottom: "1px solid var(--border)",
-                background: b.jim.loading
+                background: b.jim?.loading
                   ? "rgba(201,160,44,.02)"
-                  : b.jim.impacto === "PODE TER IMPACTO"
+                  : b.jim?.impacto === "PODE TER IMPACTO"
                     ? "rgba(231,76,60,.06)"
                     : "rgba(46,204,113,.04)",
               }}
@@ -253,14 +253,14 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
                 className="ti ti-robot"
                 style={{
                   fontSize: 16,
-                  color: b.jim.impacto === "PODE TER IMPACTO" ? "var(--red-text)" : "var(--green)",
+                  color: b.jim?.impacto === "PODE TER IMPACTO" ? "var(--red-text)" : "var(--green)",
                 }}
               />
-              {b.jim.loading ? (
+              {b.jim?.loading ? (
                 <span style={{ fontSize: 11, color: "var(--tx3)", fontStyle: "italic" }}>
                   JIM analisando impacto para {b.ticker}…
                 </span>
-              ) : b.jim.impacto ? (
+              ) : b.jim?.impacto ? (
                 <>
                   <span
                     style={{
@@ -269,18 +269,18 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
                       padding: "3px 8px",
                       borderRadius: 4,
                       background:
-                        b.jim.impacto === "PODE TER IMPACTO"
+                        b.jim?.impacto === "PODE TER IMPACTO"
                           ? "rgba(231,76,60,.12)"
                           : "rgba(46,204,113,.10)",
                       color:
-                        b.jim.impacto === "PODE TER IMPACTO" ? "#E74C3C" : "#2ECC71",
+                        b.jim?.impacto === "PODE TER IMPACTO" ? "#E74C3C" : "#2ECC71",
                       letterSpacing: 0.5,
                     }}
                   >
-                    {b.jim.impacto}
+                    {b.jim?.impacto}
                   </span>
                   <span style={{ fontSize: 11.5, color: "var(--tx2)", flex: 1 }}>
-                    {b.jim.resumo}
+                    {b.jim?.resumo}
                   </span>
                 </>
               ) : (

@@ -22,10 +22,11 @@ export default function Construtor({ go }: { go: (id: ScreenId, param?: string) 
   const dialog = useDialog();
 
   useEffect(() => {
-    apiGet<{ portfolios: Portfolio[] }>("/v1/strategies/").then((d) => setPortfolios(d.portfolios)).catch(() => {});
+    apiGet<{ portfolios: Portfolio[] }>("/v1/strategies/").then((d) => setPortfolios(d.portfolios || [])).catch(() => {});
     apiGet<{ motores: Motor[] }>("/v1/registry/motores").then((d) => {
-      setMotores(d.motores);
-      const hom = d.motores.filter((m) => m.status === "homologado");
+      const ms = d.motores || [];
+      setMotores(ms);
+      const hom = ms.filter((x) => x.status === "homologado");
       if (hom.length) setMotorId(hom[0].id);
     }).catch(() => {});
   }, []);

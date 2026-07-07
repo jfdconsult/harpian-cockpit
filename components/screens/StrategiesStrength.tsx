@@ -95,10 +95,10 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
     if (!data) return;
     publishScreenData(
       "strategies-strength",
-      `${data.n_strategies} estratégias, portfolio ref: ${data.portfolio_ref.name}`,
+      `${data.n_strategies} estratégias, portfolio ref: ${data.portfolio_ref?.name ?? "?"}`,
       data.strategies,
       {
-        briefing: `${data.n_strategies} estratégias monitoradas com ${data.strategies.reduce((a, s) => a + s.n_ativos, 0)} ativos. Portfolio referência: ${data.portfolio_ref.name}.`,
+        briefing: `${data.n_strategies} estratégias monitoradas com ${(data.strategies || []).reduce((a, s) => a + s.n_ativos, 0)} ativos. Portfolio referência: ${data.portfolio_ref?.name ?? "?"}.`,
       }
     );
   }, [data]);
@@ -110,7 +110,7 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
           <div className="h1">Estratégias · Forças</div>
           <div className="sub">
             Força individual de cada estratégia · média momentum dos ativos da cesta ·
-            portfolio alvo: <b style={{ color: "var(--gold)" }}>{data?.portfolio_ref.name}</b>
+            portfolio alvo: <b style={{ color: "var(--gold)" }}>{data?.portfolio_ref?.name}</b>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -303,7 +303,7 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
 
       <div className="foot">
         Estratégias · Forças · média momentum dos 12 candidatos por estratégia + suas cestas customizadas ·{" "}
-        Portfolio ref: <b>{data?.portfolio_ref.name}</b>
+        Portfolio ref: <b>{data?.portfolio_ref?.name}</b>
       </div>
     </div>
   );

@@ -19,10 +19,6 @@ npm run dev   # http://localhost:8960
 - `app/page.tsx` — loads Cockpit.tsx
 - `components/Cockpit.tsx` — main shell (sidebar + topbar + screen router)
 
-### API routes (Next.js)
-- `app/api/jim/chat/route.ts` — JIM AI chat endpoint
-- `app/api/jim/sessions/route.ts` — JIM session persistence
-
 ### Screen system
 Screens live in `components/screens/`. Navigation defined in `lib/nav.ts`.
 Cockpit.tsx renders the active screen based on `screenId` state.
@@ -159,7 +155,7 @@ ALWAYS use CSS variables. NEVER hardcode colors.
 - `publishScreenData()` pattern: screens publish visible data for JIM
 - JIM Morning Briefing on MissionControl
 - Uses `var(--panel)` background + `var(--tx)` text (theme-aware)
-- API routes: `app/api/jim/chat/route.ts` and `app/api/jim/sessions/route.ts`
+- Chat API lives in the HQP backend (`/v1/jim/chat`, `/v1/jim/sessions`) — no local API routes
 
 ## DefesaInteligente (new screen)
 180-degree thermometer gauge with 4 zones:

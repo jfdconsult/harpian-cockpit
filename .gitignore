@@ -35,3 +35,7 @@ yarn-error.log*
 # editor
 .vscode/
 .idea/
+
+# stray malformed directory from an old path-as-name bug
+C*dev*harpian-cockpit-next/
+devserver.log

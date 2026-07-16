@@ -230,7 +230,7 @@ export default function CanvasComposicao({
               padding: 20,
             }}
           >
-            Arraste um motor do catálogo à esquerda, ou clique num item da lista.
+            Drag an engine from the catalog on the left, or click a list item.
           </div>
         )}
       </div>

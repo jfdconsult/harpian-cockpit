@@ -36,9 +36,9 @@ export default function Construtor({ go }: { go: (id: ScreenId, param?: string) 
     const mods = (portfolios || []).filter((p) => p.mode === "model");
     publishScreenData(
       "construtor",
-      `${mods.length} estratégias em lab · ${motores.length} motores disponíveis`,
+      `${mods.length} strategies in lab · ${motores.length} engines available`,
       { portfolios, motores },
-      { briefing: `Construtor com ${mods.length} portfolios modelo e ${motores.length} motores cadastrados.` }
+      { briefing: `Builder with ${mods.length} model portfolios and ${motores.length} registered engines.` }
     );
   }, [portfolios, motores]);
 
@@ -46,8 +46,8 @@ export default function Construtor({ go }: { go: (id: ScreenId, param?: string) 
   const homologados = motores.filter((m) => m.status === "homologado");
 
   async function criarEstrategia() {
-    if (!nome.trim()) { dialog.notify("Informe um nome.", "error"); return; }
-    if (!motorId) { dialog.notify("Selecione um motor.", "error"); return; }
+    if (!nome.trim()) { dialog.notify("Enter a name.", "error"); return; }
+    if (!motorId) { dialog.notify("Select an engine.", "error"); return; }
     setCreating(true);
     const slug = nome.trim().toUpperCase().replace(/[^A-Z0-9]/g, "_").slice(0, 12);
     const id = slug + "_" + Date.now().toString(36).slice(-4);
@@ -56,17 +56,17 @@ export default function Construtor({ go }: { go: (id: ScreenId, param?: string) 
       const res = await apiPost<{ portfolio: Portfolio }>("/v1/strategies/", {
         id,
         nome: nome.trim(),
-        descricao: descricao.trim() || `Estratégia criada no Construtor · motor ${motor?.nome || motorId}`,
+        descricao: descricao.trim() || `Strategy created in Builder · engine ${motor?.nome || motorId}`,
         motor: motor?.nome || motorId,
         motor_version: motor?.versao || "v1.0",
         mode: "model",
         owner: "Harpian",
         capital_usd: 1_000_000,
       });
-      dialog.notify(`Estratégia "${nome}" criada. Abrindo o Studio…`, "success");
+      dialog.notify(`Strategy "${nome}" created. Opening the Studio…`, "success");
       go("portfolio-studio", res.portfolio.id);
     } catch (e) {
-      dialog.notify("Erro ao criar: " + String((e as Error).message || e), "error");
+      dialog.notify("Error creating strategy: " + String((e as Error).message || e), "error");
     } finally {
       setCreating(false);
     }
@@ -76,36 +76,36 @@ export default function Construtor({ go }: { go: (id: ScreenId, param?: string) 
     <div className="screen">
       <div className="hd">
         <div>
-          <div className="h1">Construtor de Estratégias</div>
-          <div className="sub">Crie novas estratégias e edite as existentes no Portfolio Studio.</div>
+          <div className="h1">Strategy Builder</div>
+          <div className="sub">Create new strategies and edit existing ones in the Portfolio Studio.</div>
         </div>
         <button className="btn" onClick={() => setWizardOpen(true)}>
-          <i className="ti ti-plus" style={{ fontSize: 14 }} /> Nova Estratégia
+          <i className="ti ti-plus" style={{ fontSize: 14 }} /> New Strategy
         </button>
       </div>
 
-      {/* Mini-wizard inline */}
+      {/* Inline mini-wizard */}
       {wizardOpen && (
         <div className="card mb" style={{ borderColor: "var(--gold)", borderWidth: 1.5 }}>
-          <h2><span>Nova Estratégia</span></h2>
+          <h2><span>New Strategy</span></h2>
           <div className="grid g3" style={{ gap: 12, marginBottom: 12 }}>
             <div>
               <label style={{ fontSize: 11, color: "var(--tx3)", textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 4 }}>
-                Nome da estratégia *
+                Strategy name *
               </label>
               <input
                 className="input" style={{ width: "100%" }}
                 value={nome} onChange={(e) => setNome(e.target.value)}
-                placeholder="Ex: HC-US Agressivo v2"
+                placeholder="E.g.: HC-US Aggressive v2"
                 autoFocus
               />
             </div>
             <div>
               <label style={{ fontSize: 11, color: "var(--tx3)", textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 4 }}>
-                Motor (homologado) *
+                Engine (approved) *
               </label>
               <select className="input" style={{ width: "100%" }} value={motorId} onChange={(e) => setMotorId(e.target.value)}>
-                {homologados.length === 0 && <option value="">Nenhum motor homologado</option>}
+                {homologados.length === 0 && <option value="">No approved engine</option>}
                 {homologados.map((m) => (
                   <option key={m.id} value={m.id}>{m.nome} ({m.versao})</option>
                 ))}
@@ -113,44 +113,44 @@ export default function Construtor({ go }: { go: (id: ScreenId, param?: string) 
             </div>
             <div>
               <label style={{ fontSize: 11, color: "var(--tx3)", textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 4 }}>
-                Descrição (opcional)
+                Description (optional)
               </label>
               <input
                 className="input" style={{ width: "100%" }}
                 value={descricao} onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Breve descrição"
+                placeholder="Brief description"
               />
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <button className="btn ghost" onClick={() => setWizardOpen(false)} disabled={creating}>Cancelar</button>
+            <button className="btn ghost" onClick={() => setWizardOpen(false)} disabled={creating}>Cancel</button>
             <button className="btn" onClick={criarEstrategia} disabled={creating || !nome.trim() || !motorId}>
-              {creating ? "Criando…" : "Criar e abrir no Studio →"}
+              {creating ? "Creating…" : "Create and open in Studio →"}
             </button>
           </div>
           <div style={{ fontSize: 11, color: "var(--tx3)", marginTop: 10 }}>
-            A estratégia nasce como <b>modelo</b> (simulação). No Studio você monta pilares, esteiras e ativos.
-            Depois de homologar via backtest, promova para ativo em Admin.
+            The strategy is created as a <b>model</b> (simulation). In the Studio you build pillars, sleeves and assets.
+            After approval via backtest, promote it to active in Admin.
           </div>
         </div>
       )}
 
-      {/* Portfolios modelo existentes */}
+      {/* Existing model portfolios */}
       <div className="card mb">
         <h2>
-          <span>Estratégias em laboratório · {modelos.length} modelo{modelos.length !== 1 ? "s" : ""}</span>
+          <span>Strategies in the lab · {modelos.length} model{modelos.length !== 1 ? "s" : ""}</span>
         </h2>
         {portfolios === null ? (
-          <div className="ph" style={{ padding: 20 }}>Carregando…</div>
+          <div className="ph" style={{ padding: 20 }}>Loading…</div>
         ) : modelos.length === 0 ? (
           <div className="ph" style={{ padding: 20 }}>
-            Nenhuma estratégia modelo. Clique em <b>Nova Estratégia</b> para começar.
+            No model strategy yet. Click <b>New Strategy</b> to get started.
           </div>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>ID</th><th>Nome</th><th>Motor</th><th>Estado</th>
+                <th>ID</th><th>Name</th><th>Engine</th><th>State</th>
                 <th style={{ textAlign: "right" }}>CAGR</th>
                 <th style={{ textAlign: "right" }}>Sortino</th>
                 <th style={{ textAlign: "right" }}>Max DD</th>
@@ -182,7 +182,7 @@ export default function Construtor({ go }: { go: (id: ScreenId, param?: string) 
                       style={{ fontSize: 11, padding: "4px 10px" }}
                       onClick={() => go("portfolio-studio", p.id)}
                     >
-                      <i className="ti ti-settings" style={{ fontSize: 13, marginRight: 4 }} />Editar no Studio
+                      <i className="ti ti-settings" style={{ fontSize: 13, marginRight: 4 }} />Edit in Studio
                     </button>
                   </td>
                 </tr>
@@ -192,29 +192,29 @@ export default function Construtor({ go }: { go: (id: ScreenId, param?: string) 
         )}
       </div>
 
-      {/* Guia rápido */}
+      {/* Quick guide */}
       <div className="card mb" style={{ opacity: 0.85 }}>
-        <h2><span>Como funciona</span></h2>
+        <h2><span>How it works</span></h2>
         <div className="grid g3" style={{ gap: 12, fontSize: 12, color: "var(--tx2)" }}>
           <div>
             <div style={{ fontSize: 28, fontWeight: 700, color: "var(--gold)", marginBottom: 4 }}>1</div>
-            <div style={{ fontWeight: 700, marginBottom: 2 }}>Criar aqui</div>
-            Dê um nome e escolha o motor. A estratégia nasce como modelo no Lab.
+            <div style={{ fontWeight: 700, marginBottom: 2 }}>Create here</div>
+            Give it a name and choose the engine. The strategy starts as a model in the Lab.
           </div>
           <div>
             <div style={{ fontSize: 28, fontWeight: 700, color: "var(--gold)", marginBottom: 4 }}>2</div>
-            <div style={{ fontWeight: 700, marginBottom: 2 }}>Montar no Studio</div>
-            Adicione pilares, esteiras (cestas de ativos), configure a arena e o Maestro.
+            <div style={{ fontWeight: 700, marginBottom: 2 }}>Build in Studio</div>
+            Add pillars, sleeves (asset baskets), configure the arena and the Maestro.
           </div>
           <div>
             <div style={{ fontSize: 28, fontWeight: 700, color: "var(--gold)", marginBottom: 4 }}>3</div>
-            <div style={{ fontWeight: 700, marginBottom: 2 }}>Homologar e promover</div>
-            Rode o backtest (2 janelas). Se grade A/B, promova para ativo em Admin.
+            <div style={{ fontWeight: 700, marginBottom: 2 }}>Approve and promote</div>
+            Run the backtest (2 windows). If grade A/B, promote it to active in Admin.
           </div>
         </div>
       </div>
 
-      <div className="foot">Construtor · Laboratório · cria portfolios modelo → Portfolio Studio → Backtest → Admin (promover)</div>
+      <div className="foot">Builder · Lab · creates model portfolios → Portfolio Studio → Backtest → Admin (promote)</div>
     </div>
   );
 }

@@ -57,7 +57,7 @@ export default function RegraNode({ regra, x, y, onRemove, onOpen, registerRef }
             {regra.response_type} · thr {regra.threshold} · k={regra.k_steep}
           </div>
         )}
-        <div style={{ fontSize: 8, color: "var(--tx3)", marginTop: 4 }}>clique para abrir o Maestro</div>
+        <div style={{ fontSize: 8, color: "var(--tx3)", marginTop: 4 }}>click to open the Maestro</div>
       </div>
       <button
         className="btn ghost"
@@ -70,14 +70,14 @@ export default function RegraNode({ regra, x, y, onRemove, onOpen, registerRef }
           color: "var(--red-text)",
           pointerEvents: "auto",
         }}
-        title="remover regra"
+        title="remove rule"
         onClick={async (e) => {
           e.stopPropagation();
           const ok = await dialog.confirm({
-            title: `Remover a regra ${regra.nome}?`,
-            body: "Os motores que dependem dela ficam com peso dinâmico órfão até você ligar outra regra.",
+            title: `Remove rule ${regra.nome}?`,
+            body: "Engines that depend on it will have an orphaned dynamic weight until you connect another rule.",
             danger: true,
-            confirmLabel: "Remover regra",
+            confirmLabel: "Remove rule",
           });
           if (ok) onRemove(regra.id);
         }}

@@ -40,7 +40,7 @@ export default function PortfolioStudioScreen({ portfolioId, onExit }: Props) {
   if (loading) {
     return (
       <div className="c-mut" style={{ padding: 40, textAlign: "center" }}>
-        Carregando composição de {portfolioId}…
+        Loading composition for {portfolioId}…
       </div>
     );
   }
@@ -48,10 +48,10 @@ export default function PortfolioStudioScreen({ portfolioId, onExit }: Props) {
   if (error) {
     return (
       <div style={{ padding: 40, textAlign: "center", color: "var(--red)" }}>
-        Erro ao carregar {portfolioId}: {error}
+        Error loading {portfolioId}: {error}
         <div style={{ marginTop: 12 }}>
           <button className="btn ghost" onClick={onExit}>
-            ← Voltar
+            ← Back
           </button>
         </div>
       </div>

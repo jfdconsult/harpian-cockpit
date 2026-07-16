@@ -4,10 +4,10 @@ import { apiGet } from "@/lib/api";
 import { publishScreenData } from "@/lib/jim-data";
 import type { ScreenId } from "@/lib/nav";
 
-// Universos por classe de ativo — tickers Yahoo reais (mesma fonte dos motores).
+// Universes per asset class — real Yahoo tickers (same source as the engines).
 const UNIVERSOS: Record<string, { label: string; icon: string; tickers: string[] }> = {
   acoes: {
-    label: "Ações", icon: "ti-building-bank",
+    label: "Stocks", icon: "ti-building-bank",
     tickers: ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "JPM", "XOM", "UNH", "V", "MA", "COST", "HD", "LLY"],
   },
   etfs: {
@@ -19,15 +19,15 @@ const UNIVERSOS: Record<string, { label: string; icon: string; tickers: string[]
     tickers: ["GC=F", "SI=F", "CL=F", "BZ=F", "NG=F", "HG=F", "PL=F", "ZC=F", "ZW=F", "ZS=F", "KC=F", "SB=F", "CC=F", "CT=F"],
   },
   cripto: {
-    label: "Cripto", icon: "ti-currency-bitcoin",
+    label: "Crypto", icon: "ti-currency-bitcoin",
     tickers: ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "BNB-USD", "ADA-USD", "DOGE-USD", "AVAX-USD", "LINK-USD", "DOT-USD"],
   },
   indices: {
-    label: "Índices internacionais", icon: "ti-world",
+    label: "International Indices", icon: "ti-world",
     tickers: ["^GSPC", "^IXIC", "^DJI", "^RUT", "^VIX", "^FTSE", "^GDAXI", "^FCHI", "^STOXX50E", "^N225", "^HSI", "^BVSP"],
   },
   forex: {
-    label: "Forex (câmbio)", icon: "ti-arrows-exchange",
+    label: "Forex (FX)", icon: "ti-arrows-exchange",
     tickers: ["EURUSD=X", "USDJPY=X", "GBPUSD=X", "USDCHF=X", "AUDUSD=X", "USDCAD=X", "NZDUSD=X", "USDBRL=X", "USDMXN=X", "USDCNY=X"],
   },
 };
@@ -51,7 +51,7 @@ export default function Cotacoes({ classe, go }: { classe?: string; go: (id: Scr
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [conn, setConn] = useState<"loading" | "ok" | "error">("loading");
 
-  // se o menu mandar uma classe nova, troca a aba
+  // if the menu sends a new class, switch the tab
   useEffect(() => { if (classe && UNIVERSOS[classe]) setActive(classe); }, [classe]);
 
   const uni = UNIVERSOS[active];
@@ -68,16 +68,16 @@ export default function Cotacoes({ classe, go }: { classe?: string; go: (id: Scr
 
   useEffect(() => {
     if (!quotes || quotes.length === 0) return;
-    publishScreenData("cotacoes", `${quotes.length} cotações · classe: ${uni.label}`, quotes, {
-      briefing: `Tela de cotações mostrando ${quotes.length} ativos da classe ${uni.label}.`,
+    publishScreenData("cotacoes", `${quotes.length} quotes · class: ${uni.label}`, quotes, {
+      briefing: `Quotes screen showing ${quotes.length} assets in the ${uni.label} class.`,
     });
   }, [quotes, active, uni.label]);
 
   return (
     <div className="screen">
-      <div className="crumb">Mercado › <b>Cotações · {uni.label}</b></div>
-      <div className="h1">Cotações</div>
-      <div className="sub">Preços ao vivo (Yahoo · EOD/last) por classe de ativo. Clique num ativo para o gráfico DSPT.</div>
+      <div className="crumb">Market › <b>Quotes · {uni.label}</b></div>
+      <div className="h1">Quotes</div>
+      <div className="sub">Live prices (Yahoo · EOD/last) by asset class. Click an asset to open the DSPT chart.</div>
 
       {/* Abas de classe */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "14px 0", alignItems: "center" }}>
@@ -92,13 +92,13 @@ export default function Cotacoes({ classe, go }: { classe?: string; go: (id: Scr
             <i className={`ti ${UNIVERSOS[k].icon}`} style={{ fontSize: 13 }} />{UNIVERSOS[k].label}
           </button>
         ))}
-        <button className="btn ghost" style={{ fontSize: 11, marginLeft: 4 }} onClick={load}><i className="ti ti-refresh" />Atualizar</button>
+        <button className="btn ghost" style={{ fontSize: 11, marginLeft: 4 }} onClick={load}><i className="ti ti-refresh" />Refresh</button>
         <span style={{ marginLeft: "auto", fontFamily: "var(--mono)", fontSize: 9, color: "var(--tx3)" }}>
-          {conn === "ok" ? `${rows.length} ativos · Yahoo` : ""}
+          {conn === "ok" ? `${rows.length} assets · Yahoo` : ""}
         </span>
       </div>
 
-      {conn === "error" && <div style={{ textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 12 }}>Backend offline — suba a API na porta 8080.</div>}
+      {conn === "error" && <div style={{ textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 12 }}>Backend offline — start the API on port 8080.</div>}
       {conn === "loading" && <div style={{ display: "grid", gap: 6 }}>{[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <div key={i} className="skeleton" style={{ height: 34, borderRadius: 5 }} />)}</div>}
 
       {conn === "ok" && (
@@ -107,13 +107,13 @@ export default function Cotacoes({ classe, go }: { classe?: string; go: (id: Scr
             <thead>
               <tr>
                 <th style={{ textAlign: "left", paddingLeft: 14 }}>Ticker</th>
-                <th style={{ textAlign: "left" }}>Nome</th>
-                <th style={{ textAlign: "right" }}>Último</th>
-                <th style={{ textAlign: "right" }}>Dia %</th>
-                <th style={{ textAlign: "right" }}>Máx dia</th>
-                <th style={{ textAlign: "right" }}>Mín dia</th>
-                <th style={{ textAlign: "right" }}>52s máx</th>
-                <th style={{ textAlign: "right", paddingRight: 14 }}>52s mín</th>
+                <th style={{ textAlign: "left" }}>Name</th>
+                <th style={{ textAlign: "right" }}>Last</th>
+                <th style={{ textAlign: "right" }}>Day %</th>
+                <th style={{ textAlign: "right" }}>Day High</th>
+                <th style={{ textAlign: "right" }}>Day Low</th>
+                <th style={{ textAlign: "right" }}>52w High</th>
+                <th style={{ textAlign: "right", paddingRight: 14 }}>52w Low</th>
                 <th />
               </tr>
             </thead>
@@ -135,7 +135,7 @@ export default function Cotacoes({ classe, go }: { classe?: string; go: (id: Scr
                 );
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={9} style={{ textAlign: "center", padding: 32, color: "var(--tx3)", fontSize: 12 }}>Sem cotação disponível para esta classe.</td></tr>
+                <tr><td colSpan={9} style={{ textAlign: "center", padding: 32, color: "var(--tx3)", fontSize: 12 }}>No quote available for this class.</td></tr>
               )}
             </tbody>
           </table>
@@ -143,7 +143,7 @@ export default function Cotacoes({ classe, go }: { classe?: string; go: (id: Scr
       )}
 
       <div style={{ fontSize: 11, color: "var(--tx3)", marginTop: 10 }}>
-        Fonte Yahoo Finance (pública) · a mesma Camada 1 que alimenta os motores. Gráfico do ativo com DSPT (DEMA/EMA/momentum) + toggle TradingView.
+        Source: Yahoo Finance (public) · the same Layer 1 that feeds the engines. Asset chart with DSPT (DEMA/EMA/momentum) + TradingView toggle.
       </div>
     </div>
   );

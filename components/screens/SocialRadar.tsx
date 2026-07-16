@@ -29,7 +29,7 @@ export default function SocialRadar() {
     const bearish = all.filter((p) => p.sentiment === "Bearish").length;
     const neutral = all.filter((p) => p.sentiment === "Neutral").length;
     publishScreenData("social-radar", `${all.length} posts · bullish:${bullish} bearish:${bearish} neutral:${neutral}`, all, {
-      briefing: `Social Radar com ${all.length} posts do StockTwits. Sentimento: ${bullish} bullish, ${bearish} bearish, ${neutral} neutral.`,
+      briefing: `Social Radar with ${all.length} posts from StockTwits. Sentiment: ${bullish} bullish, ${bearish} bearish, ${neutral} neutral.`,
     });
   }, [all]);
 
@@ -45,13 +45,13 @@ export default function SocialRadar() {
     <div className="screen" style={{ display: "flex", flexDirection: "column" }}>
       <div className="crumb">Intelligence › <b>Social Radar</b></div>
       <div className="h1">Social Media Radar</div>
-      <div className="sub">StockTwits ao vivo · cashtags · sentimento declarado pelo autor.</div>
+      <div className="sub">StockTwits live · cashtags · sentiment as declared by the author.</div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "14px 0", alignItems: "center" }}>
         <span className="flabel" style={{ marginRight: 4 }}>Filter:</span>
         <select className="fsel" value={impact} onChange={(e) => setImpact(e.target.value)}>
           <option value="all">All Reach</option>
-          <option value="High">High (20k+ seguidores)</option>
+          <option value="High">High (20k+ followers)</option>
           <option value="Medium">Medium (3k+)</option>
           <option value="Low">Low</option>
         </select>
@@ -61,7 +61,7 @@ export default function SocialRadar() {
           <option value="Bearish">Bearish</option>
           <option value="Neutral">Neutral</option>
         </select>
-        <button className="btn ghost" style={{ fontSize: 11 }} onClick={load}><i className="ti ti-refresh" />Atualizar</button>
+        <button className="btn ghost" style={{ fontSize: 11 }} onClick={load}><i className="ti ti-refresh" />Refresh</button>
         <span style={{ marginLeft: "auto", fontFamily: "var(--mono)", fontSize: 9, color: "var(--tx3)" }}>
           {conn === "ok" ? `${posts.length} posts` : ""}
         </span>
@@ -69,7 +69,7 @@ export default function SocialRadar() {
 
       {offline && (
         <div style={{ padding: "8px 12px", marginBottom: 8, fontSize: 11, color: "var(--orange)", background: "rgba(243,156,18,.08)", border: "1px solid rgba(243,156,18,.2)", borderRadius: 5 }}>
-          StockTwits indisponível no momento — feed vazio (sem dados fabricados).
+          StockTwits unavailable right now — empty feed (no fabricated data).
         </div>
       )}
 
@@ -77,9 +77,9 @@ export default function SocialRadar() {
         <div className={`sr-feed-col${active ? " has-panel" : ""}`}>
           <div style={{ display: "grid", gridTemplateColumns: active ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 8, alignContent: "start" }}>
             {conn === "loading" && [0, 1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ height: 88, borderRadius: 6 }} />)}
-            {conn === "error" && <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 11 }}>Backend offline — suba a API na porta 8080.</div>}
+            {conn === "error" && <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 11 }}>Backend offline — start the API on port 8080.</div>}
             {conn === "ok" && posts.length === 0 && (
-              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 11 }}>Nenhum post com esses filtros.</div>
+              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 11 }}>No posts match these filters.</div>
             )}
             {conn === "ok" && posts.map((p) => (
               <SocialCard key={p.id} p={p} selected={activeId === p.id} onClick={() => setActiveId(p.id)} />
@@ -141,7 +141,7 @@ function IntelPanel({ p, onClose }: { p: SocialPost; onClose: () => void }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <button onClick={onClose} className="sr-action-secondary" style={{ width: "auto", padding: "5px 10px", fontSize: 9 }}>← Feed</button>
         <span style={{ fontFamily: "var(--mono)", fontSize: 8, letterSpacing: ".10em", color: "var(--tx3)" }}>INTELLIGENCE LAYER</span>
-        <button onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", color: "var(--tx3)", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}><i className="ti ti-x" /></button>
+        <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", color: "var(--tx3)", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}><i className="ti ti-x" /></button>
       </div>
 
       <div>
@@ -151,17 +151,17 @@ function IntelPanel({ p, onClose }: { p: SocialPost; onClose: () => void }) {
           <span style={{ fontSize: 16, fontWeight: 700, color: "var(--tx)" }}>{p.author}</span>
           {p.verified && <i className="ti ti-rosette-discount-check-filled" style={{ color: "var(--blue)", fontSize: 15 }} />}
         </div>
-        <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--tx3)", marginTop: 3 }}>{p.handle} · {(p.followers / 1000).toFixed(1)}k seguidores · {p.ts}</div>
+        <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--tx3)", marginTop: 3 }}>{p.handle} · {(p.followers / 1000).toFixed(1)}k followers · {p.ts}</div>
       </div>
 
       <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--line)", borderRadius: 5, padding: "10px 12px" }}>
-        <div style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: ".10em", textTransform: "uppercase", color: "var(--tx3)", marginBottom: 6 }}>Post original</div>
+        <div style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: ".10em", textTransform: "uppercase", color: "var(--tx3)", marginBottom: 6 }}>Original post</div>
         <div style={{ fontSize: 14, fontWeight: 500, color: "var(--tx)", lineHeight: 1.5 }}>{p.body}</div>
       </div>
 
       {(p.symbols?.length ?? 0) > 0 && (
         <div>
-          <div style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: ".10em", textTransform: "uppercase", color: "var(--tx3)", marginBottom: 6 }}>Ativos citados</div>
+          <div style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: ".10em", textTransform: "uppercase", color: "var(--tx3)", marginBottom: 6 }}>Assets mentioned</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {p.symbols.map((t) => (
               <span key={t} style={{ fontFamily: "var(--mono)", fontSize: 12, background: "rgba(201,160,44,0.08)", border: "1px solid rgba(201,160,44,0.15)", color: "var(--gold)", padding: "3px 9px", borderRadius: 3 }}>${t}</span>
@@ -172,14 +172,14 @@ function IntelPanel({ p, onClose }: { p: SocialPost; onClose: () => void }) {
 
       <div style={{ background: "rgba(201,160,44,0.04)", border: "1px solid rgba(201,160,44,0.12)", borderRadius: 5, padding: "10px 12px" }}>
         <div style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: ".10em", textTransform: "uppercase", color: "var(--gold)", marginBottom: 8 }}>HARPIAN Intelligence Calibration</div>
-        <div className="sr-calib-row"><span className="sr-calib-k">Sentimento (autor)</span><span className="sr-calib-v" style={{ color: sc }}>{p.sentiment}</span></div>
-        <div className="sr-calib-row"><span className="sr-calib-k">Alcance</span><span className="sr-calib-v" style={{ color: ic }}>{p.impact} · {(p.followers / 1000).toFixed(1)}k</span></div>
-        <div className="sr-calib-row"><span className="sr-calib-k">Verificado</span><span className="sr-calib-v">{p.verified ? "Sim" : "Não"}</span></div>
-        <div className="sr-calib-row"><span className="sr-calib-k">Plataforma</span><span className="sr-calib-v">StockTwits</span></div>
+        <div className="sr-calib-row"><span className="sr-calib-k">Sentiment (author)</span><span className="sr-calib-v" style={{ color: sc }}>{p.sentiment}</span></div>
+        <div className="sr-calib-row"><span className="sr-calib-k">Reach</span><span className="sr-calib-v" style={{ color: ic }}>{p.impact} · {(p.followers / 1000).toFixed(1)}k</span></div>
+        <div className="sr-calib-row"><span className="sr-calib-k">Verified</span><span className="sr-calib-v">{p.verified ? "Yes" : "No"}</span></div>
+        <div className="sr-calib-row"><span className="sr-calib-k">Platform</span><span className="sr-calib-v">StockTwits</span></div>
       </div>
 
       <a href={p.url} target="_blank" rel="noopener noreferrer" className="sr-action-secondary" style={{ textAlign: "center", textDecoration: "none", display: "block", padding: "8px" }}>
-        Ver post original ↗
+        View original post ↗
       </a>
     </div>
   );

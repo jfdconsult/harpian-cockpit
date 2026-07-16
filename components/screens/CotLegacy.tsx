@@ -40,10 +40,10 @@ function shortName(m: string): string {
 }
 
 const WEEKS_OPTIONS = [
-  { k: 4, l: "4 semanas" },
-  { k: 12, l: "12 semanas" },
-  { k: 26, l: "6 meses" },
-  { k: 52, l: "1 ano" },
+  { k: 4, l: "4 weeks" },
+  { k: 12, l: "12 weeks" },
+  { k: 26, l: "6 months" },
+  { k: 52, l: "1 year" },
 ];
 
 const DEMO_ROWS: CotRow[] = [
@@ -75,7 +75,7 @@ export default function CotLegacy() {
     if (filtered.length === 0) return;
     publishScreenData(
       "cot-legacy",
-      `Dados brutos CFTC Legacy (janela ${weeks} semanas${marketFilter ? `, mercado ${shortName(marketFilter)}` : ", todos os mercados"}). Cada linha = data, mercado, Spec Net, Comm Net (e % do Open Interest), longs/shorts por grupo e Open Interest.`,
+      `Raw CFTC Legacy data (${weeks}-week window${marketFilter ? `, market ${shortName(marketFilter)}` : ", all markets"}). Each row = date, market, Spec Net, Comm Net (and % of Open Interest), longs/shorts by group, and Open Interest.`,
       filtered.slice(0, 60).map((x) => ({
         data: x.date, mercado: shortName(x.market || ""),
         specNet: x.spec_net ?? (x.spec_long - x.spec_short),
@@ -84,12 +84,12 @@ export default function CotLegacy() {
       })),
       {
         briefing:
-          `Você está vendo os dados brutos CFTC de ${markets.length} mercados (${filtered.length} registros, janela ${weeks} semanas). ` +
-          `Spec Net = posição líquida dos especuladores; Comm Net = dos hedgers.`,
+          `You're looking at raw CFTC data for ${markets.length} markets (${filtered.length} records, ${weeks}-week window). ` +
+          `Spec Net = speculators' net position; Comm Net = hedgers' net position.`,
         suggestions: [
-          "Qual mercado mudou mais na semana?",
-          "Como leio Spec Net vs Comm Net?",
-          "O que o open interest indica aqui?",
+          "Which market moved the most this week?",
+          "How do I read Spec Net vs. Comm Net?",
+          "What does the open interest indicate here?",
         ],
       }
     );
@@ -102,7 +102,7 @@ export default function CotLegacy() {
         <div>
           <div className="h1">COT Data Explorer</div>
           <div className="sub">
-            Dados brutos CFTC · posições Long/Short por grupo · Net e % do Open Interest.
+            Raw CFTC data · Long/Short positions by group · Net and % of Open Interest.
             {offline && <span style={{ color: "var(--orange)", marginLeft: 8 }}> [demo — API offline]</span>}
           </div>
         </div>
@@ -111,7 +111,7 @@ export default function CotLegacy() {
       {/* Controls */}
       <div className="flex wrap mt" style={{ gap: 10, marginBottom: 10, alignItems: "center" }}>
         <div className="flex" style={{ gap: 6, alignItems: "center" }}>
-          <span className="flabel">Período:</span>
+          <span className="flabel">Period:</span>
           <div className="seg" style={{ margin: 0 }}>
             {WEEKS_OPTIONS.map((w) => (
               <span key={w.k} className={weeks === w.k ? "on" : ""} onClick={() => setWeeks(w.k)}>{w.l}</span>
@@ -119,13 +119,13 @@ export default function CotLegacy() {
           </div>
         </div>
         <div className="flex" style={{ gap: 6, alignItems: "center" }}>
-          <span className="flabel">Mercado:</span>
+          <span className="flabel">Market:</span>
           <select className="fsel" value={marketFilter} onChange={(e) => setMarketFilter(e.target.value)} style={{ fontSize: 12, padding: "6px 10px", minWidth: 180 }}>
-            <option value="">Todos os mercados ({markets.length})</option>
+            <option value="">All markets ({markets.length})</option>
             {markets.map((m) => <option key={m} value={m}>{shortName(m)}</option>)}
           </select>
         </div>
-        <span className="muted" style={{ fontSize: 10, marginLeft: "auto" }}>{filtered.length} registros</span>
+        <span className="muted" style={{ fontSize: 10, marginLeft: "auto" }}>{filtered.length} records</span>
       </div>
 
       {/* Table */}
@@ -134,8 +134,8 @@ export default function CotLegacy() {
           <table>
             <thead>
               <tr>
-                <th>Data</th>
-                <th>Mercado</th>
+                <th>Date</th>
+                <th>Market</th>
                 <th className="num" style={{ color: "#4A90D9" }}>Spec Net</th>
                 <th className="num" style={{ color: "#4A90D9", fontSize: 10 }}>% OI</th>
                 <th className="num" style={{ color: "#C9A02C" }}>Comm Net</th>
@@ -177,9 +177,9 @@ export default function CotLegacy() {
       </div>
 
       <div className="legend mt">
-        <i><b style={{ background: "#4A90D9" }} />Especuladores (Non-Commercial)</i>
-        <i><b style={{ background: "#C9A02C" }} />Comerciais (Commercial)</i>
-        <span className="muted" style={{ marginLeft: "auto" }}>CFTC Legacy Futures · dados públicos</span>
+        <i><b style={{ background: "#4A90D9" }} />Speculators (Non-Commercial)</i>
+        <i><b style={{ background: "#C9A02C" }} />Commercials (Commercial)</i>
+        <span className="muted" style={{ marginLeft: "auto" }}>CFTC Legacy Futures · public data</span>
       </div>
     </div>
   );

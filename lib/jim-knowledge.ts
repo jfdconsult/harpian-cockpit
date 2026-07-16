@@ -32,7 +32,7 @@ export async function consultBlackLibrary(question: string): Promise<string> {
         output_needed: "research_brief",
         proprietary_context: "Harpian",
         depth: "quick",
-        constraints: "Responda em português do Brasil, máximo 3 parágrafos. Foco em dados e fontes verificáveis.",
+        constraints: "Respond in English, maximum 3 paragraphs. Focus on data and verifiable sources.",
       }),
       signal: AbortSignal.timeout(8000),
     });
@@ -46,9 +46,9 @@ export async function consultBlackLibrary(question: string): Promise<string> {
     if (data.source_map?.length) {
       const refs = data.source_map
         .slice(0, 3)
-        .map((s) => `${s.author} (${s.type}, relevância: ${s.relevance})`)
+        .map((s) => `${s.author} (${s.type}, relevance: ${s.relevance})`)
         .join("; ");
-      parts.push(`Fontes: ${refs}`);
+      parts.push(`Sources: ${refs}`);
     }
     return parts.join("\n\n");
   } catch {
@@ -96,16 +96,16 @@ export function buildKnowledgeContext(
   const parts: string[] = [];
   if (blackLibrary) {
     parts.push(
-      "\n\n--- CONHECIMENTO INSTITUCIONAL (Black Library) ---\n" +
-        "Inteligência consultada na base de conhecimento da Harpian. " +
-        "Use para fundamentar a resposta quando relevante.\n\n" +
+      "\n\n--- INSTITUTIONAL KNOWLEDGE (Black Library) ---\n" +
+        "Intelligence consulted from Harpian's knowledge base. " +
+        "Use it to support the response when relevant.\n\n" +
         blackLibrary,
     );
   }
   if (news) {
     parts.push(
-      "\n\n--- INTELIGÊNCIA MACRO DO DIA (JD NEWS) ---\n" +
-        "Notícias curadas do dia — use quando a pergunta envolver mercado, macro, ou atualidades.\n\n" +
+      "\n\n--- TODAY'S MACRO INTELLIGENCE (JD NEWS) ---\n" +
+        "Curated news of the day — use when the question involves markets, macro, or current events.\n\n" +
         news,
     );
   }

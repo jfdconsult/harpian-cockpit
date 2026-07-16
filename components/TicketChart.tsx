@@ -2,23 +2,26 @@
 import { useEffect, useRef } from "react";
 import { createChart, ColorType, type IChartApi } from "lightweight-charts";
 import { apiGet } from "@/lib/api";
+import { useTheme, chartColors } from "@/lib/theme";
 
 export default function TicketChart({ ticker }: { ticker: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (!ref.current) return;
     const el = ref.current;
     let chart: IChartApi | null = null;
     let cancelled = false;
+    const cc = chartColors();
 
     chart = createChart(el, {
       width: el.clientWidth,
       height: el.clientHeight,
-      layout: { background: { type: ColorType.Solid, color: "#0A1A30" }, textColor: "#7d96b3", fontSize: 10 },
-      grid: { vertLines: { color: "#16304f" }, horzLines: { color: "#13283f" } },
-      rightPriceScale: { borderColor: "#1d3a5f" },
-      timeScale: { borderColor: "#1d3a5f", timeVisible: false },
+      layout: { background: { type: ColorType.Solid, color: cc.bg }, textColor: cc.text, fontSize: 10 },
+      grid: { vertLines: { color: cc.grid }, horzLines: { color: cc.gridH } },
+      rightPriceScale: { borderColor: cc.border },
+      timeScale: { borderColor: cc.border, timeVisible: false },
     });
     const cs = chart.addCandlestickSeries({ upColor: "#2ECC71", downColor: "#E74C3C", borderUpColor: "#2ECC71", borderDownColor: "#E74C3C", wickUpColor: "#2ECC71", wickDownColor: "#E74C3C" });
 
@@ -49,7 +52,7 @@ export default function TicketChart({ ticker }: { ticker: string }) {
       ro.disconnect();
       if (chart) chart.remove();
     };
-  }, [ticker]);
+  }, [ticker, theme]);
 
   return <div ref={ref} style={{ flex: 1, minHeight: 0 }} />;
 }

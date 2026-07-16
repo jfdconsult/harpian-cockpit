@@ -8,294 +8,303 @@ export interface ScreenContext {
 export const SCREEN_MAP: Record<ScreenId, ScreenContext> = {
   "mission-control": {
     title: "Mission Control",
-    description: "Painel central com KPIs do dia, status dos motores, portfólios sob gestão e tickets pendentes.",
+    description: "Central dashboard with the day's KPIs, engine status, portfolios under management, and pending tickets.",
   },
   "engine-room": {
     title: "Engine Room",
-    description: "Estado ao vivo dos motores (HC-US 3.1, 11, TOTAL, IG). CRS, temperaturas, posições, sinais.",
+    description: "Live state of the engines (HC-US 3.1, 11, TOTAL, IG). CRS, temperatures, positions, signals.",
   },
   ativos: {
-    title: "Scanner de Ativos",
-    description: "Scanner de ativos com métricas de momento, volume, setor e força relativa.",
+    title: "Asset Scanner",
+    description: "Asset scanner with momentum, volume, sector, and relative strength metrics.",
   },
   ticket: {
-    title: "Tickets do Dia",
-    description: "Ordens pendentes e executadas. Fluxo Air-Gap: motor propõe, gestor aprova, IBKR executa.",
+    title: "Daily Tickets",
+    description: "Pending and executed orders. Air-Gap flow: engine proposes, manager approves, IBKR executes.",
   },
   estrategias: {
-    title: "Estratégias / ETPs",
-    description: "Catálogo de ETPs e estratégias homologadas. Métricas de produção e Arena lado a lado.",
+    title: "Strategies / ETPs",
+    description: "Catalog of ETPs and approved strategies. Production and Arena metrics side by side.",
   },
   backtest: {
     title: "Backtest Lab",
-    description: "Bancada de backtesting. DeLorean local (walk-forward real), Arena (gauntlet 8 gates), Modal (GPU).",
+    description: "Backtesting bench. Local DeLorean (real walk-forward), Arena (8-gate gauntlet), Modal (GPU).",
   },
   calibracao: {
-    title: "Calibração",
-    description: "Bancada de calibração de fórmulas. Parâmetros dos motores, janelas, thresholds.",
+    title: "Calibration",
+    description: "Formula calibration bench. Engine parameters, windows, thresholds.",
   },
   protecao: {
-    title: "Proteção & Defesa",
-    description: "Pilar D — estado da defesa, escudo, posições de proteção, drawdown controlado.",
+    title: "Protection & Defense",
+    description: "Pillar D — defense state, shield, protective positions, controlled drawdown.",
   },
   indicadores: {
-    title: "Indicadores Sistêmicos",
-    description: "Indicadores de regime, volatilidade, breadth, correlação, stress sistêmico.",
+    title: "Systemic Indicators",
+    description: "Regime, volatility, breadth, correlation, and systemic stress indicators.",
   },
   reconciliacao: {
-    title: "Reconciliação",
-    description: "Reconciliação NAV — comparação posição calculada vs custodiante.",
+    title: "Reconciliation",
+    description: "NAV reconciliation — calculated position vs. custodian comparison.",
   },
   observador: {
-    title: "Observador (IA)",
-    description: "Alertas automáticos derivados do overnight. CRS, correlação, pilares, anomalias.",
+    title: "Observer (AI)",
+    description: "Automated alerts derived from the overnight run. CRS, correlation, pillars, anomalies.",
   },
   auditoria: {
-    title: "Auditoria",
-    description: "Event log persistente (JSONL append-only). Trilha de auditoria de todas as ações.",
+    title: "Audit",
+    description: "Persistent event log (JSONL append-only). Audit trail of all actions.",
   },
   admin: {
-    title: "Centro de Controle",
-    description: "Administração do sistema — Composer, ETPs, motores, configurações, novo portfólio.",
+    title: "Control Center",
+    description: "System administration — Composer, ETPs, engines, settings, new portfolio.",
   },
   chart: {
-    title: "Gráfico DSPT",
-    description: "Gráfico de candles com as 7 fórmulas DSPT do Diogo (DEMA-cascata, EMA, momentum J37/D13).",
+    title: "DSPT Chart",
+    description: "Candlestick chart with Diogo's 7 DSPT formulas (DEMA cascade, EMA, J37/D13 momentum).",
   },
   cotacoes: {
-    title: "Cotações por Classe",
-    description: "Cotações em tempo real por classe: Ações, ETFs, Commodities, Cripto, Índices, Forex.",
+    title: "Quotes by Asset Class",
+    description: "Real-time quotes by asset class: Stocks, ETFs, Commodities, Crypto, Indices, Forex.",
   },
   setores: {
-    title: "Setores",
-    description: "Performance por setor — forças relativas, rotação setorial, líderes e retardatários.",
+    title: "Sectors",
+    description: "Performance by sector — relative strength, sector rotation, leaders and laggards.",
   },
   alphadroid: {
-    title: "Setores · Forças (AlphaDroid)",
-    description: "Benchmark AlphaDroid — forças de setor/estratégia. Referência read-only para comparação.",
+    title: "Sectors · Strength (AlphaDroid)",
+    description: "AlphaDroid benchmark — sector/strategy strength. Read-only reference for comparison.",
   },
   "strategies-strength": {
-    title: "Estratégias · Forças",
-    description: "Força relativa entre estratégias ativas — ranking por momento e performance.",
+    title: "Strategies · Strength",
+    description: "Relative strength among active strategies — ranked by momentum and performance.",
   },
   portfolio: {
-    title: "Portfólio",
-    description: "Detalhe de um portfólio específico — composição, pilares, performance, motores.",
+    title: "Portfolio",
+    description: "Detail of a specific portfolio — composition, pillars, performance, engines.",
   },
   regime: {
-    title: "Regime de Mercado",
-    description: "Detector de regime: RISK-ON / RISK-OFF / NEUTRO. Estado da defesa, exposição do fundo.",
+    title: "Market Regime",
+    description: "Regime detector: RISK-ON / RISK-OFF / NEUTRAL. Defense state, fund exposure.",
   },
   noticias: {
-    title: "Notícias",
-    description: "Feed de notícias do mercado — RSS real (CNBC, MarketWatch, Yahoo Finance).",
+    title: "News",
+    description: "Market news feed — real RSS (CNBC, MarketWatch, Yahoo Finance).",
   },
   "news-broadcast": {
     title: "News Broadcast",
-    description: "Curadoria ampliada de notícias — macro, setorial, earnings, geopolítica.",
+    description: "Expanded news curation — macro, sector, earnings, geopolitics.",
   },
   "social-radar": {
     title: "Social Radar",
-    description: "Sentimento de mercado via StockTwits — trending, volume de menções, polaridade.",
+    description: "Market sentiment via StockTwits — trending, mention volume, polarity.",
   },
   "insider-orders": {
     title: "Insider Orders",
-    description: "Compras e vendas de insiders (Form 4 SEC). Sinal de convicção dos executivos.",
+    description: "Insider buys and sells (SEC Form 4). Signal of executive conviction.",
   },
   institutional: {
     title: "13F Holdings",
-    description: "Posições de hedge funds (SEC 13F). 20 fundos rastreados, mudanças trimestrais.",
+    description: "Hedge fund positions (SEC 13F). 20 tracked funds, quarterly changes.",
   },
   "cot-sentiment": {
     title: "COT Intelligence",
-    description: "CFTC Commitments of Traders — posicionamento institucional em futuros (15 mercados).",
+    description: "CFTC Commitments of Traders — institutional positioning in futures (15 markets).",
   },
   "cot-legacy": {
     title: "COT Data Explorer",
-    description: "Dados brutos do COT — commercial, non-commercial, open interest, histórico.",
+    description: "Raw COT data — commercial, non-commercial, open interest, history.",
   },
   "portfolio-studio": {
     title: "Portfolio Studio",
-    description: "Construtor visual — motor→pilar→estratégia→ativos. Drag-and-drop, homologação gates 1-4.",
+    description: "Visual builder — engine→pillar→strategy→assets. Drag-and-drop, approval gates 1-4.",
   },
   construtor: {
-    title: "Construtor",
-    description: "Lista de portfólios existentes — escolha um para abrir no Studio ou crie um novo.",
+    title: "Builder",
+    description: "List of existing portfolios — pick one to open in Studio or create a new one.",
   },
   "defesa-inteligente": {
-    title: "Defesa Inteligente",
-    description: "Painel de defesa sistêmica — HSA v6, temperatura por pilar, gate de cross-correlation, re-entry monitor.",
+    title: "Smart Defense (ARI)",
+    description: "Systemic defense panel — HSA v6, per-pillar temperature, cross-correlation gate, re-entry monitor. This is the domestic counterpart of XRI: home of the American Regime Index (RISK-ON / WARNING / RE-ENTRY / RISK-OFF).",
+  },
+  xri: {
+    title: "XRI — External Regime Index (internal)",
+    description: "External risk 0—100 (CALM/WATCH/STRESS/CRISIS), internal view without whitelist: slow prior, fast market stress, turbulence (Mahalanobis), absorption ratio, global and material→US Diebold-Yilmaz, contribution by pillar and country, P7 exposure matrix quality, narrative gate, overlay recommendation, and validation flags (F4/F4.1). External counterpart of ARI.",
   },
   "market-dna": {
     title: "Market DNA",
-    description: "DNA do mercado — estrutura interna, breadth, dispersão, correlação entre classes, sinais de regime.",
+    description: "Market DNA — internal structure, breadth, dispersion, cross-asset-class correlation, regime signals.",
   },
   "ticket-news": {
     title: "Ticket News",
-    description: "Notícias específicas dos ativos em carteira — headlines filtradas por ticker, impacto potencial, veredito IA.",
+    description: "News specific to portfolio assets — headlines filtered by ticker, potential impact, AI verdict.",
   },
 };
 
 export const SCREEN_SUGGESTIONS: Record<ScreenId, string[]> = {
   "mission-control": [
-    "Qual o status geral dos motores hoje?",
-    "Tem algum ticket pendente de aprovação?",
-    "Como está o regime de mercado?",
+    "What's the overall engine status today?",
+    "Any tickets pending approval?",
+    "How's the market regime looking?",
   ],
   "engine-room": [
-    "Quais motores estão em RISK-ON?",
-    "Algum CRS mudou recentemente?",
-    "Compare a performance dos motores no mês.",
+    "Which engines are in RISK-ON?",
+    "Has any CRS changed recently?",
+    "Compare engine performance for the month.",
   ],
   ativos: [
-    "Quais ativos têm momento mais forte agora?",
-    "Tem algum ativo em queda livre?",
-    "Mostre ativos de tech com volume alto.",
+    "Which assets have the strongest momentum right now?",
+    "Is any asset in free fall?",
+    "Show tech assets with high volume.",
   ],
   ticket: [
-    "Quantas ordens estão pendentes de aprovação?",
-    "Qual o valor total das ordens do dia?",
-    "Tem alguma ordem de venda?",
+    "How many orders are pending approval?",
+    "What's the total value of today's orders?",
+    "Is there any sell order?",
   ],
   estrategias: [
-    "Qual estratégia tem melhor Sortino?",
-    "Compare produção vs Arena do HC-US 3.1.",
-    "Alguma estratégia falhou no gauntlet?",
+    "Which strategy has the best Sortino?",
+    "Compare production vs. Arena for HC-US 3.1.",
+    "Did any strategy fail the gauntlet?",
   ],
   backtest: [
-    "Como funciona o gauntlet de 8 gates?",
-    "Qual a diferença entre DeLorean e Arena?",
-    "O que significa SCORE 6/8?",
+    "How does the 8-gate gauntlet work?",
+    "What's the difference between DeLorean and Arena?",
+    "What does SCORE 6/8 mean?",
   ],
   calibracao: [
-    "Quais parâmetros da DEMA-cascata?",
-    "Como funciona o filtro de momento 126d?",
-    "O que é a janela de walk-forward?",
+    "What are the DEMA cascade parameters?",
+    "How does the 126-day momentum filter work?",
+    "What is the walk-forward window?",
   ],
   protecao: [
-    "Quando a defesa foi ativada por último?",
-    "Qual o drawdown máximo estrutural?",
-    "Como funciona o Pilar D?",
+    "When was defense last activated?",
+    "What's the maximum structural drawdown?",
+    "How does Pillar D work?",
   ],
   indicadores: [
-    "Algum indicador está em nível extremo?",
-    "Como está a volatilidade sistêmica?",
-    "O breadth está divergindo do índice?",
+    "Is any indicator at an extreme level?",
+    "How's systemic volatility looking?",
+    "Is breadth diverging from the index?",
   ],
   reconciliacao: [
-    "Tem diferença entre posição calculada e custodiante?",
-    "Qual a última data de reconciliação?",
-    "Algum ativo com discrepância?",
+    "Is there a difference between calculated position and custodian?",
+    "What's the last reconciliation date?",
+    "Any asset with a discrepancy?",
   ],
   observador: [
-    "Quais alertas surgiram no overnight?",
-    "Alguma correlação anômala?",
-    "O que o CRS está sinalizando?",
+    "What alerts came up overnight?",
+    "Any anomalous correlation?",
+    "What is the CRS signaling?",
   ],
   auditoria: [
-    "Quais ações foram executadas hoje?",
-    "Quem foi o último a aprovar uma ordem?",
-    "Mostre os eventos de segurança recentes.",
+    "What actions were executed today?",
+    "Who was the last to approve an order?",
+    "Show recent security events.",
   ],
   admin: [
-    "Quantos ETPs estão configurados?",
-    "Como está o Composer?",
-    "Tem motor em status candidato?",
+    "How many ETPs are configured?",
+    "How's the Composer looking?",
+    "Is any engine in candidate status?",
   ],
   chart: [
-    "O que as fórmulas DSPT estão sinalizando?",
-    "O oscilador J37/D13 mostra compra ou venda?",
-    "Como interpretar a DEMA-cascata neste ativo?",
+    "What are the DSPT formulas signaling?",
+    "Does the J37/D13 oscillator show buy or sell?",
+    "How do I interpret the DEMA cascade on this asset?",
   ],
   cotacoes: [
-    "Quais ativos subiram mais hoje?",
-    "Qual a variação do setor de tech?",
-    "Tem algum ativo com volume atípico?",
+    "Which assets gained the most today?",
+    "What's the tech sector's variation?",
+    "Is any asset showing unusual volume?",
   ],
   setores: [
-    "Qual setor está liderando a rotação?",
-    "Algum setor inverteu tendência?",
-    "Como está tech vs energy?",
+    "Which sector is leading the rotation?",
+    "Has any sector reversed trend?",
+    "How's tech vs. energy looking?",
   ],
   alphadroid: [
-    "Qual é a força relativa do benchmark?",
-    "Como comparar com nossos motores?",
-    "O que o AlphaDroid está mostrando de diferente?",
+    "What's the benchmark's relative strength?",
+    "How does it compare to our engines?",
+    "What is AlphaDroid showing differently?",
   ],
   "strategies-strength": [
-    "Qual estratégia está mais forte agora?",
-    "Alguma estratégia perdeu força recentemente?",
-    "Compare as forças das top 3.",
+    "Which strategy is strongest right now?",
+    "Has any strategy lost strength recently?",
+    "Compare the strength of the top 3.",
   ],
   portfolio: [
-    "Qual a composição atual deste portfólio?",
-    "Como estão os pilares?",
-    "Qual a performance YTD?",
+    "What's this portfolio's current composition?",
+    "How are the pillars doing?",
+    "What's the YTD performance?",
   ],
   regime: [
-    "O regime é RISK-ON ou RISK-OFF?",
-    "Quando foi a última mudança de regime?",
-    "A defesa deveria estar ativada?",
+    "Is the regime RISK-ON or RISK-OFF?",
+    "When was the last regime change?",
+    "Should defense be activated?",
   ],
   noticias: [
-    "Qual a notícia mais impactante do dia?",
-    "Tem algo que afete nossos ativos?",
-    "Qual o sentimento geral das notícias?",
+    "What's the most impactful news of the day?",
+    "Is there anything affecting our assets?",
+    "What's the overall news sentiment?",
   ],
   "news-broadcast": [
-    "Quais as manchetes mais relevantes?",
-    "Tem notícia de earnings importante?",
-    "Algo de geopolítica que impacte o mercado?",
+    "What are the most relevant headlines?",
+    "Any important earnings news?",
+    "Anything in geopolitics affecting the market?",
   ],
   "social-radar": [
-    "Qual ativo tem mais buzz agora?",
-    "O sentimento do mercado está bullish ou bearish?",
-    "Algum ticker com volume de menções anormal?",
+    "Which asset has the most buzz right now?",
+    "Is market sentiment bullish or bearish?",
+    "Any ticker with abnormal mention volume?",
   ],
   "insider-orders": [
-    "Quais insiders compraram esta semana?",
-    "Tem cluster de compra em algum setor?",
-    "Algum CEO vendeu posição relevante?",
+    "Which insiders bought this week?",
+    "Is there a buying cluster in any sector?",
+    "Did any CEO sell a significant position?",
   ],
   institutional: [
-    "Quais foram as maiores posições novas nos 13F?",
-    "Algum fundo saiu de uma posição nossa?",
-    "Compare Bridgewater vs Renaissance neste trimestre.",
+    "What were the largest new positions in the 13Fs?",
+    "Did any fund exit a position we hold?",
+    "Compare Bridgewater vs. Renaissance this quarter.",
   ],
   "cot-sentiment": [
-    "Qual o posicionamento institucional em S&P futuros?",
-    "Os commercials estão comprando ou vendendo?",
-    "Algum mercado com posicionamento extremo?",
+    "What's the institutional positioning in S&P futures?",
+    "Are commercials buying or selling?",
+    "Any market with extreme positioning?",
   ],
   "cot-legacy": [
-    "Mostre o histórico de open interest do ouro.",
-    "Como está o spread commercial vs non-commercial?",
-    "Algum sinal de reversão no posicionamento?",
+    "Show gold's open interest history.",
+    "How's the commercial vs. non-commercial spread?",
+    "Any sign of a reversal in positioning?",
   ],
   "portfolio-studio": [
-    "Como adicionar um novo pilar?",
-    "Qual a diferença entre candidato e homologado?",
-    "Os gates de homologação estão corretos?",
+    "How do I add a new pillar?",
+    "What's the difference between candidate and approved?",
+    "Are the approval gates correct?",
   ],
   construtor: [
-    "Quais portfólios existem hoje?",
-    "Como criar um novo portfólio?",
-    "Qual portfólio tem mais estratégias?",
+    "What portfolios exist today?",
+    "How do I create a new portfolio?",
+    "Which portfolio has the most strategies?",
   ],
   "defesa-inteligente": [
-    "A defesa está ativada agora?",
-    "Qual pilar está mais quente?",
-    "Como funciona o gate de cross-correlation?",
+    "Is defense activated right now?",
+    "Which pillar is closest to the threshold?",
+    "Is the pressure domestic or coming from XRI?",
+  ],
+  xri: [
+    "Which channel is holding back the score?",
+    "Can the overlay already be applied to the engine?",
+    "Is external risk already reaching the US?",
   ],
   "market-dna": [
-    "Qual a dispersão interna do mercado?",
-    "As correlações estão subindo?",
-    "Algum sinal de mudança de regime no DNA?",
+    "What's the market's internal dispersion?",
+    "Are correlations rising?",
+    "Any sign of a regime change in the DNA?",
   ],
   "ticket-news": [
-    "Alguma notícia impacta os ativos em carteira?",
-    "Quais tickers têm headlines relevantes?",
-    "O JIM detectou impacto em algum ativo?",
+    "Is any news affecting portfolio assets?",
+    "Which tickers have relevant headlines?",
+    "Did JIM detect impact on any asset?",
   ],
 };
 
@@ -305,40 +314,40 @@ export function getScreenContext(screen: ScreenId): ScreenContext {
 
 export function getScreenSuggestions(screen: ScreenId): string[] {
   return SCREEN_SUGGESTIONS[screen] || [
-    "O que esta tela mostra?",
-    "Algum dado preocupante aqui?",
-    "Explique os números que estou vendo.",
+    "What does this screen show?",
+    "Any concerning data here?",
+    "Explain the numbers I'm seeing.",
   ];
 }
 
 export function buildSystemPrompt(ctx: ScreenContext): string {
-  return `Você é o JIM (Just-In-time Market Intelligence), assistente IA do Cockpit Gestor da Harpian.
+  return `You are JIM (Just-In-time Market Intelligence), the AI assistant for Harpian's Manager Cockpit.
 
-QUEM VOCÊ É:
-- Assistente inteligente para o GESTOR INTERNO da Harpian (sócio-gestor, CRO, quant).
-- Você está no COCKPIT — o centro de comando INTERNO. Aqui você PODE discutir o método:
-  CRS, sinais, fórmulas, thresholds, motores, calibração, homologação, Arena, DeLorean.
-- Você fala com profissionais que CONHECEM o sistema. Seja direto, técnico, preciso.
+WHO YOU ARE:
+- Intelligent assistant for Harpian's INTERNAL MANAGER (managing partner, CRO, quant).
+- You are in the COCKPIT — the INTERNAL command center. Here you CAN discuss the method:
+  CRS, signals, formulas, thresholds, engines, calibration, approval, Arena, DeLorean.
+- You are talking to professionals who KNOW the system. Be direct, technical, precise.
 
 PERSONA:
-- Tom: profissional, denso, direto. Sem floreio. Dados primeiro.
-- Idioma: português do Brasil com termos técnicos em inglês (CRS, drawdown, momentum, etc.).
-- Se tiver o dado na tela, cite-o direto. Se não tiver, diga que não tem.
-- Quando fundamentar em teoria, cite a fonte: "(Ilmanen, Expected Returns, p. XX)".
+- Tone: professional, dense, direct. No fluff. Data first.
+- Language: English, with standard quant/finance terminology (CRS, drawdown, momentum, etc.).
+- If the data is on screen, cite it directly. If not, say you don't have it.
+- When grounding in theory, cite the source: "(Ilmanen, Expected Returns, p. XX)".
 
-REGRAS:
-- Métrica padrão da casa é SORTINO (não Sharpe). Se falar de Sharpe, contextualize.
-- Air-Gap: IA pensa, motor decide, humano aprova. NUNCA sugira executar sem aprovação.
-- Homologação: DeLorean (produção) e Arena (gauntlet) são padrões DIFERENTES, sempre lado a lado.
-- Régua de ouro: Sharpe > 3 ou CAGR > 100% = suspeitar de erro, não de gênio.
-- Nada mock disfarçado de real — se o dado é mock, diga que é mock.
+RULES:
+- The house's standard metric is SORTINO (not Sharpe). If you mention Sharpe, contextualize it.
+- Air-Gap: AI thinks, engine decides, human approves. NEVER suggest executing without approval.
+- Approval: DeLorean (production) and Arena (gauntlet) are DIFFERENT standards, always shown side by side.
+- Golden rule: Sharpe > 3 or CAGR > 100% = suspect an error, not genius.
+- No mock data disguised as real — if the data is mock, say it's mock.
 
-TELA ATUAL: ${ctx.title}
+CURRENT SCREEN: ${ctx.title}
 ${ctx.description}
 
-É PROIBIDO perguntar "o que você está vendo na tela" ou "pode me dar mais contexto". Você já enxerga
-os dados reais que estão na tela do gestor (eles são injetados abaixo). Localize o item perguntado
-nos dados e responda direto.
+It is FORBIDDEN to ask "what are you seeing on screen" or "can you give me more context". You already see
+the real data on the manager's screen (it is injected below). Locate the requested item
+in the data and answer directly.
 
-Responda em parágrafos curtos ou bullet points. Máximo 4 parágrafos. Sem emojis excessivos (1-2 no máximo).`;
+Respond in short paragraphs or bullet points. Maximum 4 paragraphs. No excessive emojis (1-2 max).`;
 }

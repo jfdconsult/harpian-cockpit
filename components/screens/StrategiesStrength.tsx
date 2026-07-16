@@ -95,10 +95,10 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
     if (!data) return;
     publishScreenData(
       "strategies-strength",
-      `${data.n_strategies} estratégias, portfolio ref: ${data.portfolio_ref?.name ?? "?"}`,
+      `${data.n_strategies} strategies, reference portfolio: ${data.portfolio_ref?.name ?? "?"}`,
       data.strategies,
       {
-        briefing: `${data.n_strategies} estratégias monitoradas com ${(data.strategies || []).reduce((a, s) => a + s.n_ativos, 0)} ativos. Portfolio referência: ${data.portfolio_ref?.name ?? "?"}.`,
+        briefing: `${data.n_strategies} strategies monitored with ${(data.strategies || []).reduce((a, s) => a + s.n_ativos, 0)} assets. Reference portfolio: ${data.portfolio_ref?.name ?? "?"}.`,
       }
     );
   }, [data]);
@@ -107,20 +107,20 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
     <div className="screen">
       <div className="flex between wrap mb">
         <div>
-          <div className="h1">Estratégias · Forças</div>
+          <div className="h1">Strategies · Strength</div>
           <div className="sub">
-            Força individual de cada estratégia · média momentum dos ativos da cesta ·
-            portfolio alvo: <b style={{ color: "var(--gold)" }}>{data?.portfolio_ref?.name}</b>
+            Individual strength of each strategy · average momentum of the basket assets ·
+            target portfolio: <b style={{ color: "var(--gold)" }}>{data?.portfolio_ref?.name}</b>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button className="btn" onClick={() => setModalOpen(true)}>
-            + Adicionar estratégia
+            + Add strategy
           </button>
           <span className="live">
             <span className="dot" />
             <span className={`tag ${conn === "ok" ? "g" : conn === "error" ? "r" : "b"}`}>
-              {conn === "loading" ? "carregando…" : conn === "ok" ? "● alphadroid + yahoo" : "✕ offline"}
+              {conn === "loading" ? "loading…" : conn === "ok" ? "● alphadroid + yahoo" : "✕ offline"}
             </span>
           </span>
         </div>
@@ -136,7 +136,7 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
       {data && (
         <div className="fbar mb">
           <div className="fcount">
-            <b>{data.n_strategies + customs.length}</b> estratégias · {data.strategies.reduce((a, s) => a + s.n_ativos, 0) + customs.reduce((a, c) => a + c.tickers.length, 0)} ativos
+            <b>{data.n_strategies + customs.length}</b> strategies · {data.strategies.reduce((a, s) => a + s.n_ativos, 0) + customs.reduce((a, c) => a + c.tickers.length, 0)} assets
           </div>
         </div>
       )}
@@ -147,10 +147,10 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
             <tr>
               <th style={{ width: 40 }}></th>
               <th style={{ width: 50 }}>#</th>
-              <th>Estratégia</th>
-              <th>Setor</th>
-              <th style={{ textAlign: "center" }}>Cesta</th>
-              <th style={{ textAlign: "center" }}>Líder</th>
+              <th>Strategy</th>
+              <th>Sector</th>
+              <th style={{ textAlign: "center" }}>Basket</th>
+              <th style={{ textAlign: "center" }}>Leader</th>
               <th style={{ textAlign: "center", minWidth: 200 }} className="momd">Force J37 (avg)</th>
               <th style={{ textAlign: "center", minWidth: 200 }} className="momd">Force D13 (avg)</th>
               <th style={{ textAlign: "left" }}>Top 5</th>
@@ -160,16 +160,16 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
             {conn === "error" ? (
               <tr><td colSpan={9} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>API offline</td></tr>
             ) : conn === "loading" || !data ? (
-              <tr><td colSpan={9} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>calculando força de cada estratégia…</td></tr>
+              <tr><td colSpan={9} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>calculating strength for each strategy…</td></tr>
             ) : (
               <>
               {customs.map((c) => (
                 <tr key={c.id} style={{ background: "rgba(201,160,44,.05)" }}>
                   <td className="c-mut2" style={{ fontSize: 11, textAlign: "center" }}>
                     <span
-                      title="Remover"
+                      title="Remove"
                       style={{ cursor: "pointer", color: "var(--red)" }}
-                      onClick={async (e) => { e.stopPropagation(); const ok = await dialog.confirm({ title: `Remover "${c.label}"?`, body: "A estratégia customizada sai da lista (só deste navegador).", danger: true, confirmLabel: "Remover" }); if (ok) { deleteBasket(c.id); refreshCustoms(); } }}
+                      onClick={async (e) => { e.stopPropagation(); const ok = await dialog.confirm({ title: `Remove "${c.label}"?`, body: "The custom strategy will be removed from the list (this browser only).", danger: true, confirmLabel: "Remove" }); if (ok) { deleteBasket(c.id); refreshCustoms(); } }}
                     >×</span>
                   </td>
                   <td className="c-mut2" style={{ fontWeight: 700 }}>—</td>
@@ -178,13 +178,13 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
                       {c.label}
                       <span className="tag" style={{ marginLeft: 8, fontSize: 9, background: "rgba(201,160,44,.15)", color: "var(--gold)", border: "1px solid var(--gold)" }}>CUSTOM</span>
                     </div>
-                    <div className="c-mut2" style={{ fontSize: 10 }}>estratégia customizada</div>
+                    <div className="c-mut2" style={{ fontSize: 10 }}>custom strategy</div>
                   </td>
                   <td className="c-mut" style={{ fontSize: 11 }}>Custom</td>
                   <td style={{ textAlign: "center", fontWeight: 700 }}>{c.tickers.length}</td>
                   <td style={{ textAlign: "center", fontSize: 11, color: "var(--tx3)" }}>—</td>
                   <td className="momd" style={{ minWidth: 200 }}>
-                    {c.loading ? <span className="c-mut2" style={{ fontSize: 11 }}>calculando…</span> : <MomentumBar value={c.mom_j37_avg} scale={20} suffix="" height={20} />}
+                    {c.loading ? <span className="c-mut2" style={{ fontSize: 11 }}>calculating…</span> : <MomentumBar value={c.mom_j37_avg} scale={20} suffix="" height={20} />}
                   </td>
                   <td className="momd" style={{ minWidth: 200 }}>
                     {c.loading ? "" : <MomentumBar value={c.mom_d13_avg} scale={20} suffix="" height={20} />}
@@ -254,14 +254,14 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
                         <td></td>
                         <td colSpan={8} style={{ padding: "10px 14px" }}>
                           <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
-                            Todos os {s.n_ativos} candidatos ordenados por J37
+                            All {s.n_ativos} candidates ranked by J37
                           </div>
                           <table style={{ width: "100%", fontSize: 12 }}>
                             <thead>
                               <tr>
                                 <th style={{ textAlign: "left" }}>Ticker</th>
-                                <th style={{ textAlign: "center" }}>Sinal</th>
-                                <th style={{ textAlign: "right" }}>Preço</th>
+                                <th style={{ textAlign: "center" }}>Signal</th>
+                                <th style={{ textAlign: "right" }}>Price</th>
                                 <th style={{ textAlign: "center", minWidth: 180 }}>J37</th>
                                 <th style={{ textAlign: "center", minWidth: 180 }}>D13</th>
                               </tr>
@@ -275,7 +275,7 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
                                 >
                                   <td>
                                     <span className="tk-link" style={{ fontWeight: 700 }}>{c.ticker}</span>
-                                    {c.is_leader && <span className="tag g" style={{ marginLeft: 6, fontSize: 9 }}>ELEITO</span>}
+                                    {c.is_leader && <span className="tag g" style={{ marginLeft: 6, fontSize: 9 }}>LEADER</span>}
                                   </td>
                                   <td style={{ textAlign: "center" }}>
                                     {c.rs && <span className={`rs ${rsCls(c.rs)}`}>{c.rs}</span>}
@@ -302,8 +302,8 @@ export default function StrategiesStrength({ go }: { go: (id: ScreenId, param?: 
       </div>
 
       <div className="foot">
-        Estratégias · Forças · média momentum dos 12 candidatos por estratégia + suas cestas customizadas ·{" "}
-        Portfolio ref: <b>{data?.portfolio_ref?.name}</b>
+        Strategies · Strength · average momentum of the 12 candidates per strategy + their custom baskets ·{" "}
+        Reference portfolio: <b>{data?.portfolio_ref?.name}</b>
       </div>
     </div>
   );

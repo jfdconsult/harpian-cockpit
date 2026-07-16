@@ -63,73 +63,73 @@ function generateJimInsight(layers: IntelLayer[]): JimInsight {
   const liq = byKey["liquidity"]?.score ?? 50;
   const opt = byKey["options"]?.score ?? 50;
 
-  if (macro >= 70) positives.push("Ambiente macro forte: yield curve normal e credit spreads apertados. Condições favorecem ativos de risco.");
-  else if (macro >= 55) positives.push("Macro neutro-positivo: condições razoáveis para exposicao a risco.");
-  else if (macro < 35) negatives.push("Macro adverso: curva de juros e/ou spreads de credito sinalizam cautela.");
+  if (macro >= 70) positives.push("Strong macro environment: normal yield curve and tight credit spreads. Conditions favor risk assets.");
+  else if (macro >= 55) positives.push("Neutral-to-positive macro: reasonable conditions for risk exposure.");
+  else if (macro < 35) negatives.push("Adverse macro: yield curve and/or credit spreads signal caution.");
 
   if (vol <= 25) {
-    positives.push("Volatilidade muito baixa (VIX comprimido). Mercado complacente.");
-    alerts.push("VIX comprimido e historicamente precede expansoes subitas de volatilidade. Risco assimetrico de protecao barata.");
+    positives.push("Very low volatility (VIX compressed). Market complacent.");
+    alerts.push("A compressed VIX has historically preceded sudden volatility expansions. Asymmetric risk — cheap protection available.");
   } else if (vol <= 40) {
-    positives.push("Volatilidade baixa-moderada. Ambiente favoravel para posicoes direcionais.");
+    positives.push("Low-to-moderate volatility. Favorable environment for directional positions.");
   } else if (vol >= 75) {
-    negatives.push("Volatilidade elevada — mercado em stress. Risco de movimentos bruscos.");
-    alerts.push("VIX acima de 25 — considerar reduzir tamanho de posicao ou proteger com opcoes.");
+    negatives.push("Elevated volatility — market under stress. Risk of sharp moves.");
+    alerts.push("VIX above 25 — consider reducing position size or hedging with options.");
   }
 
-  if (breadth >= 65) positives.push(`Breadth saudavel: ${breadth}% dos ativos acima da MA200. Rally com ampla participacao.`);
-  else if (breadth >= 50) positives.push(`Breadth aceitavel: ${breadth}% acima da MA200. Participacao moderada.`);
-  else if (breadth < 35) negatives.push(`Breadth fraco: apenas ${breadth}% acima da MA200. Mercado estreito — poucos ativos sustentam o indice.`);
+  if (breadth >= 65) positives.push(`Healthy breadth: ${breadth}% of assets above the 200-day MA. Rally with broad participation.`);
+  else if (breadth >= 50) positives.push(`Acceptable breadth: ${breadth}% above the 200-day MA. Moderate participation.`);
+  else if (breadth < 35) negatives.push(`Weak breadth: only ${breadth}% above the 200-day MA. Narrow market — few assets are carrying the index.`);
 
   if (sent >= 80) {
-    negatives.push("Sentimento euforico (Fear & Greed acima de 80). Historicamente zona de pico.");
-    alerts.push("Euforia extrema costuma preceder correcoes. Cautela com novas posicoes.");
+    negatives.push("Euphoric sentiment (Fear & Greed above 80). Historically a peak zone.");
+    alerts.push("Extreme euphoria tends to precede corrections. Exercise caution with new positions.");
   } else if (sent <= 25) {
-    positives.push("Pessimismo extremo (Fear & Greed abaixo de 25). Historicamente zona de oportunidade contraria.");
+    positives.push("Extreme pessimism (Fear & Greed below 25). Historically a contrarian opportunity zone.");
   } else if (sent <= 40) {
-    positives.push("Sentimento em zona de medo — pode ser oportunidade se os fundamentos sustentam.");
+    positives.push("Sentiment in fear territory — could be an opportunity if fundamentals hold up.");
   } else if (sent >= 65) {
-    negatives.push("Sentimento elevado. Otimismo pode estar exagerado.");
+    negatives.push("Elevated sentiment. Optimism may be overdone.");
   }
 
   if (pos >= 80) {
-    negatives.push("Posicionamento especulador em extremo de alta. Risco de reversao se o fluxo mudar.");
-    alerts.push("COT Index extremo — hedge funds excessivamente comprados.");
+    negatives.push("Speculative positioning at an extreme high. Reversal risk if flows shift.");
+    alerts.push("Extreme COT Index — hedge funds excessively long.");
   } else if (pos <= 20) {
-    positives.push("Posicionamento em extremo de baixa. Potencial para alta significativa se sentimento mudar.");
+    positives.push("Positioning at an extreme low. Potential for a significant rally if sentiment shifts.");
   }
 
-  if (liq >= 65) positives.push("Liquidez saudavel — volume e fluxo sustentam o mercado.");
-  else if (liq < 35) negatives.push("Liquidez baixa — risco de gaps e execucao ruim em movimentos de stress.");
+  if (liq >= 65) positives.push("Healthy liquidity — volume and flow are supporting the market.");
+  else if (liq < 35) negatives.push("Low liquidity — risk of gaps and poor execution during stress moves.");
 
-  if (opt >= 75) alerts.push("Skew elevado sugere demanda por protecao — institucionais comprando puts.");
-  else if (opt <= 25) alerts.push("Skew baixo e complacencia em opcoes. Protecao barata disponivel.");
+  if (opt >= 75) alerts.push("Elevated skew suggests demand for protection — institutions buying puts.");
+  else if (opt <= 25) alerts.push("Low skew and complacency in options. Cheap protection available.");
 
   let headline: string;
   let headlineColor: string;
   const avg = Math.round(layers.reduce((s, l) => s + l.score, 0) / layers.length);
 
   if (avg >= 70 && negatives.length === 0) {
-    headline = "Cenario favoravel para risco. Fundamentos, liquidez e sentimento alinhados.";
+    headline = "Favorable scenario for risk. Fundamentals, liquidity, and sentiment aligned.";
     headlineColor = "#2ECC71";
   } else if (avg >= 55 && negatives.length <= 1) {
-    headline = "Cenario moderadamente positivo. Maioria dos indicadores sustenta exposicao a risco.";
+    headline = "Moderately positive scenario. Most indicators support risk exposure.";
     headlineColor = "#4A90D9";
   } else if (avg >= 40) {
     headline = positives.length > negatives.length
-      ? "Cenario misto com vies positivo. Sinais contraditarios entre camadas."
-      : "Cenario misto com alertas. Equilibrio entre sinais positivos e negativos.";
+      ? "Mixed scenario with a positive bias. Conflicting signals across layers."
+      : "Mixed scenario with alerts. Balance between positive and negative signals.";
     headlineColor = "#C9A02C";
   } else {
-    headline = "Cenario de cautela. Multiplos indicadores sugerem reducao de risco.";
+    headline = "Cautious scenario. Multiple indicators suggest reducing risk.";
     headlineColor = "#E74C3C";
   }
 
   const summaryParts: string[] = [];
-  if (positives.length > 0) summaryParts.push(`${positives.length} sinal(is) positivo(s)`);
-  if (negatives.length > 0) summaryParts.push(`${negatives.length} sinal(is) negativo(s)`);
-  if (alerts.length > 0) summaryParts.push(`${alerts.length} alerta(s)`);
-  const summary = `JIM identifica ${summaryParts.join(", ")} nas ${layers.filter(l => l.status !== "planned").length} camadas ativas.`;
+  if (positives.length > 0) summaryParts.push(`${positives.length} positive signal(s)`);
+  if (negatives.length > 0) summaryParts.push(`${negatives.length} negative signal(s)`);
+  if (alerts.length > 0) summaryParts.push(`${alerts.length} alert(s)`);
+  const summary = `JIM identifies ${summaryParts.join(", ")} across ${layers.filter(l => l.status !== "planned").length} active layers.`;
 
   return { headline, headlineColor, positives, negatives, alerts, summary };
 }
@@ -179,15 +179,15 @@ function buildLayersFromApi(api: any): IntelLayer[] {
   const cot = apiLayers.positioning?.data;
   const cotScore = cot?.avg_cot_index != null ? Math.round(cot.avg_cot_index) : 50;
   layers.push({
-    key: "positioning", label: "Positioning", question: "Quem esta comprado?",
+    key: "positioning", label: "Positioning", question: "Who is buying?",
     icon: "ti-users-group", score: cotScore,
     status: apiLayers.positioning ? "live" : "planned",
     source: "CFTC COT + SEC 13F", color: "#4A90D9",
     indicators: [
-      { name: "COT Index Medio", value: cot?.avg_cot_index != null ? fmtNum(cot.avg_cot_index, 0) : "—", color: cotScore >= 70 ? "#E67E22" : undefined },
-      { name: "Extremos", value: cot?.extreme_count != null ? `${cot.extreme_count} mercados` : "—" },
-      { name: "Mercados", value: cot?.n_markets != null ? `${cot.n_markets}` : "—" },
-      { name: "Status", value: apiLayers.positioning ? "Live" : "Planejado", color: apiLayers.positioning ? "#2ECC71" : "#7d96b3" },
+      { name: "Average COT Index", value: cot?.avg_cot_index != null ? fmtNum(cot.avg_cot_index, 0) : "—", color: cotScore >= 70 ? "#E67E22" : undefined },
+      { name: "Extremes", value: cot?.extreme_count != null ? `${cot.extreme_count} markets` : "—" },
+      { name: "Markets", value: cot?.n_markets != null ? `${cot.n_markets}` : "—" },
+      { name: "Status", value: apiLayers.positioning ? "Live" : "Planned", color: apiLayers.positioning ? "#2ECC71" : "#7d96b3" },
     ],
   });
 
@@ -195,7 +195,7 @@ function buildLayersFromApi(api: any): IntelLayer[] {
   const vix = cboe?.vix;
   const vScore = volScore(vix?.current);
   layers.push({
-    key: "volatility", label: "Volatility", question: "Qual o nivel de medo?",
+    key: "volatility", label: "Volatility", question: "What's the fear level?",
     icon: "ti-bolt", score: vScore,
     status: apiLayers.volatility ? "live" : "planned",
     source: "CBOE + Yahoo", color: "#E74C3C",
@@ -208,7 +208,7 @@ function buildLayersFromApi(api: any): IntelLayer[] {
   });
 
   layers.push({
-    key: "options", label: "Options", question: "O mercado esta protegido?",
+    key: "options", label: "Options", question: "Is the market hedged?",
     icon: "ti-chart-dots-3", score: cboe ? Math.round(50 + (cboe.skew ? (cboe.skew - 130) / 2 : 0)) : 50,
     status: cboe ? "partial" : "planned",
     source: "CBOE", color: "#9B59B6",
@@ -223,52 +223,52 @@ function buildLayersFromApi(api: any): IntelLayer[] {
   const finra = apiLayers.liquidity?.data;
   const darkPct = finra?.summary?.dark_pool_pct;
   layers.push({
-    key: "liquidity", label: "Liquidity", question: "Quem esta colocando dinheiro?",
+    key: "liquidity", label: "Liquidity", question: "Who's putting money in?",
     icon: "ti-droplet-half-2", score: finra ? (darkPct != null ? Math.round(100 - darkPct) : 55) : 50,
     status: apiLayers.liquidity ? "partial" : "planned",
     source: "FINRA ATS", color: "#1ABC9C",
     indicators: [
       { name: "Dark Pool %", value: darkPct != null ? `${fmtNum(darkPct)}%` : "—" },
       { name: "Tracked Symbols", value: finra?.summary?.tracked_symbols != null ? `${finra.summary.tracked_symbols}` : "—" },
-      { name: "Demo", value: finra?.is_demo ? "Sim" : "Nao", color: finra?.is_demo ? "#E67E22" : "#2ECC71" },
-      { name: "Fonte", value: finra?.source ? "FINRA" : "—" },
+      { name: "Demo", value: finra?.is_demo ? "Yes" : "No", color: finra?.is_demo ? "#E67E22" : "#2ECC71" },
+      { name: "Source", value: finra?.source ? "FINRA" : "—" },
     ],
   });
 
   const breadthData = apiLayers.breadth?.data;
   const bScore = breadthToScore(breadthData?.pct_above_200ma);
   layers.push({
-    key: "breadth", label: "Breadth", question: "O mercado inteiro sobe ou so poucos?",
+    key: "breadth", label: "Breadth", question: "Is the whole market rising, or just a few?",
     icon: "ti-chart-histogram", score: bScore,
     status: apiLayers.breadth ? "live" : "planned",
-    source: "Yahoo (calculado)", color: "#3498DB",
+    source: "Yahoo (computed)", color: "#3498DB",
     indicators: [
       { name: "% > 200MA", value: breadthData?.pct_above_200ma != null ? `${fmtNum(breadthData.pct_above_200ma)}%` : "—" },
       { name: "% > 50MA", value: breadthData?.pct_above_50ma != null ? `${fmtNum(breadthData.pct_above_50ma)}%` : "—" },
       { name: "A/D Ratio", value: breadthData?.ad_ratio != null ? fmtNum(breadthData.ad_ratio, 2) : "—", color: (breadthData?.ad_ratio ?? 1) > 1 ? "#2ECC71" : "#E74C3C" },
-      { name: "Sinal", value: breadthData?.breadth_signal || "—", color: breadthData?.breadth_signal === "Strong" ? "#2ECC71" : breadthData?.breadth_signal === "Healthy" ? "#4A90D9" : "#E67E22" },
+      { name: "Signal", value: breadthData?.breadth_signal || "—", color: breadthData?.breadth_signal === "Strong" ? "#2ECC71" : breadthData?.breadth_signal === "Healthy" ? "#4A90D9" : "#E67E22" },
     ],
   });
 
   const sentData = apiLayers.sentiment?.data;
   const fgScore = fgToScore(sentData?.score);
   layers.push({
-    key: "sentiment", label: "Sentiment", question: "O que o mercado sente?",
+    key: "sentiment", label: "Sentiment", question: "What does the market feel?",
     icon: "ti-mood-smile", score: fgScore,
     status: apiLayers.sentiment ? "partial" : "planned",
     source: "CNN Fear & Greed", color: "#E67E22",
     indicators: [
       { name: "Fear & Greed", value: sentData?.score != null ? `${fmtNum(sentData.score, 0)} ${sentData.rating || ""}` : "—", color: (sentData?.score ?? 50) >= 75 ? "#E74C3C" : (sentData?.score ?? 50) <= 25 ? "#2ECC71" : undefined },
-      { name: "Semana anterior", value: sentData?.previous_close != null ? fmtNum(sentData.previous_close, 0) : "—" },
-      { name: "1 semana atras", value: sentData?.week_ago != null ? fmtNum(sentData.week_ago, 0) : "—" },
-      { name: "1 ano atras", value: sentData?.year_ago != null ? fmtNum(sentData.year_ago, 0) : "—" },
+      { name: "Prior week", value: sentData?.previous_close != null ? fmtNum(sentData.previous_close, 0) : "—" },
+      { name: "1 week ago", value: sentData?.week_ago != null ? fmtNum(sentData.week_ago, 0) : "—" },
+      { name: "1 year ago", value: sentData?.year_ago != null ? fmtNum(sentData.year_ago, 0) : "—" },
     ],
   });
 
   const fred = apiLayers.macro?.data;
   const mScore = macroScore(fred?.yield_curve_signal, fred?.credit_signal);
   layers.push({
-    key: "macro", label: "Macro", question: "O ambiente favorece risco?",
+    key: "macro", label: "Macro", question: "Does the environment favor risk?",
     icon: "ti-building-bank", score: mScore,
     status: apiLayers.macro ? "live" : "planned",
     source: "FRED", color: "#7B68EE",
@@ -281,7 +281,7 @@ function buildLayersFromApi(api: any): IntelLayer[] {
   });
 
   layers.push({
-    key: "momentum", label: "Momentum", question: "A tendencia esta forte?",
+    key: "momentum", label: "Momentum", question: "Is the trend strong?",
     icon: "ti-rocket", score: 50, status: "planned",
     source: "AlphaDroid · TPT · DEMA", color: "#F39C12",
     indicators: [
@@ -293,9 +293,9 @@ function buildLayersFromApi(api: any): IntelLayer[] {
   });
 
   layers.push({
-    key: "structure", label: "Mkt Structure", question: "Como os ativos se correlacionam?",
+    key: "structure", label: "Mkt Structure", question: "How are assets correlated?",
     icon: "ti-topology-ring-3", score: 50, status: "planned",
-    source: "Yahoo (calculado)", color: "#2C3E50",
+    source: "Yahoo (computed)", color: "#2C3E50",
     indicators: [
       { name: "Avg Correlation", value: "—" },
       { name: "Dispersion", value: "—" },
@@ -305,7 +305,7 @@ function buildLayersFromApi(api: any): IntelLayer[] {
   });
 
   layers.push({
-    key: "risk", label: "Risk Engine", question: "A Harpian esta protegida?",
+    key: "risk", label: "Risk Engine", question: "Is Harpian protected?",
     icon: "ti-shield-check", score: 50, status: "planned",
     source: "StormGuard · Risk Number", color: "#27AE60",
     indicators: [
@@ -321,21 +321,21 @@ function buildLayersFromApi(api: any): IntelLayer[] {
 
 function buildFallbackLayers(): IntelLayer[] {
   const names = [
-    { key: "positioning", label: "Positioning", icon: "ti-users-group", color: "#4A90D9", q: "Quem esta comprado?", src: "CFTC COT" },
-    { key: "volatility", label: "Volatility", icon: "ti-bolt", color: "#E74C3C", q: "Qual o nivel de medo?", src: "CBOE" },
-    { key: "options", label: "Options", icon: "ti-chart-dots-3", color: "#9B59B6", q: "O mercado esta protegido?", src: "CBOE" },
-    { key: "liquidity", label: "Liquidity", icon: "ti-droplet-half-2", color: "#1ABC9C", q: "Quem coloca dinheiro?", src: "FINRA" },
-    { key: "breadth", label: "Breadth", icon: "ti-chart-histogram", color: "#3498DB", q: "O mercado inteiro sobe?", src: "Yahoo" },
-    { key: "sentiment", label: "Sentiment", icon: "ti-mood-smile", color: "#E67E22", q: "O que o mercado sente?", src: "CNN F&G" },
-    { key: "macro", label: "Macro", icon: "ti-building-bank", color: "#7B68EE", q: "Ambiente favorece risco?", src: "FRED" },
-    { key: "momentum", label: "Momentum", icon: "ti-rocket", color: "#F39C12", q: "Tendencia forte?", src: "AlphaDroid" },
-    { key: "structure", label: "Mkt Structure", icon: "ti-topology-ring-3", color: "#2C3E50", q: "Correlacoes?", src: "Yahoo" },
-    { key: "risk", label: "Risk Engine", icon: "ti-shield-check", color: "#27AE60", q: "Harpian protegida?", src: "StormGuard" },
+    { key: "positioning", label: "Positioning", icon: "ti-users-group", color: "#4A90D9", q: "Who is buying?", src: "CFTC COT" },
+    { key: "volatility", label: "Volatility", icon: "ti-bolt", color: "#E74C3C", q: "What's the fear level?", src: "CBOE" },
+    { key: "options", label: "Options", icon: "ti-chart-dots-3", color: "#9B59B6", q: "Is the market hedged?", src: "CBOE" },
+    { key: "liquidity", label: "Liquidity", icon: "ti-droplet-half-2", color: "#1ABC9C", q: "Who's putting money in?", src: "FINRA" },
+    { key: "breadth", label: "Breadth", icon: "ti-chart-histogram", color: "#3498DB", q: "Is the whole market rising?", src: "Yahoo" },
+    { key: "sentiment", label: "Sentiment", icon: "ti-mood-smile", color: "#E67E22", q: "What does the market feel?", src: "CNN F&G" },
+    { key: "macro", label: "Macro", icon: "ti-building-bank", color: "#7B68EE", q: "Does the environment favor risk?", src: "FRED" },
+    { key: "momentum", label: "Momentum", icon: "ti-rocket", color: "#F39C12", q: "Strong trend?", src: "AlphaDroid" },
+    { key: "structure", label: "Mkt Structure", icon: "ti-topology-ring-3", color: "#2C3E50", q: "Correlations?", src: "Yahoo" },
+    { key: "risk", label: "Risk Engine", icon: "ti-shield-check", color: "#27AE60", q: "Harpian protected?", src: "StormGuard" },
   ];
   return names.map(n => ({
     key: n.key, label: n.label, question: n.q, icon: n.icon,
     score: 50, status: "planned" as const, source: n.src, color: n.color,
-    indicators: [{ name: "Aguardando", value: "API offline" }],
+    indicators: [{ name: "Waiting", value: "API offline" }],
   }));
 }
 
@@ -461,14 +461,14 @@ function JimAnalysisPanel({ insight, avgScore, regime }: { insight: JimInsight; 
           background: "linear-gradient(135deg, #C9A02C 0%, #E6B800 100%)",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          <i className="ti ti-brain" style={{ fontSize: 16, color: "#0a1628" }} />
+          <i className="ti ti-brain" style={{ fontSize: 16, color: "var(--bg)" }} />
         </div>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--gold)", fontFamily: "var(--mono)", letterSpacing: ".05em" }}>
             JIM INTELLIGENCE
           </div>
           <div style={{ fontSize: 10, color: "var(--tx3)" }}>
-            Analise proativa &middot; {new Date().toLocaleDateString("pt-BR")}
+            Proactive analysis &middot; {new Date().toLocaleDateString("en-US")}
           </div>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
@@ -560,17 +560,17 @@ export default function MarketDna() {
   useEffect(() => {
     publishScreenData(
       "market-dna",
-      "Market DNA: 10 camadas de inteligencia de mercado com score 0-100. Posicionamento + Opcoes + Liquidez + Breadth + Volatilidade + Momentum + Macro + Sentimento + Estrutura + Risk Engine. Score medio = Market Conviction Score.",
+      "Market DNA: 10 layers of market intelligence scored 0-100. Positioning + Options + Liquidity + Breadth + Volatility + Momentum + Macro + Sentiment + Structure + Risk Engine. Average score = Market Conviction Score.",
       layers.map((l) => ({ camada: l.label, score: l.score, status: l.status, source: l.source })),
       {
         briefing:
-          `Market DNA: **${layers.length} camadas**. Conviction **${avgScore}** (${regime.label}). ` +
-          `${liveCount} live, ${partialCount} parciais, ${plannedCount} planejadas. ` +
+          `Market DNA: **${layers.length} layers**. Conviction **${avgScore}** (${regime.label}). ` +
+          `${liveCount} live, ${partialCount} partial, ${plannedCount} planned. ` +
           `Headline: ${jimInsight.headline}`,
         suggestions: [
-          "Qual camada esta mais fraca agora?",
-          "O mercado esta em Risk-On ou Risk-Off?",
-          "Que sinais contrarios existem?",
+          "Which layer is weakest right now?",
+          "Is the market in Risk-On or Risk-Off?",
+          "What contrarian signals exist?",
         ],
       }
     );
@@ -584,8 +584,8 @@ export default function MarketDna() {
         <div>
           <div className="h1">Market DNA</div>
           <div className="sub">
-            10 camadas de inteligencia &middot; Score 0&ndash;100 por dimensao &middot; Sintese quantitativa para decisao de alocacao
-            {loading && <span style={{ marginLeft: 8, color: "#C9A02C" }}> Carregando dados...</span>}
+            10 layers of intelligence &middot; Score 0&ndash;100 per dimension &middot; Quantitative synthesis for allocation decisions
+            {loading && <span style={{ marginLeft: 8, color: "#C9A02C" }}> Loading data...</span>}
           </div>
         </div>
       </div>
@@ -656,10 +656,10 @@ export default function MarketDna() {
       </div>
 
       <div className="legend mt">
-        <i><b style={{ background: "#2ECC71" }} />Live (dado real)</i>
-        <i><b style={{ background: "#E67E22" }} />Parcial</i>
-        <i><b style={{ background: "#7d96b3" }} />Planejado</i>
-        <span className="muted" style={{ marginLeft: "auto" }}>Harpian Intelligence Engine &middot; JIM proactive analysis &middot; atualizacao semanal</span>
+        <i><b style={{ background: "#2ECC71" }} />Live (real data)</i>
+        <i><b style={{ background: "#E67E22" }} />Partial</i>
+        <i><b style={{ background: "#7d96b3" }} />Planned</i>
+        <span className="muted" style={{ marginLeft: "auto" }}>Harpian Intelligence Engine &middot; JIM proactive analysis &middot; weekly update</span>
       </div>
     </div>
   );

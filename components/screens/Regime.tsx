@@ -2,52 +2,52 @@
 import { useEffect } from "react";
 import { publishScreenData } from "@/lib/jim-data";
 
-// Ordem: Risk-Off → Cautela → Neutro → Risk-On (defensivo à esquerda, exposto à direita).
+// Order: Risk-Off → Caution → Neutral → Risk-On (defensive on the left, exposed on the right).
 const STATES = [
   { key: "BEAR", label: "Risk-Off", color: "#E74C3C" },
-  { key: "CAUTELA", label: "Cautela", color: "#F39C12" },
-  { key: "NEUTRO", label: "Neutro", color: "#4A90D9" },
+  { key: "CAUTELA", label: "Caution", color: "#F39C12" },
+  { key: "NEUTRO", label: "Neutral", color: "#4A90D9" },
   { key: "BULL", label: "Risk-On", color: "#2ECC71" },
 ];
 const CURRENT = "BULL";
 
-// Leitura de alto nível (cliente-safe: o QUE significa, não COMO é detectado).
+// High-level reading (client-safe: WHAT it means, not HOW it's detected).
 const MEANING: Record<string, string> = {
-  BULL: "Ambiente favorável ao risco. Os fundos operam com exposição plena a ações; a camada de defesa fica em prontidão, pronta para reduzir risco se o regime virar.",
-  NEUTRO: "Sem tendência dominante. Exposição moderada e monitoramento próximo — a postura pode mudar rápido nos dois sentidos.",
-  CAUTELA: "Sinais de deterioração. Os fundos começam a reduzir risco e a reforçar a proteção.",
-  BEAR: "Ambiente adverso. Defesa ativa: mais caixa e ativos defensivos, com exposição a ações reduzida.",
+  BULL: "Risk-favorable environment. The funds operate with full equity exposure; the defense layer stays on standby, ready to reduce risk if the regime turns.",
+  NEUTRO: "No dominant trend. Moderate exposure and close monitoring — the stance can shift quickly in either direction.",
+  CAUTELA: "Signs of deterioration. The funds begin reducing risk and reinforcing protection.",
+  BEAR: "Adverse environment. Active defense: more cash and defensive assets, with reduced equity exposure.",
 };
 
-// Postura por regime — resultado (o que o fundo faz), sem revelar o motor.
+// Posture by regime — outcome (what the fund does), without revealing the engine.
 const POSTURE = [
-  { r: "Risk-On", eq: "Plena", def: "Em prontidão", tone: "g" },
-  { r: "Neutro", eq: "Moderada", def: "Em prontidão", tone: "b" },
-  { r: "Cautela", eq: "Reduzida", def: "Ativando", tone: "o" },
-  { r: "Risk-Off", eq: "Baixa", def: "Ativa", tone: "r" },
+  { r: "Risk-On", eq: "Full", def: "Standing by", tone: "g" },
+  { r: "Neutral", eq: "Moderate", def: "Standing by", tone: "b" },
+  { r: "Caution", eq: "Reduced", def: "Activating", tone: "o" },
+  { r: "Risk-Off", eq: "Low", def: "Active", tone: "r" },
 ];
 
 export default function Regime() {
   const cur = STATES.find((s) => s.key === CURRENT)!;
 
   useEffect(() => {
-    publishScreenData("regime", `Regime atual: ${cur.label} (${CURRENT})`, { current: CURRENT, label: cur.label, states: STATES, posture: POSTURE }, {
-      briefing: `Regime de mercado atual é ${cur.label}. ${MEANING[CURRENT]}`,
+    publishScreenData("regime", `Current regime: ${cur.label} (${CURRENT})`, { current: CURRENT, label: cur.label, states: STATES, posture: POSTURE }, {
+      briefing: `Current market regime is ${cur.label}. ${MEANING[CURRENT]}`,
     });
   }, []);
 
   return (
     <div className="screen">
-      <div className="crumb">Mercado › <b>Regime de mercado</b></div>
-      <div className="h1">Regime de mercado</div>
-      <div className="sub">A leitura de regime que orienta a postura de defesa dos fundos. (O método de detecção é proprietário.)</div>
+      <div className="crumb">Market › <b>Market regime</b></div>
+      <div className="h1">Market regime</div>
+      <div className="sub">The regime reading that guides the funds' defense posture. (The detection method is proprietary.)</div>
 
       <div className="grid g2 mb">
         <div className="card">
-          <h3><i className="ti ti-gauge" />Regime atual</h3>
+          <h3><i className="ti ti-gauge" />Current regime</h3>
           <div style={{ textAlign: "center", padding: "6px 0 2px" }}>
             <div className="big" style={{ fontSize: 30, color: cur.color }}>{cur.label.toUpperCase()}</div>
-            <div className="muted mt">defesa desarmada · exposição plena</div>
+            <div className="muted mt">defense disarmed · full exposure</div>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
             {STATES.map((s) => {
@@ -60,23 +60,23 @@ export default function Regime() {
               );
             })}
           </div>
-          <div className="muted mt" style={{ textAlign: "center", fontSize: 11 }}>Em Risk-On desde 02/05/2026.</div>
+          <div className="muted mt" style={{ textAlign: "center", fontSize: 11 }}>In Risk-On since 02/05/2026.</div>
         </div>
 
         <div className="card">
-          <h3><i className="ti ti-info-circle" />O que isso significa para a sua carteira</h3>
+          <h3><i className="ti ti-info-circle" />What this means for your portfolio</h3>
           <div style={{ fontSize: 14, color: "var(--tx)", lineHeight: 1.6 }}>{MEANING[CURRENT]}</div>
           <div className="pills mt">
-            <span className="pill g"><span className="pd" />Exposição plena</span>
-            <span className="pill g"><span className="pd" />Defesa em prontidão</span>
+            <span className="pill g"><span className="pd" />Full exposure</span>
+            <span className="pill g"><span className="pd" />Defense on standby</span>
           </div>
         </div>
       </div>
 
       <div className="card">
-        <h3><i className="ti ti-shield-half" />Postura dos fundos por regime</h3>
+        <h3><i className="ti ti-shield-half" />Fund posture by regime</h3>
         <table>
-          <thead><tr><th>Regime</th><th>Exposição a ações</th><th>Camada de defesa</th></tr></thead>
+          <thead><tr><th>Regime</th><th>Equity exposure</th><th>Defense layer</th></tr></thead>
           <tbody>
             {POSTURE.map((p) => (
               <tr key={p.r} style={{ background: p.r === "Risk-On" ? "rgba(46,204,113,.05)" : undefined }}>
@@ -87,7 +87,7 @@ export default function Regime() {
             ))}
           </tbody>
         </table>
-        <div className="muted mt" style={{ fontSize: 11 }}>Mostra a postura que cada regime dispara nos fundos — não os sinais internos que definem o regime.</div>
+        <div className="muted mt" style={{ fontSize: 11 }}>Shows the posture each regime triggers in the funds — not the internal signals that define the regime.</div>
       </div>
     </div>
   );

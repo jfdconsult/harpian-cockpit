@@ -21,7 +21,7 @@ interface RegraTemplate {
 }
 
 const REGRA_TEMPLATES: RegraTemplate[] = [
-  { id: "template-mix", tipo: "dynamic_mix", nome: "Dynamic Mix", descricao: "Redistribui carga entre motores de ataque a partir de um sinal de regime." },
+  { id: "template-mix", tipo: "dynamic_mix", nome: "Dynamic Mix", descricao: "Redistributes load among attack engines based on a regime signal." },
 ];
 
 interface Props {
@@ -59,7 +59,7 @@ export default function CatalogSidebar({ onAddMotor, onAddRegraTemplate, existin
           }}
           onClick={() => setTab("motores")}
         >
-          Motores
+          Engines
         </button>
         <button
           className="btn ghost"
@@ -72,14 +72,14 @@ export default function CatalogSidebar({ onAddMotor, onAddRegraTemplate, existin
           }}
           onClick={() => setTab("regras")}
         >
-          Regras
+          Rules
         </button>
       </div>
 
       <input
         className="input"
-        placeholder="buscar..."
-        aria-label="Buscar motores e regras"
+        placeholder="search..."
+        aria-label="Search engines and rules"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         style={{ fontSize: 11, padding: "4px 8px", marginBottom: 8 }}
@@ -102,8 +102,8 @@ export default function CatalogSidebar({ onAddMotor, onAddRegraTemplate, existin
                 onClick={() => homologado && onAddMotor(m)}
                 title={
                   homologado
-                    ? `Clique ou arraste para adicionar como motor [${nextLocalId}]`
-                    : "🔒 motor não homologado — precisa ser testado e homologado antes de entrar no construtor"
+                    ? `Click or drag to add as engine [${nextLocalId}]`
+                    : "🔒 engine not certified — needs to be tested and certified before it can enter the builder"
                 }
                 style={{
                   padding: 8,
@@ -123,14 +123,14 @@ export default function CatalogSidebar({ onAddMotor, onAddRegraTemplate, existin
                 <div style={{ color: "var(--tx3)", marginTop: 2 }}>
                   v{m.versao}
                   {m.metricas_homologacao?.grade && ` · grade ${m.metricas_homologacao.grade}`}
-                  {!homologado && <span style={{ color: "var(--red-text)" }}> · não pode ser adicionado</span>}
+                  {!homologado && <span style={{ color: "var(--red-text)" }}> · cannot be added</span>}
                 </div>
               </div>
             );
           })}
           {filteredMotores.length === 0 && (
             <div className="c-mut" style={{ fontSize: 11, padding: 8 }}>
-              Nenhum motor encontrado.
+              No engines found.
             </div>
           )}
         </div>
@@ -146,7 +146,7 @@ export default function CatalogSidebar({ onAddMotor, onAddRegraTemplate, existin
                 e.dataTransfer.setData("application/x-regra-catalog", JSON.stringify(t));
               }}
               onClick={() => onAddRegraTemplate(t)}
-              title="Clique ou arraste para adicionar ao canvas"
+              title="Click or drag to add to the canvas"
               style={{
                 padding: 8,
                 border: "1px solid var(--line)",
@@ -163,7 +163,7 @@ export default function CatalogSidebar({ onAddMotor, onAddRegraTemplate, existin
       )}
 
       <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 10, lineHeight: 1.4 }}>
-        Clique num item para adicionar ao canvas, ou arraste até a posição desejada.
+        Click an item to add it to the canvas, or drag it to the desired position.
       </div>
     </div>
   );

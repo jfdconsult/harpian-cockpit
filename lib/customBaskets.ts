@@ -1,12 +1,12 @@
 // ============================================================
-// Custom baskets (setores e estratégias criados pelo gestor)
-// Salvos em localStorage — v1. Backend depois.
+// Custom baskets (sectors and strategies created by the manager)
+// Saved in localStorage — v1. Backend later.
 // ============================================================
 export interface CustomBasket {
-  id: string;              // uuid local
+  id: string;              // local uuid
   kind: "sector" | "strategy";
-  label: string;           // nome dado pelo gestor
-  tickers: string[];       // lista de tickers
+  label: string;           // name given by the manager
+  tickers: string[];       // list of tickers
   created_at: string;
 }
 

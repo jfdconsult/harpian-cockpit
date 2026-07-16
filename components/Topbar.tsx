@@ -6,7 +6,7 @@ import { useDialog } from "./ui/Dialog";
 function Clock() {
   const [t, setT] = useState("--:--:--");
   useEffect(() => {
-    const tick = () => setT(new Date().toLocaleTimeString("pt-BR"));
+    const tick = () => setT(new Date().toLocaleTimeString("en-US"));
     tick();
     const iv = setInterval(tick, 1000);
     return () => clearInterval(iv);
@@ -15,7 +15,7 @@ function Clock() {
 }
 
 export default function Topbar({ go, jimOpen, onJimToggle, onSettingsToggle }: { go: (id: ScreenId, param?: string) => void; jimOpen?: boolean; onJimToggle?: () => void; onSettingsToggle?: () => void }) {
-  // menu aberto por CLIQUE (hover continua funcionando via CSS; clique cobre touch/teclado)
+  // menu opened via CLICK (hover still works through CSS; click covers touch/keyboard)
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const dialog = useDialog();
@@ -49,7 +49,7 @@ export default function Topbar({ go, jimOpen, onJimToggle, onSettingsToggle }: {
         onClick={() => navigate("mission-control")}
         onKeyDown={(e) => e.key === "Enter" && navigate("mission-control")}
       >
-        <div className="lg">H</div>HARPIAN<span className="sub">COCKPIT GESTOR</span>
+        <div className="lg">H</div>HARPIAN<span className="sub">MANAGER COCKPIT</span>
       </div>
 
       {MENUS.map((m) => (
@@ -119,11 +119,11 @@ export default function Topbar({ go, jimOpen, onJimToggle, onSettingsToggle }: {
           tabIndex={0}
           onClick={() => onSettingsToggle?.()}
           onKeyDown={(e) => e.key === "Enter" && onSettingsToggle?.()}
-          title="Configurações"
+          title="Settings"
         >
           <i className="ti ti-settings" />
         </div>
-        <div className="pillstate" style={{ cursor: "default" }}><span className="dot" />JD · sócio-gestor</div>
+        <div className="pillstate" style={{ cursor: "default" }}><span className="dot" />JD · managing partner</div>
         <Clock />
       </div>
     </div>

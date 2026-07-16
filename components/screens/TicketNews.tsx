@@ -26,7 +26,7 @@ interface TickerNewsBlock {
   jim?: JimVerdict;
 }
 
-const SIDE_LABEL: Record<string, string> = { buy: "COMPRA", sell: "VENDA" };
+const SIDE_LABEL: Record<string, string> = { buy: "BUY", sell: "SELL" };
 const SIDE_CLS: Record<string, string> = { buy: "g", sell: "r" };
 const TIPO_ICON: Record<string, string> = {
   ENTRADA: "ti-arrow-right",
@@ -117,7 +117,7 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
               setBlocks((prev) =>
                 prev.map((b) =>
                   b.ticker === tk
-                    ? { ...b, jim: { impacto: "SEM INFLUÊNCIA RELEVANTE", resumo: "Nenhuma notícia recente.", loading: false } }
+                    ? { ...b, jim: { impacto: "NO RELEVANT INFLUENCE", resumo: "No recent news.", loading: false } }
                     : b
                 )
               );
@@ -144,7 +144,7 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
     const comImpacto = blocks.filter((b) => b.jim?.impacto === "PODE TER IMPACTO").length;
     publishScreenData(
       "ticket-news",
-      `${blocks.length} ativos, ${totalHeadlines} notícias, ${comImpacto} com impacto potencial`,
+      `${blocks.length} assets, ${totalHeadlines} news items, ${comImpacto} with potential impact`,
       blocks.map((b) => ({
         ticker: b.ticker,
         action: b.tickets.map((t) => t.tipo).join(", "),
@@ -153,7 +153,7 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
         jim_resumo: b.jim?.resumo,
       })),
       {
-        briefing: `Ticket News: ${blocks.length} ativos nos tickets de hoje. ${comImpacto > 0 ? `ATENÇÃO: ${comImpacto} ativo(s) com PODE TER IMPACTO.` : "Nenhum impacto relevante identificado."} ${blocks.filter((b) => b.jim?.impacto).map((b) => `${b.ticker}: ${b.jim?.impacto} — ${b.jim?.resumo}`).join("; ")}`,
+        briefing: `Ticket News: ${blocks.length} assets in today's tickets. ${comImpacto > 0 ? `ATTENTION: ${comImpacto} asset(s) flagged as MAY HAVE IMPACT.` : "No relevant impact identified."} ${blocks.filter((b) => b.jim?.impacto).map((b) => `${b.ticker}: ${b.jim?.impacto} — ${b.jim?.resumo}`).join("; ")}`,
       }
     );
   }, [blocks, loading]);
@@ -164,30 +164,30 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
         <div>
           <div className="h1">Ticket News</div>
           <div className="sub">
-            Notícias dos últimos 7 dias para cada ativo nos tickets. JIM analisa impacto por ordem.
+            News from the last 7 days for each asset in the tickets. JIM analyzes impact per order.
           </div>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <span className="tag b" style={{ fontSize: 10 }}>
-            {ticketCount} ticket{ticketCount !== 1 ? "s" : ""} · {blocks.length} ativo{blocks.length !== 1 ? "s" : ""}
+            {ticketCount} ticket{ticketCount !== 1 ? "s" : ""} · {blocks.length} asset{blocks.length !== 1 ? "s" : ""}
           </span>
           <button className="btn ghost" style={{ fontSize: 11 }} onClick={() => go("ticket")}>
-            <i className="ti ti-ticket" style={{ fontSize: 13 }} /> Ver tickets
+            <i className="ti ti-ticket" style={{ fontSize: 13 }} /> View tickets
           </button>
         </div>
       </div>
 
       {loading && (
         <div className="ph mb" style={{ textAlign: "center", padding: 40 }}>
-          Carregando tickets do dia…
+          Loading today's tickets…
         </div>
       )}
 
       {!loading && blocks.length === 0 && (
         <div className="ph mb" style={{ textAlign: "center", padding: 40 }}>
-          <b>Sem tickets hoje</b>
+          <b>No tickets today</b>
           <div style={{ fontSize: 12, color: "var(--tx3)", marginTop: 8 }}>
-            Quando houver tickets pendentes, as notícias de cada ativo aparecerão aqui automaticamente.
+            When there are pending tickets, news for each asset will appear here automatically.
           </div>
         </div>
       )}
@@ -220,16 +220,16 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
                 style={{ fontSize: 9, fontWeight: 700 }}
               >
                 <i className={TIPO_ICON[t.tipo] || "ti-arrow-right"} style={{ fontSize: 11 }} />{" "}
-                {t.tipo} · {SIDE_LABEL[t.side] || t.side} · US$ {t.valor_usd.toLocaleString("pt-BR")}
+                {t.tipo} · {SIDE_LABEL[t.side] || t.side} · ${t.valor_usd.toLocaleString("en-US")}
               </span>
             ))}
 
             <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--tx3)" }}>
               {b.loading
-                ? "buscando notícias…"
+                ? "searching for news…"
                 : b.error
-                  ? "falha ao buscar"
-                  : `${b.headlines.length} notícia${b.headlines.length !== 1 ? "s" : ""}`}
+                  ? "search failed"
+                  : `${b.headlines.length} headline${b.headlines.length !== 1 ? "s" : ""}`}
             </span>
           </div>
 
@@ -258,7 +258,7 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
               />
               {b.jim?.loading ? (
                 <span style={{ fontSize: 11, color: "var(--tx3)", fontStyle: "italic" }}>
-                  JIM analisando impacto para {b.ticker}…
+                  JIM analyzing impact for {b.ticker}…
                 </span>
               ) : b.jim?.impacto ? (
                 <>
@@ -285,7 +285,7 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
                 </>
               ) : (
                 <span style={{ fontSize: 11, color: "var(--tx3)" }}>
-                  Análise indisponível
+                  Analysis unavailable
                 </span>
               )}
             </div>
@@ -295,19 +295,19 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
           <div style={{ padding: "8px 16px 12px" }}>
             {b.loading && (
               <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "var(--tx3)" }}>
-                Buscando notícias de {b.ticker}…
+                Fetching news for {b.ticker}…
               </div>
             )}
 
             {b.error && (
               <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "var(--red-text)" }}>
-                Não foi possível buscar notícias de {b.ticker}
+                Could not fetch news for {b.ticker}
               </div>
             )}
 
             {!b.loading && !b.error && b.headlines.length === 0 && (
               <div style={{ padding: 16, textAlign: "center", fontSize: 12, color: "var(--tx3)" }}>
-                Nenhuma notícia recente encontrada para {b.ticker}
+                No recent news found for {b.ticker}
               </div>
             )}
 
@@ -382,7 +382,7 @@ export default function TicketNews({ go }: { go: (id: ScreenId, param?: string) 
       ))}
 
       <div className="foot">
-        Ticket News · v2 · Yahoo Finance RSS (7 dias) + JIM Haiku (análise de impacto por ordem).
+        Ticket News · v2 · Yahoo Finance RSS (7 days) + JIM Haiku (impact analysis per order).
       </div>
     </div>
   );

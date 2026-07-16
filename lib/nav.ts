@@ -1,5 +1,5 @@
 // ============================================================
-// HARPIAN COCKPIT GESTOR — Navegação (menus + dropdowns, padrão Terminal)
+// HARPIAN COCKPIT MANAGER — Navigation (menus + dropdowns, Terminal pattern)
 // ============================================================
 export type ScreenId =
   | "mission-control"
@@ -11,6 +11,7 @@ export type ScreenId =
   | "calibracao"
   | "protecao"
   | "defesa-inteligente"
+  | "xri"
   | "indicadores"
   | "reconciliacao"
   | "observador"
@@ -55,77 +56,78 @@ export interface Menu {
 }
 
 export const MENUS: Menu[] = [
-  { label: "Missão", icon: "ti-command", direct: "mission-control" },
+  { label: "Mission", icon: "ti-command", direct: "mission-control" },
   {
-    label: "Motores",
+    label: "Engines",
     icon: "ti-engine",
     columns: [
       {
         items: [
           { id: "engine-room", label: "Engine Room", icon: "ti-cpu" },
-          { id: "estrategias", label: "Estratégias / ETPs", icon: "ti-hierarchy" },
-          { id: "alphadroid", label: "Setores · Forças", icon: "ti-chart-bar", tag: "+ criar" },
-          { id: "strategies-strength", label: "Estratégias · Forças", icon: "ti-target", tag: "+ criar" },
-          { id: "ativos", label: "Ativos (scanner)", icon: "ti-radar-2" },
-          { id: "chart", label: "Gráfico DSPT", icon: "ti-chart-candle" },
+          { id: "estrategias", label: "Strategies / ETPs", icon: "ti-hierarchy" },
+          { id: "alphadroid", label: "Sectors · Strength", icon: "ti-chart-bar", tag: "+ create" },
+          { id: "strategies-strength", label: "Strategies · Strength", icon: "ti-target", tag: "+ create" },
+          { id: "ativos", label: "Assets (scanner)", icon: "ti-radar-2" },
+          { id: "chart", label: "DSPT Chart", icon: "ti-chart-candle" },
         ],
       },
     ],
   },
   {
-    label: "Ordens",
+    label: "Orders",
     icon: "ti-send",
     columns: [
       {
         items: [
-          { id: "ticket", label: "Tickets do dia", icon: "ti-ticket", tag: "IBKR" },
-          { id: "ticket-news", label: "Ticket News", icon: "ti-news", tag: "novo" },
-          { id: "reconciliacao", label: "Reconciliação", icon: "ti-checks" },
+          { id: "ticket", label: "Today's Tickets", icon: "ti-ticket", tag: "IBKR" },
+          { id: "ticket-news", label: "Ticket News", icon: "ti-news", tag: "new" },
+          { id: "reconciliacao", label: "Reconciliation", icon: "ti-checks" },
         ],
       },
     ],
   },
   {
-    label: "Laboratório",
+    label: "Lab",
     icon: "ti-flask",
     columns: [
       {
         items: [
-          { id: "construtor", label: "Construtor", icon: "ti-puzzle", tag: "criar" },
+          { id: "construtor", label: "Builder", icon: "ti-puzzle", tag: "create" },
           { id: "backtest", label: "Backtest Lab", icon: "ti-history" },
-          { id: "calibracao", label: "Calibração", icon: "ti-adjustments" },
-          { id: "observador", label: "Observador (IA)", icon: "ti-eye-search" },
+          { id: "calibracao", label: "Calibration", icon: "ti-adjustments" },
+          { id: "observador", label: "Observer (AI)", icon: "ti-eye-search" },
         ],
       },
     ],
   },
   {
-    label: "Defesa",
+    label: "Defense",
     icon: "ti-shield-half",
     columns: [
       {
         items: [
-          { id: "defesa-inteligente", label: "Defesa Inteligente", icon: "ti-shield-bolt", tag: "novo" },
-          { id: "protecao", label: "Proteção & Defesa", icon: "ti-shield-check" },
-          { id: "indicadores", label: "Indicadores sistêmicos", icon: "ti-activity" },
-          { id: "regime", label: "Regime de mercado", icon: "ti-activity" },
+          { id: "defesa-inteligente", label: "Smart Defense", icon: "ti-shield-bolt", tag: "new" },
+          { id: "xri", label: "External Risk (XRI)", icon: "ti-world-exclamation", tag: "new" },
+          { id: "protecao", label: "Protection & Defense", icon: "ti-shield-check" },
+          { id: "indicadores", label: "Systemic Indicators", icon: "ti-activity" },
+          { id: "regime", label: "Market Regime", icon: "ti-activity" },
         ],
       },
     ],
   },
   {
-    label: "Mercado",
+    label: "Market",
     icon: "ti-chart-candle",
     columns: [
       {
-        label: "Cotações",
+        label: "Quotes",
         items: [
-          { id: "cotacoes", label: "Ações", icon: "ti-building-bank", param: "acoes" },
+          { id: "cotacoes", label: "Stocks", icon: "ti-building-bank", param: "acoes" },
           { id: "cotacoes", label: "ETFs", icon: "ti-layers-intersect", param: "etfs" },
           { id: "cotacoes", label: "Commodities", icon: "ti-flame", param: "commodities" },
-          { id: "cotacoes", label: "Cripto", icon: "ti-currency-bitcoin", param: "cripto" },
-          { id: "cotacoes", label: "Índices internacionais", icon: "ti-world", param: "indices" },
-          { id: "cotacoes", label: "Forex (câmbio)", icon: "ti-arrows-exchange", param: "forex" },
+          { id: "cotacoes", label: "Crypto", icon: "ti-currency-bitcoin", param: "cripto" },
+          { id: "cotacoes", label: "International Indices", icon: "ti-world", param: "indices" },
+          { id: "cotacoes", label: "Forex (FX)", icon: "ti-arrows-exchange", param: "forex" },
         ],
       },
     ],
@@ -136,17 +138,17 @@ export const MENUS: Menu[] = [
     columns: [
       {
         items: [
-          { id: "social-radar", label: "Social Radar", icon: "ti-radar-2", tag: "novo" },
-          { id: "news-broadcast", label: "News Broadcast", icon: "ti-broadcast", tag: "novo" },
-          { id: "insider-orders", label: "Insider Orders", icon: "ti-gavel", tag: "novo" },
+          { id: "social-radar", label: "Social Radar", icon: "ti-radar-2", tag: "new" },
+          { id: "news-broadcast", label: "News Broadcast", icon: "ti-broadcast", tag: "new" },
+          { id: "insider-orders", label: "Insider Orders", icon: "ti-gavel", tag: "new" },
           { id: "institutional", label: "13F Holdings", icon: "ti-report-money", tag: "SEC" },
           { id: "cot-sentiment", label: "COT Intelligence", icon: "ti-flame", tag: "CFTC" },
           { id: "cot-legacy", label: "COT Data Explorer", icon: "ti-chart-bar" },
-          { id: "market-dna", label: "Market DNA", icon: "ti-dna-2", tag: "novo" },
+          { id: "market-dna", label: "Market DNA", icon: "ti-dna-2", tag: "new" },
         ],
       },
     ],
   },
-  { label: "Auditoria", icon: "ti-notebook", direct: "auditoria" },
+  { label: "Audit", icon: "ti-notebook", direct: "auditoria" },
   { label: "Admin", icon: "ti-settings", direct: "admin" },
 ];

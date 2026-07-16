@@ -35,7 +35,7 @@ export default function PerfilPanel({ perfis, adrTravas, onActivate, onPatch }: 
   return (
     <div className="card" style={{ padding: 12 }}>
       <h2 style={{ marginBottom: 8 }}>
-        <span>Perfis institucionais</span>
+        <span>Institutional profiles</span>
       </h2>
 
       <div style={{ display: "grid", gap: 8 }}>
@@ -61,7 +61,7 @@ export default function PerfilPanel({ perfis, adrTravas, onActivate, onPatch }: 
               <span style={{ fontSize: 10, color: "var(--tx3)" }}>[{p.id}]</span>
               {p.ativo && (
                 <span className="tag g" style={{ marginLeft: "auto" }}>
-                  ATIVO
+                  ACTIVE
                 </span>
               )}
             </div>
@@ -109,7 +109,7 @@ export default function PerfilPanel({ perfis, adrTravas, onActivate, onPatch }: 
         ))}
         {perfis.length === 0 && (
           <div className="c-mut" style={{ fontSize: 12, padding: 8 }}>
-            Nenhum perfil neste portfolio.
+            No profile in this portfolio.
           </div>
         )}
       </div>
@@ -117,7 +117,7 @@ export default function PerfilPanel({ perfis, adrTravas, onActivate, onPatch }: 
       {adrTravas.length > 0 && (
         <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--line)" }}>
           <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>
-            ADR travas
+            ADR locks
           </div>
           {adrTravas.map((adr, i) => (
             <div key={i} style={{ fontSize: 10, color: "var(--tx2)", marginBottom: 2 }}>

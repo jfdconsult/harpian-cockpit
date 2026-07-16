@@ -1,6 +1,6 @@
 // ============================================================
 // PORTFOLIO STUDIO v2 — draft store (useReducer)
-// Edição local em memória. "Salvar" sincroniza com API via diff.
+// Local in-memory editing. "Save" syncs with the API via diff.
 // ============================================================
 import type {
   Composicao,
@@ -113,7 +113,7 @@ export function portfolioDraftReducer(state: Composicao, action: DraftAction): C
 
     case "ADD_ESTEIRA": {
       if (action.pilar === null) {
-        // esteira "solta" — no MVP anexamos como pilar sintético único se não existir
+        // standalone "sleeve" — in the MVP we attach it as a single synthetic pillar if one doesn't exist
         return {
           ...state,
           motores: updateMotorEstrutura(state.motores, action.motor_id, (pilares) => {

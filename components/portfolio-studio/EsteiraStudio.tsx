@@ -30,10 +30,10 @@ interface Props {
 }
 
 const REGRA_PESO_LABEL: Record<RegraPeso, string> = {
-  igual: "Igual entre os líderes",
-  forca_sinal: "Por força do sinal",
+  igual: "Equal among leaders",
+  forca_sinal: "By signal strength",
   inverse_vol: "Inverse-vol",
-  cap: "Cap por posição",
+  cap: "Cap by position",
 };
 
 const CLASSES = ["TODOS", "AÇÃO", "ETF", "COMMODITY", "ÍNDICE"] as const;
@@ -48,7 +48,7 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
   const [pickerQ, setPickerQ] = useState("");
   const [pickerClasse, setPickerClasse] = useState<string>("TODOS");
 
-  // ---- Arena de competição ----
+  // ---- Competition arena ----
   const [rankers, setRankers] = useState<RegistryFormula[]>([]);
   const [universoTxt, setUniversoTxt] = useState((esteira.arena?.universo_tickers || []).join(", "));
   const [rankerId, setRankerId] = useState<string>(esteira.arena?.ranker_formula_id || "");
@@ -89,7 +89,7 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
 
   function handleSaveArena() {
     if (universoTickers.length > 500) {
-      dialog.notify("O universo não pode ter mais de 500 ativos.", "error");
+      dialog.notify("The universe cannot have more than 500 assets.", "error");
       return;
     }
     onSaveArena({
@@ -129,43 +129,43 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
           }}
         >
           <div>
-            <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase" }}>Estratégia</div>
+            <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase" }}>Strategy</div>
             <div style={{ fontSize: 16, fontWeight: 600, color: "var(--gold)" }}>{esteira.nome}</div>
           </div>
           <button className="btn ghost" style={{ marginLeft: "auto" }} onClick={onClose}>
-            Fechar
+            Close
           </button>
         </div>
 
         <div style={{ padding: 18 }}>
           {locked && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: "#3a2d10", border: "1px solid var(--gold)", borderRadius: 6, marginBottom: 12, fontSize: 11.5 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: "var(--gold-bg)", border: "1px solid var(--gold)", borderRadius: 6, marginBottom: 12, fontSize: 11.5 }}>
               <i className="ti ti-lock" style={{ color: "var(--gold)" }} />
-              <span>🔒 motor homologado — imutável. Crie um fork do portfólio para editar.</span>
+              <span>🔒 approved engine — immutable. Fork the portfolio to edit.</span>
             </div>
           )}
           <div style={{ fontSize: 12, color: "var(--tx3)", marginBottom: 14 }}>
-            Peso no portfolio: <b style={{ color: "var(--tx)" }}>{esteira.peso_pct}%</b>
-            {esteira.peso_modo && ` · modo: ${esteira.peso_modo}`}
+            Portfolio weight: <b style={{ color: "var(--tx)" }}>{esteira.peso_pct}%</b>
+            {esteira.peso_modo && ` · mode: ${esteira.peso_modo}`}
           </div>
 
-          {/* ===== ARENA DE COMPETIÇÃO ===== */}
+          {/* ===== COMPETITION ARENA ===== */}
           <div style={{ border: "1px solid var(--line)", borderRadius: 6, padding: 14, marginBottom: 16, background: "rgba(201,160,44,.03)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--gold)" }}>🎯 Arena de competição</span>
-              <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: arenaConfigurada ? "#10351f" : "#2a2a2a", color: arenaConfigurada ? "var(--green)" : "var(--tx3)" }}>
-                {arenaConfigurada ? "configurada" : "não configurada · cesta manual"}
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--gold)" }}>🎯 Competition arena</span>
+              <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: arenaConfigurada ? "var(--green-bg)" : "var(--raise)", color: arenaConfigurada ? "var(--green)" : "var(--tx3)" }}>
+                {arenaConfigurada ? "configured" : "not configured · manual basket"}
               </span>
             </div>
             <div style={{ fontSize: 11, color: "var(--tx3)", marginBottom: 12, lineHeight: 1.5 }}>
-              Ativos competem por um ranker; os líderes (top-N) ficam comprados — estilo AlphaDroid, sem limite de ativos.
-              Sem arena, a estratégia é uma cesta curada manualmente (a tabela abaixo).
+              Assets compete through a ranker; the leaders (top-N) stay long — AlphaDroid-style, with no asset limit.
+              Without an arena, the strategy is a manually curated basket (the table below).
             </div>
 
             <div style={{ display: "grid", gap: 10 }}>
               <div>
                 <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>
-                  Universo · ativos que competem (até 500) <span style={{ color: "var(--tx2)" }}>· {universoTickers.length} informado(s)</span>
+                  Universe · competing assets (up to 500) <span style={{ color: "var(--tx2)" }}>· {universoTickers.length} entered</span>
                 </div>
                 <textarea
                   className="input"
@@ -179,19 +179,19 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 8 }}>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Ranker (fórmula homologada)</div>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Ranker (approved formula)</div>
                   <select className="input" disabled={locked} value={rankerId} onChange={(e) => setRankerId(e.target.value)} style={{ fontSize: 12, width: "100%", opacity: locked ? 0.5 : 1 }}>
-                    <option value="">— nenhum —</option>
+                    <option value="">— none —</option>
                     {rankers.map((f) => (
                       <option key={f.id} value={f.id}>{f.nome}</option>
                     ))}
                   </select>
                   {rankers.length === 0 && (
-                    <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 3 }}>Nenhuma fórmula Ranker homologada no catálogo.</div>
+                    <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 3 }}>No approved Ranker formula in the catalog.</div>
                   )}
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Top-N líderes</div>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Top-N leaders</div>
                   <input
                     className="input" type="number" min={1} disabled={locked}
                     value={topN} onChange={(e) => setTopN(e.target.value === "" ? "" : Number(e.target.value))}
@@ -202,7 +202,7 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
 
               <div style={{ display: "grid", gridTemplateColumns: regraPeso === "cap" ? "1fr 110px 1fr" : "1fr 1fr", gap: 8 }}>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Peso dos líderes</div>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Leader weighting</div>
                   <select className="input" disabled={locked} value={regraPeso} onChange={(e) => setRegraPeso(e.target.value as RegraPeso)} style={{ fontSize: 12, width: "100%", opacity: locked ? 0.5 : 1 }}>
                     {(Object.keys(REGRA_PESO_LABEL) as RegraPeso[]).map((r) => (
                       <option key={r} value={r}>{REGRA_PESO_LABEL[r]}</option>
@@ -222,32 +222,32 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
                 <div>
                   <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Rebalance</div>
                   <select className="input" disabled={locked} value={rebalanceFreq} onChange={(e) => setRebalanceFreq(e.target.value)} style={{ fontSize: 12, width: "100%", opacity: locked ? 0.5 : 1 }}>
-                    <option value="mensal">Mensal</option>
-                    <option value="mensal+defesa_diaria">Mensal + defesa diária</option>
-                    <option value="semanal">Semanal</option>
-                    <option value="diario">Diário</option>
+                    <option value="mensal">Monthly</option>
+                    <option value="mensal+defesa_diaria">Monthly + daily defense</option>
+                    <option value="semanal">Weekly</option>
+                    <option value="diario">Daily</option>
                   </select>
                 </div>
               </div>
 
               {!locked && (
                 <button className="btn" style={{ fontSize: 12, justifySelf: "start" }} onClick={handleSaveArena}>
-                  <i className="ti ti-device-floppy" style={{ marginRight: 5 }} />Salvar arena
+                  <i className="ti ti-device-floppy" style={{ marginRight: 5 }} />Save arena
                 </button>
               )}
             </div>
           </div>
 
-          {/* ===== LÍDERES ATUAIS (resultado da competição / cesta manual) ===== */}
+          {/* ===== CURRENT LEADERS (competition result / manual basket) ===== */}
           <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 6 }}>
-            {arenaConfigurada ? "Líderes atuais (resultado da última competição)" : "Ativos da cesta"}
+            {arenaConfigurada ? "Current leaders (result of the last competition)" : "Basket assets"}
           </div>
           <table style={{ width: "100%", fontSize: 12, marginBottom: 12 }}>
             <thead>
               <tr style={{ color: "var(--tx3)", textAlign: "left" }}>
                 <th style={{ paddingBottom: 6 }}>Ticker</th>
-                <th style={{ paddingBottom: 6 }}>Tipo</th>
-                <th style={{ paddingBottom: 6, textAlign: "right" }}>Peso</th>
+                <th style={{ paddingBottom: 6 }}>Type</th>
+                <th style={{ paddingBottom: 6, textAlign: "right" }}>Weight</th>
                 <th style={{ paddingBottom: 6 }}></th>
               </tr>
             </thead>
@@ -262,19 +262,19 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
                       className="btn ghost"
                       disabled={locked}
                       style={{ fontSize: 11, padding: "5px 9px", color: "var(--red-text)", opacity: locked ? 0.35 : 1, cursor: locked ? "not-allowed" : "pointer" }}
-                      title={locked ? "🔒 motor homologado — crie um fork para editar" : undefined}
+                      title={locked ? "🔒 approved engine — fork to edit" : undefined}
                       onClick={async () => {
                         if (locked) return;
                         const ok = await dialog.confirm({
-                          title: `Remover ${a.ticker} da estratégia?`,
-                          body: "A remoção grava direto no backend (sem precisar de Salvar).",
+                          title: `Remove ${a.ticker} from the strategy?`,
+                          body: "The removal is written directly to the backend (no need to click Save).",
                           danger: true,
-                          confirmLabel: "Remover ativo",
+                          confirmLabel: "Remove asset",
                         });
                         if (ok) onRemoveAtivo(a.ticker);
                       }}
                     >
-                      remover
+                      remove
                     </button>
                   </td>
                 </tr>
@@ -283,7 +283,7 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
           </table>
 
           <div style={{ fontSize: 11, color: somaAtivos === 100 ? "var(--green)" : "var(--orange)", marginBottom: 14 }}>
-            Total: {somaAtivos}% {somaAtivos !== 100 && "(idealmente 100%)"}
+            Total: {somaAtivos}% {somaAtivos !== 100 && "(ideally 100%)"}
           </div>
 
           {!locked && (
@@ -300,7 +300,7 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
                   />
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 3 }}>Classe</div>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 3 }}>Class</div>
                   <select className="input" value={tipo} onChange={(e) => setTipo(e.target.value)} style={{ fontSize: 12, width: 110 }}>
                     <option value="AÇÃO">AÇÃO</option>
                     <option value="ETF">ETF</option>
@@ -308,7 +308,7 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
                   </select>
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 3 }}>Peso %</div>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 3 }}>Weight %</div>
                   <input
                     className="input"
                     type="number"
@@ -336,7 +336,7 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
                   style={{ fontSize: 11, whiteSpace: "nowrap", color: "var(--gold)" }}
                   onClick={() => setShowPicker(!showPicker)}
                 >
-                  {showPicker ? "Fechar lista" : "Procurar ativos"}
+                  {showPicker ? "Close list" : "Search assets"}
                 </button>
               </div>
 
@@ -346,7 +346,7 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
                   <div style={{ display: "flex", gap: 6, marginBottom: 8, alignItems: "center" }}>
                     <input
                       className="input"
-                      placeholder="Buscar ticker, nome ou setor..."
+                      placeholder="Search ticker, name, or sector..."
                       value={pickerQ}
                       onChange={(e) => setPickerQ(e.target.value)}
                       style={{ fontSize: 12, flex: 1 }}
@@ -365,7 +365,7 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
                         }}
                         onClick={() => setPickerClasse(c)}
                       >
-                        {c === "TODOS" ? "Todos" : c}
+                        {c === "TODOS" ? "All" : c}
                       </button>
                     ))}
                   </div>
@@ -373,16 +373,16 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
                   <div style={{ maxHeight: 220, overflowY: "auto", fontSize: 11 }}>
                     {filteredCatalog.length === 0 ? (
                       <div style={{ padding: 12, color: "var(--tx3)", textAlign: "center" }}>
-                        Nenhum ativo encontrado{pickerQ ? ` para "${pickerQ}"` : ""}.
+                        No assets found{pickerQ ? ` for "${pickerQ}"` : ""}.
                       </div>
                     ) : (
                       <table style={{ width: "100%" }}>
                         <thead>
                           <tr style={{ color: "var(--tx3)", textAlign: "left", fontSize: 10 }}>
                             <th style={{ padding: "4px 0" }}>Ticker</th>
-                            <th>Nome</th>
-                            <th>Setor</th>
-                            <th>Classe</th>
+                            <th>Name</th>
+                            <th>Sector</th>
+                            <th>Class</th>
                             <th></th>
                           </tr>
                         </thead>
@@ -421,7 +421,7 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
                     )}
                     {filteredCatalog.length > 50 && (
                       <div style={{ padding: 6, color: "var(--tx3)", fontSize: 10, textAlign: "center" }}>
-                        Mostrando 50 de {filteredCatalog.length} — refine a busca.
+                        Showing 50 of {filteredCatalog.length} — refine your search.
                       </div>
                     )}
                   </div>
@@ -429,7 +429,7 @@ export default function EsteiraStudio({ esteira, onAddAtivo, onRemoveAtivo, onSa
               )}
 
               <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 10 }}>
-                Adicionar/remover ativo grava direto no backend — não precisa clicar em &quot;Salvar&quot;.
+                Adding/removing an asset writes directly to the backend — no need to click &quot;Save&quot;.
               </div>
             </>
           )}

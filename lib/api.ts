@@ -1,5 +1,5 @@
 // ============================================================
-// HARPIAN COCKPIT — Cliente da API HQP (/v1)
+// HARPIAN COCKPIT — HQP API client (/v1)
 // ============================================================
 const API_URL = process.env.NEXT_PUBLIC_HQP_API_URL || "http://localhost:8080";
 
@@ -49,7 +49,7 @@ export async function apiDelete<T = unknown>(path: string): Promise<T> {
 }
 
 export function fmtUSD(n: number): string {
-  return "US$ " + (n / 1e6).toFixed(1).replace(".", ",") + "M";
+  return "$" + (n / 1e6).toFixed(1) + "M";
 }
 
 export function semColor(regime: string): "g" | "a" | "r" | "b" {

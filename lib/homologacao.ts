@@ -1,6 +1,6 @@
-// Selo de homologação — a "chave de segurança": nada cru entra na estrada.
-// Um único lugar que traduz os status crus do backend (motor.status /
-// portfolio.estado) no selo visual 🟢/🟡/🔴 usado em toda a Árvore Viva e no Studio.
+// Validation badge — the "security key": nothing raw makes it to the road.
+// A single place that translates the raw backend statuses (motor.status /
+// portfolio.estado) into the visual badge 🟢/🟡/🔴 used throughout the Living Tree and the Studio.
 
 export type SeloTone = "homologado" | "candidato" | "nao_testado";
 
@@ -17,7 +17,7 @@ const SELOS: Record<SeloTone, Selo> = {
   homologado: {
     tone: "homologado",
     emoji: "🟢",
-    label: "Homologado",
+    label: "Validated",
     color: "#2ECC71",
     bg: "rgba(46,204,113,.12)",
     border: "rgba(46,204,113,.35)",
@@ -25,7 +25,7 @@ const SELOS: Record<SeloTone, Selo> = {
   candidato: {
     tone: "candidato",
     emoji: "🟡",
-    label: "Candidato · testando",
+    label: "Candidate · testing",
     color: "#F39C12",
     bg: "rgba(243,156,18,.12)",
     border: "rgba(243,156,18,.35)",
@@ -33,34 +33,34 @@ const SELOS: Record<SeloTone, Selo> = {
   nao_testado: {
     tone: "nao_testado",
     emoji: "🔴",
-    label: "Não homologado",
+    label: "Not validated",
     color: "#E74C3C",
     bg: "rgba(231,76,60,.12)",
     border: "rgba(231,76,60,.35)",
   },
 };
 
-// status de motor DENTRO de um portfolio (composicao.motores[].status)
+// engine status INSIDE a portfolio (composicao.motores[].status)
 export function seloMotor(status: string | null | undefined): Selo {
   if (status === "prod") return SELOS.homologado;
   if (status === "candidate") return SELOS.candidato;
-  return SELOS.nao_testado; // "lab" ou ausente
+  return SELOS.nao_testado; // "lab" or absent
 }
 
-// status de motor no CATÁLOGO (/v1/registry/motores[].status)
+// engine status in the CATALOG (/v1/registry/motores[].status)
 export function seloMotorCatalogo(status: string | null | undefined): Selo {
   if (status === "homologado") return SELOS.homologado;
   return SELOS.nao_testado; // "lab"
 }
 
-// estado de portfolio (PORTFOLIOS[].estado)
+// portfolio state (PORTFOLIOS[].estado)
 export function seloPortfolio(estado: string | null | undefined): Selo {
   if (estado === "live" || estado === "homologado") return SELOS.homologado;
   if (estado === "candidate" || estado === "testando") return SELOS.candidato;
   return SELOS.nao_testado; // "lab"
 }
 
-// ETP: listado = elegível/live; candidato = aguardando o portfólio homologar
+// ETP: listed = eligible/live; candidate = waiting on the portfolio to be validated
 export function seloEtp(status: string | null | undefined): Selo {
   if (status === "listed") return SELOS.homologado;
   return SELOS.candidato;

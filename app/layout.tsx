@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HARPIAN · Cockpit Gestor",
-  description: "Cockpit interno da gestão — Harpian Capital",
+  title: "HARPIAN · Manager Cockpit",
+  description: "Internal management cockpit — Harpian Capital",
 };
 
 export default function RootLayout({
@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="en-US">
       <head>
         <link
           rel="stylesheet"

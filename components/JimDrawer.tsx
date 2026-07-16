@@ -96,7 +96,7 @@ function renderMarkdown(text: string): string {
 function buildGreeting(screen: ScreenId, snap: ScreenSnapshot | null): string {
   const ctx = getScreenContext(screen);
   const lead = snap?.briefing || ctx.description;
-  return `Você está na tela **${ctx.title}**.\n\n${lead}\n\nPergunta sobre esta tela, dados, ou sobre o sistema?`;
+  return `You're on the **${ctx.title}** screen.\n\n${lead}\n\nQuestions about this screen, the data, or the system?`;
 }
 
 export default function JimDrawer({ open, onClose, screen }: Props) {
@@ -212,7 +212,7 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Erro desconhecido" }));
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
         throw new Error(err.error || `HTTP ${res.status}`);
       }
 
@@ -239,7 +239,7 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
     } catch (e) {
       const errMsg: Msg = {
         role: "assistant",
-        content: `Erro: ${e instanceof Error ? e.message : "Falha na comunicacao"}.\n\nVerifique se a chave \`ANTHROPIC_API_KEY\` esta configurada em \`.env.local\`.`,
+        content: `Error: ${e instanceof Error ? e.message : "Communication failure"}.\n\nCheck that the \`ANTHROPIC_API_KEY\` key is configured in \`.env.local\`.`,
         ts: Date.now(),
         screen,
       };
@@ -285,10 +285,10 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
             </div>
           </div>
           <div className="jim-header-actions">
-            <button className="jim-hbtn" onClick={clearHistory} title="Limpar conversa">
+            <button className="jim-hbtn" onClick={clearHistory} title="Clear conversation">
               <i className="ti ti-trash" />
             </button>
-            <button className="jim-hbtn" onClick={onClose} title="Fechar">
+            <button className="jim-hbtn" onClick={onClose} title="Close">
               <i className="ti ti-x" />
             </button>
           </div>
@@ -298,12 +298,12 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
           <i className="ti ti-eye" />
           <span>{ctx.title}</span>
           {knowledgeSources.length > 0 && (
-            <div className="jim-sources" title={`Fontes: ${knowledgeSources.join(", ")}`}>
+            <div className="jim-sources" title={`Sources: ${knowledgeSources.join(", ")}`}>
               <i className="ti ti-database" />
               {knowledgeSources.length}
             </div>
           )}
-          <div className="jim-model-toggle" onClick={() => setUsesSonnet(!usesSonnet)} title={usesSonnet ? "Sonnet (analise profunda)" : "Haiku (rapido)"}>
+          <div className="jim-model-toggle" onClick={() => setUsesSonnet(!usesSonnet)} title={usesSonnet ? "Sonnet (deep analysis)" : "Haiku (fast)"}>
             <i className={`ti ${usesSonnet ? "ti-brain" : "ti-bolt"}`} />
             {usesSonnet ? "Sonnet" : "Haiku"}
           </div>
@@ -313,8 +313,8 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
           {messages.length === 0 && (
             <div className="jim-empty">
               <i className="ti ti-sparkles" />
-              <div>JIM pronto. Cockpit mode.</div>
-              <div className="jim-empty-sub">Pergunte sobre motores, CRS, calibracao, regime, backtest, ordens — tudo visivel na tela.</div>
+              <div>JIM ready. Cockpit mode.</div>
+              <div className="jim-empty-sub">Ask about engines, CRS, calibration, regime, backtest, orders — all visible on screen.</div>
             </div>
           )}
 
@@ -349,7 +349,7 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
             <textarea
               ref={inputRef}
               className="jim-input"
-              placeholder="Pergunte ao JIM..."
+              placeholder="Ask JIM..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -365,7 +365,7 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
             </button>
           </div>
           <div className="jim-disclaimer">
-            JIM usa IA (Claude) e pode cometer erros. Verifique informacoes importantes.
+            JIM uses AI (Claude) and may make mistakes. Verify important information.
           </div>
         </div>
       </div>

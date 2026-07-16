@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useRef } from "react";
 
-// Widget oficial do TradingView (gratuito). Estudos nativos (RSI/MACD).
-// Os indicadores DSPT (Pine) ficam no gráfico próprio (aba DSPT) e no deep-link.
-// Mapa Yahoo → símbolo TradingView para os casos que não resolvem direto.
+// Official TradingView widget (free). Native studies (RSI/MACD).
+// The DSPT (Pine) indicators live in their own chart (DSPT tab) and in the deep-link.
+// Yahoo → TradingView symbol map for cases that don't resolve directly.
 const TV_MAP: Record<string, string> = {
   "^GSPC": "SP:SPX",
   "^IXIC": "NASDAQ:IXIC",
@@ -39,7 +39,7 @@ export default function TradingViewWidget({ ticker }: { ticker: string }) {
         interval: "D",
         theme: "dark",
         style: "1",
-        locale: "br",
+        locale: "en",
         autosize: true,
         hide_side_toolbar: false,
         allow_symbol_change: false,

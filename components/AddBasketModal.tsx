@@ -25,7 +25,7 @@ export default function AddBasketModal({ kind, open, onClose, onSaved }: Props) 
 
   if (!open) return null;
 
-  const labelKind = kind === "sector" ? "setor" : "estratégia";
+  const labelKind = kind === "sector" ? "sector" : "strategy";
 
   function submit() {
     const tks = tickers
@@ -33,10 +33,10 @@ export default function AddBasketModal({ kind, open, onClose, onSaved }: Props) 
       .split(/[,\s;]+/)
       .map((t) => t.trim())
       .filter(Boolean);
-    if (!label.trim()) { dialog.notify("Dê um nome ao " + labelKind + " antes de salvar.", "error"); return; }
-    if (tks.length < 2) { dialog.notify("Adicione pelo menos 2 tickers separados por vírgula.", "error"); return; }
+    if (!label.trim()) { dialog.notify("Give the " + labelKind + " a name before saving.", "error"); return; }
+    if (tks.length < 2) { dialog.notify("Add at least 2 tickers separated by commas.", "error"); return; }
     const nb = saveBasket({ kind, label: label.trim(), tickers: tks });
-    dialog.notify(`${labelKind === "setor" ? "Setor" : "Estratégia"} "${label.trim()}" criado (salvo neste navegador).`, "success");
+    dialog.notify(`${labelKind === "sector" ? "Sector" : "Strategy"} "${label.trim()}" created (saved in this browser).`, "success");
     onSaved(nb);
     setLabel(""); setTickers("");
     onClose();
@@ -58,19 +58,19 @@ export default function AddBasketModal({ kind, open, onClose, onSaved }: Props) 
         }}
       >
         <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>
-          + Adicionar {labelKind}
+          + Add {labelKind}
         </div>
         <div style={{ fontSize: 12, color: "var(--tx2)", marginBottom: 16 }}>
-          Crie uma cesta customizada de ativos para monitorar sua força de momentum
+          Create a custom basket of assets to monitor its momentum strength
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: .8, color: "var(--gold)" }}>Nome</label>
+          <label style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: .8, color: "var(--gold)" }}>Name</label>
           <input
             className="input"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder={kind === "sector" ? "ex.: My AI leaders" : "ex.: Custom growth"}
+            placeholder={kind === "sector" ? "e.g., My AI leaders" : "e.g., Custom growth"}
             style={{ width: "100%", marginTop: 4 }}
             autoFocus
           />
@@ -78,7 +78,7 @@ export default function AddBasketModal({ kind, open, onClose, onSaved }: Props) 
 
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: .8, color: "var(--gold)" }}>
-            Tickers (separados por vírgula, espaço ou linha)
+            Tickers (separated by comma, space, or line break)
           </label>
           <textarea
             className="input"
@@ -89,13 +89,13 @@ export default function AddBasketModal({ kind, open, onClose, onSaved }: Props) 
             style={{ width: "100%", marginTop: 4, resize: "vertical", fontFamily: "var(--mono)" }}
           />
           <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 4 }}>
-            Yahoo tickers · mínimo 2 · máximo prático 20
+            Yahoo tickers · minimum 2 · practical maximum 20
           </div>
         </div>
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button className="btn ghost" onClick={onClose}>Cancelar</button>
-          <button className="btn" onClick={submit}>Adicionar {labelKind}</button>
+          <button className="btn ghost" onClick={onClose}>Cancel</button>
+          <button className="btn" onClick={submit}>Add {labelKind}</button>
         </div>
       </div>
     </div>

@@ -23,10 +23,10 @@ const TIPO_ICON: Record<string, string> = {
 };
 
 const TIPO_LABEL: Record<string, string> = {
-  attack_stocks: "Ataque · Ações",
-  attack_etfs: "Ataque · ETFs",
+  attack_stocks: "Attack · Stocks",
+  attack_etfs: "Attack · ETFs",
   detector: "Detector",
-  defense: "Defesa",
+  defense: "Defense",
   custom: "Custom",
 };
 
@@ -44,7 +44,7 @@ export default function MotorCard({
   const dialog = useDialog();
   const statusColor =
     motor.status === "prod" ? "var(--green)" : motor.status === "lab" ? "var(--gold)" : "var(--blue)";
-  const statusLabel = motor.status === "prod" ? "PROD" : motor.status === "lab" ? "LAB" : "CANDIDATO";
+  const statusLabel = motor.status === "prod" ? "PROD" : motor.status === "lab" ? "LAB" : "CANDIDATE";
 
   return (
     <div
@@ -111,21 +111,21 @@ export default function MotorCard({
           <>
             <i className="ti ti-link" style={{ color: "var(--gold)" }} />
             <span style={{ color: "var(--gold)" }}>
-              dinâmico{motor.peso.regra_id ? ` · ${motor.peso.regra_id}` : ""}
+              dynamic{motor.peso.regra_id ? ` · ${motor.peso.regra_id}` : ""}
             </span>
           </>
         ) : motor.peso.modo === "fixo" ? (
           <span>
-            peso fixo: <b style={{ color: "var(--gold)" }}>{motor.peso.valor ?? "—"}</b>
+            fixed weight: <b style={{ color: "var(--gold)" }}>{motor.peso.valor ?? "—"}</b>
           </span>
         ) : (
-          <span style={{ color: "var(--tx3)" }}>sem peso (detector)</span>
+          <span style={{ color: "var(--tx3)" }}>no weight (detector)</span>
         )}
       </div>
 
       {motor.registry?.grade && (
         <div style={{ marginTop: 6, fontSize: 10, color: "var(--tx3)" }}>
-          Grade backtest: <b style={{ color: "var(--green)" }}>{motor.registry.grade}</b>
+          Backtest grade: <b style={{ color: "var(--green)" }}>{motor.registry.grade}</b>
         </div>
       )}
 
@@ -138,20 +138,20 @@ export default function MotorCard({
             onDrillDown(motor.id);
           }}
         >
-          abrir <i className="ti ti-chevron-right" style={{ fontSize: 11 }} />
+          open <i className="ti ti-chevron-right" style={{ fontSize: 11 }} />
         </button>
         <button
           className="btn ghost"
           style={{ fontSize: 12, padding: "6px 10px", color: "var(--red-text)" }}
-          title="remover do portfolio"
-          aria-label={`Remover motor ${motor.id} do portfolio`}
+          title="remove from portfolio"
+          aria-label={`Remove engine ${motor.id} from the portfolio`}
           onClick={async (e) => {
             e.stopPropagation();
             const ok = await dialog.confirm({
-              title: `Remover motor ${motor.id}?`,
-              body: `${motor.nome} sai da composição deste portfolio. Regras ligadas a ele também são removidas.`,
+              title: `Remove engine ${motor.id}?`,
+              body: `${motor.nome} leaves this portfolio's composition. Rules linked to it are also removed.`,
               danger: true,
-              confirmLabel: "Remover motor",
+              confirmLabel: "Remove engine",
             });
             if (ok) onRemove(motor.id);
           }}

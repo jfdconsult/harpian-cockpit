@@ -33,12 +33,12 @@ export default function Institutional() {
     const h = data.all_holdings || [];
     const aum = h.reduce((s, x) => s + (x.value_x1000_usd || 0), 0) * 1000;
     const fName = funds.find((f) => f.short === selected)?.name || selected;
-    const fmtAum = aum >= 1e9 ? `US$ ${(aum / 1e9).toFixed(1)}B` : `US$ ${(aum / 1e6).toFixed(0)}M`;
+    const fmtAum = aum >= 1e9 ? `$${(aum / 1e9).toFixed(1)}B` : `$${(aum / 1e6).toFixed(0)}M`;
     publishScreenData(
       "institutional",
       `${fName} · AUM ${fmtAum} · ${data.num_holdings || h.length} holdings · filing ${data.filing_date || "—"}`,
       data,
-      { briefing: `Visualizando 13F de ${fName} com ${data.num_holdings || h.length} posições e AUM de ${fmtAum}.` }
+      { briefing: `Viewing 13F for ${fName} with ${data.num_holdings || h.length} positions and AUM of ${fmtAum}.` }
     );
   }, [data, selected]);
 
@@ -56,19 +56,19 @@ export default function Institutional() {
     <div className="screen">
       <div className="crumb">Intelligence › <b>13F Holdings</b></div>
       <div className="h1">Institutional Holdings</div>
-      <div className="sub">SEC Form 13F · O que os maiores hedge funds estão comprando e vendendo.</div>
+      <div className="sub">SEC Form 13F · What the biggest hedge funds are buying and selling.</div>
 
       <div style={{ display: "flex", gap: 8, alignItems: "center", margin: "14px 0", flexWrap: "wrap" }}>
-        <span className="flabel">Fundo:</span>
+        <span className="flabel">Fund:</span>
         <select className="fsel" style={{ fontSize: 12, padding: "6px 10px", minWidth: 240 }} value={selected} onChange={(e) => setSelected(e.target.value)}>
-          {offline && <option>API offline — rode: python api_server.py</option>}
+          {offline && <option>API offline — run: python api_server.py</option>}
           {funds.map((f) => (<option key={f.short} value={f.short}>{f.name} ({f.style})</option>))}
         </select>
         <span style={{ fontSize: 11, color: "var(--tx3)", marginLeft: "auto" }}>{fund ? `${fund.style}${fund.cik ? " · CIK " + fund.cik : ""}` : ""}</span>
       </div>
 
       {offline ? (
-        <div className="placeholder">API gov-data offline. Rode <b>python api_server.py</b> (porta 8877) para ver os dados reais.</div>
+        <div className="placeholder">gov-data API offline. Run <b>python api_server.py</b> (port 8877) to see real data.</div>
       ) : (
         <>
           <div className="grid g4" style={{ marginBottom: 14 }}>

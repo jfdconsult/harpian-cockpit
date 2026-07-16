@@ -25,7 +25,7 @@ function fmtTS(ts: string) {
   if (!ts) return "—";
   const d = new Date(ts);
   if (isNaN(d.getTime())) return ts;
-  return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR");
+  return d.toLocaleDateString("en-US") + " " + d.toLocaleTimeString("en-US");
 }
 const TICKER_RE = /^[A-Z]{1,5}(\.[A-Z])?$/;
 
@@ -75,43 +75,43 @@ export default function Auditoria({ go }: { go: (id: ScreenId, param?: string) =
   return (
     <div className="screen">
       <div className="flex between mb">
-        <div><div className="h1">Auditoria — Trilha Imutável</div><div className="sub">Append-only · cada decisão, aprovação, ordem e execução registrada</div></div>
+        <div><div className="h1">Audit — Immutable Trail</div><div className="sub">Append-only · every decision, approval, order, and execution logged</div></div>
         <div className={`tag ${conn === "ok" ? "b" : conn === "error" ? "r" : "b"}`}>
-          {conn === "loading" ? "conectando…" : conn === "ok" ? "● API ao vivo" : "✕ API offline"}
+          {conn === "loading" ? "connecting…" : conn === "ok" ? "● API live" : "✕ API offline"}
         </div>
       </div>
 
       <div className="card mb">
-        <h2><span>Filtros</span></h2>
+        <h2><span>Filters</span></h2>
         <div className="flex wrap" style={{ gap: 10 }}>
           <select className="input" value={fType} onChange={(e) => setFType(e.target.value)}>
-            <option value="">Todos os tipos</option>
+            <option value="">All types</option>
             <option value="pipeline">pipeline</option><option value="motor">motor</option>
             <option value="ticket">ticket</option><option value="order">order</option>
             <option value="kill_switch">kill_switch</option><option value="version">version</option>
           </select>
-          <input type="date" className="input" value={fFrom} onChange={(e) => setFFrom(e.target.value)} title="Data início" />
-          <input type="date" className="input" value={fTo} onChange={(e) => setFTo(e.target.value)} title="Data fim" />
-          <input type="text" className="input" placeholder="Filtrar ator…" value={fActor} onChange={(e) => setFActor(e.target.value)} />
-          <button className="btn ghost" onClick={clearFilters}>Limpar</button>
+          <input type="date" className="input" value={fFrom} onChange={(e) => setFFrom(e.target.value)} title="Start date" />
+          <input type="date" className="input" value={fTo} onChange={(e) => setFTo(e.target.value)} title="End date" />
+          <input type="text" className="input" placeholder="Filter by actor…" value={fActor} onChange={(e) => setFActor(e.target.value)} />
+          <button className="btn ghost" onClick={clearFilters}>Clear</button>
         </div>
       </div>
 
       {conn === "error" ? (
-        <div className="ph mb"><b>API não respondeu</b>Suba a API: <code>uvicorn app.main:app --port 8080</code></div>
+        <div className="ph mb"><b>API did not respond</b>Start the API: <code>uvicorn app.main:app --port 8080</code></div>
       ) : (
         <div className="grid g4 mb">
-          <div className="kpi"><div className="l">Total eventos</div><div className="v">{events.length}</div><div className="s">trilha completa</div></div>
-          <div className="kpi"><div className="l">Pipeline/Motor</div><div className="v c-b">{(counts.pipeline || 0) + (counts.motor || 0)}</div></div>
-          <div className="kpi"><div className="l">Tickets/Ordens</div><div className="v c-a">{(counts.ticket || 0) + (counts.order || 0)}</div></div>
+          <div className="kpi"><div className="l">Total events</div><div className="v">{events.length}</div><div className="s">full trail</div></div>
+          <div className="kpi"><div className="l">Pipeline/Engine</div><div className="v c-b">{(counts.pipeline || 0) + (counts.motor || 0)}</div></div>
+          <div className="kpi"><div className="l">Tickets/Orders</div><div className="v c-a">{(counts.ticket || 0) + (counts.order || 0)}</div></div>
           <div className="kpi"><div className="l">Kill Switch</div><div className="v c-r">{counts.kill_switch || 0}</div></div>
         </div>
       )}
 
       <div className="card mb">
-        <h2><span>Timeline de eventos</span><span className="tag b">{filtered.length} eventos</span></h2>
+        <h2><span>Event timeline</span><span className="tag b">{filtered.length} events</span></h2>
         <table>
-          <thead><tr><th>Timestamp</th><th>Ator</th><th>Papel</th><th>Ação</th><th>Ref</th><th>Detalhe</th></tr></thead>
+          <thead><tr><th>Timestamp</th><th>Actor</th><th>Role</th><th>Action</th><th>Ref</th><th>Detail</th></tr></thead>
           <tbody>
             {filtered.map((e, i) => {
               const type = typeOf(e.action);
@@ -131,7 +131,7 @@ export default function Auditoria({ go }: { go: (id: ScreenId, param?: string) =
         </table>
       </div>
 
-      <div className="foot">Trilha imutável · append-only · correções são novos eventos</div>
+      <div className="foot">Immutable trail · append-only · corrections are new events</div>
     </div>
   );
 }

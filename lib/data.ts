@@ -1,8 +1,8 @@
 // ============================================================
-// HARPIAN ETP TERMINAL — Dados mock + lógica de inteligência
+// HARPIAN ETP TERMINAL — Mock data + intelligence logic
 // ============================================================
 
-// ---------- Helpers de formatação ----------
+// ---------- Formatting helpers ----------
 export function fmtUSD(n: number): string {
   if (n >= 1e9) return "$" + (n / 1e9).toFixed(1) + "B";
   if (n >= 1e6) return "$" + (n / 1e6).toFixed(1) + "M";

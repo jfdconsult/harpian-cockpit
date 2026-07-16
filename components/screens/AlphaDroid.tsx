@@ -106,10 +106,10 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
     if (!data) return;
     publishScreenData(
       "alphadroid",
-      `${data.n_sectors} setores, portfolio ref: ${data.portfolio_ref?.name ?? "?"}`,
+      `${data.n_sectors} sectors, portfolio ref: ${data.portfolio_ref?.name ?? "?"}`,
       data.sectors,
       {
-        briefing: `${data.n_sectors} setores monitorados com ${(data.sectors || []).reduce((a, s) => a + s.n_ativos, 0)} ativos. Portfolio referência: ${data.portfolio_ref?.name ?? "?"}.`,
+        briefing: `${data.n_sectors} sectors monitored with ${(data.sectors || []).reduce((a, s) => a + s.n_ativos, 0)} assets. Reference portfolio: ${data.portfolio_ref?.name ?? "?"}.`,
       }
     );
   }, [data]);
@@ -118,20 +118,20 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
     <div className="screen">
       <div className="flex between wrap mb">
         <div>
-          <div className="h1">Setores · Forças</div>
+          <div className="h1">Sectors · Strengths</div>
           <div className="sub">
-            Força dos setores · momentum agregado das cestas · GICS institucional + seus custom ·
-            portfolio alvo: <b style={{ color: "var(--gold)" }}>{data?.portfolio_ref?.name}</b>
+            Sector strength · aggregated momentum of the baskets · institutional GICS + your custom sectors ·
+            target portfolio: <b style={{ color: "var(--gold)" }}>{data?.portfolio_ref?.name}</b>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button className="btn" onClick={() => setModalOpen(true)}>
-            + Adicionar setor
+            + Add sector
           </button>
           <span className="live">
             <span className="dot" />
             <span className={`tag ${conn === "ok" ? "g" : conn === "error" ? "r" : "b"}`}>
-              {conn === "loading" ? "carregando…" : conn === "ok" ? "● alphadroid + yahoo" : "✕ offline"}
+              {conn === "loading" ? "loading…" : conn === "ok" ? "● alphadroid + yahoo" : "✕ offline"}
             </span>
           </span>
         </div>
@@ -147,8 +147,8 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
       {data && (
         <div className="fbar mb">
           <div className="fcount">
-            <b>{data.n_sectors}</b> setores · {data.sectors.reduce((a, s) => a + s.n_ativos, 0)} ativos monitorados ·{" "}
-            {data.sectors.reduce((a, s) => a + s.n_leaders, 0)} líderes eleitos
+            <b>{data.n_sectors}</b> sectors · {data.sectors.reduce((a, s) => a + s.n_ativos, 0)} assets monitored ·{" "}
+            {data.sectors.reduce((a, s) => a + s.n_leaders, 0)} elected leaders
           </div>
         </div>
       )}
@@ -159,29 +159,29 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
             <tr>
               <th style={{ width: 40 }}></th>
               <th>Sector</th>
-              <th style={{ textAlign: "center" }}>Cesta</th>
-              <th style={{ textAlign: "center" }}>Líderes</th>
-              <th style={{ textAlign: "center", minWidth: 220 }} className="momd">Force J37 (avg cesta)</th>
-              <th style={{ textAlign: "center", minWidth: 220 }} className="momd">Force D13 (avg cesta)</th>
+              <th style={{ textAlign: "center" }}>Basket</th>
+              <th style={{ textAlign: "center" }}>Leaders</th>
+              <th style={{ textAlign: "center", minWidth: 220 }} className="momd">Force J37 (avg basket)</th>
+              <th style={{ textAlign: "center", minWidth: 220 }} className="momd">Force D13 (avg basket)</th>
               <th style={{ textAlign: "center" }}>Long / Short</th>
-              <th style={{ textAlign: "left" }}>Top 5 do setor</th>
+              <th style={{ textAlign: "left" }}>Sector Top 5</th>
             </tr>
           </thead>
           <tbody>
             {conn === "error" ? (
               <tr><td colSpan={8} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>API offline</td></tr>
             ) : conn === "loading" || !data ? (
-              <tr><td colSpan={8} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>calculando força de cada setor (Yahoo · DSPT)…</td></tr>
+              <tr><td colSpan={8} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>calculating strength for each sector (Yahoo · DSPT)…</td></tr>
             ) : (
               <>
-              {/* Custom setores primeiro (com highlight dourado) */}
+              {/* Custom sectors first (with gold highlight) */}
               {customs.map((c) => (
                 <tr key={c.id} style={{ background: "rgba(201,160,44,.05)" }}>
                   <td className="c-mut2" style={{ fontSize: 11, textAlign: "center" }}>
                     <span
-                      title="Remover setor custom"
+                      title="Remove custom sector"
                       style={{ cursor: "pointer", color: "var(--red)" }}
-                      onClick={async (e) => { e.stopPropagation(); const ok = await dialog.confirm({ title: `Remover setor "${c.label}"?`, body: "A cesta customizada sai da lista (só deste navegador).", danger: true, confirmLabel: "Remover" }); if (ok) { deleteBasket(c.id); refreshCustoms(); } }}
+                      onClick={async (e) => { e.stopPropagation(); const ok = await dialog.confirm({ title: `Remove sector "${c.label}"?`, body: "The custom basket leaves the list (only for this browser).", danger: true, confirmLabel: "Remove" }); if (ok) { deleteBasket(c.id); refreshCustoms(); } }}
                     >×</span>
                   </td>
                   <td>
@@ -189,7 +189,7 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
                       {c.label}
                       <span className="tag" style={{ marginLeft: 8, fontSize: 9, background: "rgba(201,160,44,.15)", color: "var(--gold)", border: "1px solid var(--gold)" }}>CUSTOM</span>
                     </div>
-                    <div className="c-mut2" style={{ fontSize: 10 }}>seu setor · {c.tickers.length} tickers</div>
+                    <div className="c-mut2" style={{ fontSize: 10 }}>your sector · {c.tickers.length} tickers</div>
                   </td>
                   <td style={{ textAlign: "center", fontWeight: 700 }}>{c.n_ativos}</td>
                   <td style={{ textAlign: "center", fontSize: 11, color: "var(--tx3)" }}>—</td>
@@ -232,7 +232,7 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
                         {i === 0 && <span className="tag g" style={{ marginLeft: 8, fontSize: 9 }}>STRONGEST</span>}
                       </div>
                       <div className="c-mut2" style={{ fontSize: 10 }}>
-                        {s.is_gics ? "GICS sector" : "Custom basket"} · {s.n_strategies} estratégia{s.n_strategies > 1 ? "s" : ""}
+                        {s.is_gics ? "GICS sector" : "Custom basket"} · {s.n_strategies} strateg{s.n_strategies > 1 ? "ies" : "y"}
                       </div>
                     </td>
                     <td style={{ textAlign: "center", fontWeight: 700 }}>{s.n_ativos}</td>
@@ -281,14 +281,14 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
                       <td></td>
                       <td colSpan={7} style={{ padding: "10px 14px" }}>
                         <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
-                          Todos os {s.n_ativos} ativos da cesta · ordenados por J37
+                          All {s.n_ativos} assets in the basket · sorted by J37
                         </div>
                         <table style={{ width: "100%", fontSize: 12 }}>
                           <thead>
                             <tr>
                               <th style={{ textAlign: "left" }}>Ticker</th>
-                              <th style={{ textAlign: "center" }}>Sinal</th>
-                              <th style={{ textAlign: "right" }}>Preço</th>
+                              <th style={{ textAlign: "center" }}>Signal</th>
+                              <th style={{ textAlign: "right" }}>Price</th>
                               <th style={{ textAlign: "center", minWidth: 180 }}>J37</th>
                               <th style={{ textAlign: "center", minWidth: 180 }}>D13</th>
                             </tr>
@@ -307,7 +307,7 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
                                 >
                                   <td>
                                     <span className="tk-link" style={{ fontWeight: 700 }}>{c.ticker}</span>
-                                    {c.is_leader && <span className="tag g" style={{ marginLeft: 6, fontSize: 9 }}>ELEITO</span>}
+                                    {c.is_leader && <span className="tag g" style={{ marginLeft: 6, fontSize: 9 }}>ELECTED</span>}
                                   </td>
                                   <td style={{ textAlign: "center" }}>
                                     {c.rs && <span className={`rs ${rsCls(c.rs)}`}>{c.rs}</span>}
@@ -326,7 +326,7 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
                           </tbody>
                         </table>
                         <div style={{ marginTop: 12, fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
-                          Estratégias que compõem este setor
+                          Strategies that make up this sector
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                           {s.strategies.map((st) => (
@@ -364,8 +364,8 @@ export default function AlphaDroid({ go }: { go: (id: ScreenId, param?: string) 
       </div>
 
       <div className="foot">
-        Sectors Strengths · momentum agregado (média J37/D13) dos ativos de cada cesta setorial ·{" "}
-        Portfolio ref: <b>{data?.portfolio_ref?.name}</b> (#{data?.portfolio_ref.portfolio_num}) · Fonte: Yahoo EOD + DSPT
+        Sectors Strengths · aggregated momentum (J37/D13 average) of the assets in each sector basket ·{" "}
+        Portfolio ref: <b>{data?.portfolio_ref?.name}</b> (#{data?.portfolio_ref.portfolio_num}) · Source: Yahoo EOD + DSPT
       </div>
     </div>
   );

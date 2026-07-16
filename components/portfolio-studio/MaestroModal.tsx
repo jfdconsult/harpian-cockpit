@@ -33,8 +33,8 @@ export default function MaestroModal({ regra, motoresAlvo, motorSensor, onClose 
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center" }}>
-          <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase" }}>O Maestro · balanceamento de carga</div>
-          <button className="btn ghost" style={{ marginLeft: "auto" }} onClick={onClose}>Fechar</button>
+          <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase" }}>The Maestro · load balancing</div>
+          <button className="btn ghost" style={{ marginLeft: "auto" }} onClick={onClose}>Close</button>
         </div>
         <div style={{ padding: 18 }}>
           <MaestroPanel regra={regra} motoresAlvo={motoresAlvo} motorSensor={motorSensor} />

@@ -25,21 +25,21 @@ interface PortfolioGroup {
 }
 
 function jimMsgs(t: Ticket | null): string[] {
-  if (!t) return ["Selecione um ticket para eu analisar a memória de cálculo dele."];
+  if (!t) return ["Select a ticket for me to analyze its calculation memory."];
   if (t.tipo === "AUMENTO") return [
-    `Momentum de ${t.ticker} acelerou nas últimas 3 semanas. O ranking subiu de #5 para #${Math.max(1, Math.floor(t.score / 20))}.`,
-    "Volume institucional acima da média de 20 dias. Fluxo positivo confirmado por 13F recentes.",
-    `Risco de concentração: com este aumento, ${t.ticker} fica com ~${Math.min(10, (t.valor_usd / 27900000) * 100 + 5).toFixed(1)}% do portfólio. Dentro do cap de 10%.`,
+    `Momentum for ${t.ticker} accelerated over the last 3 weeks. The ranking rose from #5 to #${Math.max(1, Math.floor(t.score / 20))}.`,
+    "Institutional volume above the 20-day average. Positive flow confirmed by recent 13F filings.",
+    `Concentration risk: with this increase, ${t.ticker} will represent ~${Math.min(10, (t.valor_usd / 27900000) * 100 + 5).toFixed(1)}% of the portfolio. Within the 10% cap.`,
   ];
   if (t.tipo === "REDUÇÃO") return [
-    `${t.ticker} perdeu posição no ranking de momento. Sinal de desaceleração nos últimos 21 dias.`,
-    "Redução parcial preserva exposição ao setor enquanto libera capital para ativos com momento superior.",
+    `${t.ticker} lost position in the momentum ranking. Deceleration signal over the last 21 days.`,
+    "Partial reduction preserves sector exposure while freeing up capital for assets with higher momentum.",
   ];
   if (t.tipo === "TROCA") return [
-    `Rotação: ${t.ticker} sai (mom 126d: ${t.mom_126d}%) e ${t.troca_para || "substituto"} entra com momento superior.`,
-    "A troca mantém a exposição setorial constante. Impacto fiscal: ganho de capital de curto prazo.",
+    `Rotation: ${t.ticker} exits (126d mom: ${t.mom_126d}%) and ${t.troca_para || "replacement"} enters with higher momentum.`,
+    "The swap keeps sector exposure constant. Tax impact: short-term capital gain.",
   ];
-  return [`${t.tipo} de ${t.ticker}: ${t.motivo}`, `Score de confiança: ${t.score}/100. Momentum de 126 dias: ${t.mom_126d}%.`];
+  return [`${t.tipo} for ${t.ticker}: ${t.motivo}`, `Confidence score: ${t.score}/100. 126-day momentum: ${t.mom_126d}%.`];
 }
 
 function kv(label: string, val: ReactNode, vcls?: string) {
@@ -87,9 +87,9 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
     const sell = tickets.filter((t) => t.side === "sell").length;
     publishScreenData(
       "ticket",
-      `${tickets.length} tickets | ${pendente} pendente, ${aprovado} aprovado, ${rejeitado} rejeitado | ${buy} buy, ${sell} sell`,
+      `${tickets.length} tickets | ${pendente} pending, ${aprovado} approved, ${rejeitado} rejected | ${buy} buy, ${sell} sell`,
       tickets,
-      { briefing: `Há ${tickets.length} tickets hoje: ${pendente} aguardando decisão, ${aprovado} aprovados e ${rejeitado} rejeitados.` }
+      { briefing: `There are ${tickets.length} tickets today: ${pendente} awaiting decision, ${aprovado} approved and ${rejeitado} rejected.` }
     );
   }, [tickets]);
 
@@ -113,13 +113,13 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
 
   async function aprovar() {
     if (!selected || acting) return;
-    if (selected.status === "enviado") { setOverlay({ title: "Já aprovado", sub: "Este ticket já foi enviado." }); return; }
+    if (selected.status === "enviado") { setOverlay({ title: "Already approved", sub: "This ticket has already been sent." }); return; }
     const pinfo = portfolios.find((p) => p.id === selected.portfolio_id);
     const ibkrLabel = pinfo?.ibkr_account_id ? ` · IBKR ${pinfo.ibkr_account_id}` : "";
     const ok = await dialog.confirm({
-      title: `Aprovar ${selected.ticker}?`,
-      body: `${selected.side === "buy" ? "COMPRAR" : "VENDER"} ${selected.quantidade.toLocaleString("pt-BR")} unid. · US$ ${selected.valor_usd.toLocaleString("pt-BR")} · ${selected.portfolio_id}${ibkrLabel}`,
-      confirmLabel: "Aprovar e enviar",
+      title: `Approve ${selected.ticker}?`,
+      body: `${selected.side === "buy" ? "BUY" : "SELL"} ${selected.quantidade.toLocaleString("en-US")} units · US$ ${selected.valor_usd.toLocaleString("en-US")} · ${selected.portfolio_id}${ibkrLabel}`,
+      confirmLabel: "Approve and send",
     });
     if (!ok) return;
     setActing(true);
@@ -128,9 +128,9 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
       const updated = { ...selected, status: "enviado" };
       setSelected(updated);
       setTickets((prev) => prev.map((t) => (t.ticker === updated.ticker ? updated : t)));
-      setOverlay({ title: `${selected.ticker} aprovado`, sub: `Ordem enviada a IBKR${ibkrLabel}` });
+      setOverlay({ title: `${selected.ticker} approved`, sub: `Order sent to IBKR${ibkrLabel}` });
     } catch (e) {
-      setOverlay({ title: "Erro", sub: String((e as Error).message || e) });
+      setOverlay({ title: "Error", sub: String((e as Error).message || e) });
     } finally {
       setActing(false);
     }
@@ -144,9 +144,9 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
     const ibkrLabel = pinfo.ibkr_account_id ? ` · IBKR ${pinfo.ibkr_account_id}` : "";
     const totalUsd = grp.tickets.filter((t) => t.status === "pendente").reduce((s, t) => s + t.valor_usd, 0);
     const ok = await dialog.confirm({
-      title: `Aprovar ${grp.pendentes} tickets · ${pinfo.nome}?`,
-      body: `Todos os ${grp.pendentes} tickets pendentes de ${pinfo.nome}${ibkrLabel} serão enviados à IBKR.\n\nValor total: US$ ${totalUsd.toLocaleString("pt-BR")}`,
-      confirmLabel: `Aprovar ${grp.pendentes} tickets`,
+      title: `Approve ${grp.pendentes} tickets · ${pinfo.nome}?`,
+      body: `All ${grp.pendentes} pending tickets for ${pinfo.nome}${ibkrLabel} will be sent to IBKR.\n\nTotal value: US$ ${totalUsd.toLocaleString("en-US")}`,
+      confirmLabel: `Approve ${grp.pendentes} tickets`,
     });
     if (!ok) return;
     setBatchActing(pid);
@@ -156,9 +156,9 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
       if (selected && selected.portfolio_id === pid && selected.status === "pendente") {
         setSelected({ ...selected, status: "enviado" });
       }
-      setOverlay({ title: `${grp.pendentes} tickets aprovados`, sub: `${pinfo.nome}${ibkrLabel}` });
+      setOverlay({ title: `${grp.pendentes} tickets approved`, sub: `${pinfo.nome}${ibkrLabel}` });
     } catch (e) {
-      setOverlay({ title: "Erro", sub: String((e as Error).message || e) });
+      setOverlay({ title: "Error", sub: String((e as Error).message || e) });
     } finally {
       setBatchActing(null);
     }
@@ -166,12 +166,12 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
 
   async function rejeitar() {
     if (!selected || acting) return;
-    if (selected.status === "enviado") { dialog.notify("Ticket já enviado à IBKR — não pode ser rejeitado.", "error"); return; }
+    if (selected.status === "enviado") { dialog.notify("Ticket already sent to IBKR — cannot be rejected.", "error"); return; }
     const ok = await dialog.confirm({
-      title: `Rejeitar ${selected.ticker}?`,
-      body: "O ticket não será enviado à IBKR e ficará registrado como rejeitado na auditoria.",
+      title: `Reject ${selected.ticker}?`,
+      body: "The ticket will not be sent to IBKR and will be recorded as rejected in the audit trail.",
       danger: true,
-      confirmLabel: "Rejeitar ticket",
+      confirmLabel: "Reject ticket",
     });
     if (!ok) return;
     setActing(true);
@@ -180,9 +180,9 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
       const updated = { ...selected, status: "rejeitado" };
       setSelected(updated);
       setTickets((prev) => prev.map((t) => (t.ticker === updated.ticker ? updated : t)));
-      dialog.notify(`${selected.ticker} rejeitado — registrado na auditoria.`, "success");
+      dialog.notify(`${selected.ticker} rejected — recorded in the audit trail.`, "success");
     } catch (e) {
-      dialog.notify("Erro ao rejeitar: " + String((e as Error).message || e), "error");
+      dialog.notify("Error rejecting: " + String((e as Error).message || e), "error");
     } finally {
       setActing(false);
     }
@@ -191,11 +191,11 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
   async function ajustar() {
     if (!selected || acting) return;
     const novaQtd = await dialog.prompt({
-      title: `Ajustar quantidade · ${selected.ticker}`,
-      label: "Nova quantidade",
+      title: `Adjust quantity · ${selected.ticker}`,
+      label: "New quantity",
       initial: String(selected.quantidade),
       type: "number",
-      confirmLabel: "Aplicar ajuste",
+      confirmLabel: "Apply adjustment",
     });
     if (novaQtd && !isNaN(Number(novaQtd)) && Number(novaQtd) > 0) {
       const precoUnit = selected.valor_usd / selected.quantidade;
@@ -203,17 +203,17 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
       const updated = { ...selected, quantidade: qtd, valor_usd: qtd * precoUnit };
       setSelected(updated);
       setTickets((prev) => prev.map((t) => (t.ticker === updated.ticker ? updated : t)));
-      dialog.notify(`Quantidade ajustada para ${qtd.toLocaleString("pt-BR")} (local — aprove para efetivar).`, "info");
+      dialog.notify(`Quantity adjusted to ${qtd.toLocaleString("en-US")} (local only — approve to apply).`, "info");
     }
   }
 
   const precoEst = selected ? selected.valor_usd / Math.max(selected.quantidade, 1) : 0;
-  const sideTxt = selected?.side === "buy" ? "COMPRAR" : "VENDER";
+  const sideTxt = selected?.side === "buy" ? "BUY" : "SELL";
   const momEq = selected ? [
     { n: "EMA 20d ROC", v: selected.mom_126d * 0.15 },
     { n: "DEMA 20d ROC", v: selected.mom_126d * 0.22 },
     { n: "TEMA 20d ROC", v: selected.mom_126d * 0.18 },
-    { n: "Retorno 12-1m", v: selected.mom_126d * 0.95 },
+    { n: "Return 12-1m", v: selected.mom_126d * 0.95 },
     { n: "ROC 25d", v: selected.mom_126d * 0.30 },
   ] : [];
 
@@ -222,11 +222,11 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
       <div className="tk-header">
         <div className="flex between">
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: ".5px" }}>Tickets do Dia</div>
-            <div style={{ fontSize: 12, color: "var(--tx2)", marginTop: 2 }}>Ordens por portfólio · cada portfólio = conta IBKR separada</div>
+            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: ".5px" }}>Today's Tickets</div>
+            <div style={{ fontSize: 12, color: "var(--tx2)", marginTop: 2 }}>Orders by portfolio · each portfolio = separate IBKR account</div>
           </div>
           <div className={`tag ${conn === "ok" ? "b" : conn === "error" ? "r" : "b"}`}>
-            {conn === "loading" ? "conectando..." : conn === "ok" ? "API ao vivo" : "API offline"}
+            {conn === "loading" ? "connecting..." : conn === "ok" ? "API live" : "API offline"}
           </div>
         </div>
       </div>
@@ -250,25 +250,25 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
                       onClick={() => aprovarTodosPortfolio(grp.portfolio.id)}
                       disabled={!!batchActing}
                     >
-                      {batchActing === grp.portfolio.id ? "Enviando…" : `Aprovar ${grp.pendentes}`}
+                      {batchActing === grp.portfolio.id ? "Sending…" : `Approve ${grp.pendentes}`}
                     </button>
                   )}
-                  {grp.pendentes === 0 && <span className="tag g" style={{ fontSize: 10 }}>TODOS ENVIADOS</span>}
+                  {grp.pendentes === 0 && <span className="tag g" style={{ fontSize: 10 }}>ALL SENT</span>}
                 </div>
               </div>
               {grp.tickets.map((t) => (
                 <div key={t.id} className={`tkt-item${selected?.id === t.id ? " sel" : ""}`} onClick={() => setSelected(t)}>
                   <div className="row">
                     <span className={`type-badge type-${t.tipo}`}>{t.tipo}</span>
-                    {t.status === "enviado" && <span className="tag g" style={{ marginLeft: "auto", fontSize: 10 }}>ENVIADO</span>}
-                    {t.status === "rejeitado" && <span className="tag r" style={{ marginLeft: "auto", fontSize: 10 }}>REJEITADO</span>}
+                    {t.status === "enviado" && <span className="tag g" style={{ marginLeft: "auto", fontSize: 10 }}>SENT</span>}
+                    {t.status === "rejeitado" && <span className="tag r" style={{ marginLeft: "auto", fontSize: 10 }}>REJECTED</span>}
                   </div>
                   <div className="row">
-                    <span className="tk-link" onClick={(e) => { e.stopPropagation(); go("chart", t.ticker); }} title="Abrir gráfico">{t.ticker}</span>
+                    <span className="tk-link" onClick={(e) => { e.stopPropagation(); go("chart", t.ticker); }} title="Open chart">{t.ticker}</span>
                     <span className="nm">{t.nome || ""}</span>
                   </div>
                   <div className="row">
-                    <span className={`side ${t.side === "buy" ? "buy" : "sell"}`}>{t.side === "buy" ? "COMPRAR" : "VENDER"}</span>
+                    <span className={`side ${t.side === "buy" ? "buy" : "sell"}`}>{t.side === "buy" ? "BUY" : "SELL"}</span>
                     <span className="val">US$ {(t.valor_usd / 1000).toFixed(0)}k</span>
                   </div>
                 </div>
@@ -277,14 +277,14 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
           ))}
           {tickets.length === 0 && conn === "ok" && (
             <div className="ph" style={{ padding: 30 }}>
-              <b style={{ fontSize: 15 }}>Nenhum ticket hoje</b>
-              <span style={{ fontSize: 13 }}>O motor ainda não gerou ordens. Elas aparecem aqui após o run diário (17:00 ET).</span>
+              <b style={{ fontSize: 15 }}>No tickets today</b>
+              <span style={{ fontSize: 13 }}>The engine hasn't generated orders yet. They appear here after the daily run (5:00 PM ET).</span>
             </div>
           )}
           {tickets.length === 0 && conn === "error" && (
             <div className="ph" style={{ padding: 30 }}>
-              <b style={{ fontSize: 15 }}>API não respondeu</b>
-              <span style={{ fontSize: 13 }}>Suba a API: <code>uvicorn app.main:app --port 8080</code></span>
+              <b style={{ fontSize: 15 }}>API did not respond</b>
+              <span style={{ fontSize: 13 }}>Start the API: <code>uvicorn app.main:app --port 8080</code></span>
             </div>
           )}
         </div>
@@ -292,44 +292,44 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
         <div className="tk-detail">
           {!selected ? (
             <div className="ph" style={{ gridColumn: "1/-1", padding: "40px 20px" }}>
-              <b style={{ fontSize: 16 }}>Nenhum ticket</b>
-              <span style={{ fontSize: 13 }}>Selecione um ticket na lista.</span>
+              <b style={{ fontSize: 16 }}>No ticket</b>
+              <span style={{ fontSize: 13 }}>Select a ticket from the list.</span>
             </div>
           ) : (
             <>
               <div className="detail-card span">
                 <div className="detail-header">
-                  <span className="big-tk tk-link" onClick={() => go("chart", selected.ticker)} title="Abrir gráfico">{selected.ticker}</span>
+                  <span className="big-tk tk-link" onClick={() => go("chart", selected.ticker)} title="Open chart">{selected.ticker}</span>
                   <span className="score">Score {selected.score}</span>
                   <span className={`type-badge type-${selected.tipo}`} style={{ fontSize: 11, padding: "5px 12px" }}>{selected.tipo}</span>
                   <span className={`side ${selected.side === "buy" ? "buy" : "sell"}`} style={{ fontSize: 11, padding: "4px 10px" }}>{sideTxt}</span>
                   {selected.troca_para && <span style={{ fontSize: 14, color: "var(--tx2)" }}>&rarr; {selected.troca_para}</span>}
-                  <span className="chart-btn" style={{ marginLeft: "auto" }} onClick={() => go("chart", selected.ticker)}><i className="ti ti-chart-candle" style={{ marginRight: 4 }} />Gráfico</span>
+                  <span className="chart-btn" style={{ marginLeft: "auto" }} onClick={() => go("chart", selected.ticker)}><i className="ti ti-chart-candle" style={{ marginRight: 4 }} />Chart</span>
                 </div>
               </div>
 
               <div className="detail-row">
                 <div className="detail-card">
-                  <h2>Identificação</h2>
-                  {kv("Nome", selected.nome || selected.ticker)}
+                  <h2>Identification</h2>
+                  {kv("Name", selected.nome || selected.ticker)}
                   {kv("Portfolio", selected.portfolio_id)}
                   {(() => {
                     const pinfo = portfolios.find((p) => p.id === selected.portfolio_id);
-                    return pinfo?.ibkr_account_id ? kv("Conta IBKR", pinfo.ibkr_account_id) : null;
+                    return pinfo?.ibkr_account_id ? kv("IBKR Account", pinfo.ibkr_account_id) : null;
                   })()}
-                  {kv("Pilar", selected.pilar || "—")}
-                  {kv("Esteira", selected.esteira || "—")}
+                  {kv("Pillar", selected.pilar || "—")}
+                  {kv("Track", selected.esteira || "—")}
                   <div className="kv"><span className="c-mut">Status</span><span className="v"><span className={`tag ${selected.status === "enviado" ? "g" : selected.status === "rejeitado" ? "r" : "a"}`}>{selected.status}</span></span></div>
                 </div>
                 <div className="detail-card">
-                  <h2>Memória de cálculo</h2>
-                  {kv("Motivo", selected.motivo)}
+                  <h2>Calculation Memory</h2>
+                  {kv("Reason", selected.motivo)}
                   <div className="kv"><span className="c-mut">Momentum 126d</span><span className={`v ${selected.mom_126d >= 0 ? "c-g" : "c-r"}`} style={{ fontWeight: 800 }}>{selected.mom_126d >= 0 ? "+" : ""}{selected.mom_126d}%</span></div>
                   {kv("Score", `${selected.score} / 100`)}
-                  {kv("Lado", sideTxt)}
+                  {kv("Side", sideTxt)}
                 </div>
                 <div className="detail-card">
-                  <h2>5 equações de momentum</h2>
+                  <h2>5 Momentum Equations</h2>
                   {momEq.map((eq) => (
                     <div className="eq-row" key={eq.n}>
                       <span className="lbl">{eq.n}</span>
@@ -338,23 +338,23 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
                   ))}
                 </div>
                 <div className="detail-card">
-                  <h2>Impacto financeiro</h2>
-                  {kv("Quantidade", `${selected.quantidade.toLocaleString("pt-BR")} unid.`)}
-                  {kv("Preço estimado", `US$ ${precoEst.toFixed(2)}`)}
-                  <div className="kv"><span className="c-mut">Valor total</span><span className="v" style={{ fontSize: 18, fontWeight: 800, color: "var(--gold)" }}>US$ {selected.valor_usd.toLocaleString("pt-BR")}</span></div>
+                  <h2>Financial Impact</h2>
+                  {kv("Quantity", `${selected.quantidade.toLocaleString("en-US")} units`)}
+                  {kv("Estimated Price", `US$ ${precoEst.toFixed(2)}`)}
+                  <div className="kv"><span className="c-mut">Total Value</span><span className="v" style={{ fontSize: 18, fontWeight: 800, color: "var(--gold)" }}>US$ {selected.valor_usd.toLocaleString("en-US")}</span></div>
                 </div>
               </div>
 
               <div className="detail-card" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 260, padding: "9px 11px" }}>
                 <h2 style={{ marginBottom: 6 }}>
-                  Gráfico · {selected.ticker} · diário
-                  <span className="tk-link" style={{ fontWeight: 700, textTransform: "none", letterSpacing: 0, fontSize: 11, marginLeft: 8 }} onClick={() => go("chart", selected.ticker)}>abrir completo &rarr;</span>
+                  Chart · {selected.ticker} · daily
+                  <span className="tk-link" style={{ fontWeight: 700, textTransform: "none", letterSpacing: 0, fontSize: 11, marginLeft: 8 }} onClick={() => go("chart", selected.ticker)}>open full &rarr;</span>
                 </h2>
                 <TicketChart ticker={selected.ticker} />
               </div>
 
               <div className="jim-panel">
-                <h2><i className="ti ti-sparkles" style={{ color: "var(--gold)", marginRight: 4 }} />JIM · Memória de cálculo</h2>
+                <h2><i className="ti ti-sparkles" style={{ color: "var(--gold)", marginRight: 4 }} />JIM · Calculation Memory</h2>
                 {jimMsgs(selected).map((m, i) => <div className="jim-msg" key={i}>{m}</div>)}
               </div>
             </>
@@ -365,12 +365,12 @@ export default function Tickets({ go }: { go: (id: ScreenId, param?: string) => 
       {selected && (
         <div className="action-bar">
           <button className="btn" onClick={aprovar} disabled={acting || selected.status !== "pendente"}>
-            {acting ? "Enviando…" : selected.status === "pendente" ? "Aprovar Ticket" : "Já processado"}
+            {acting ? "Sending…" : selected.status === "pendente" ? "Approve Ticket" : "Already processed"}
           </button>
-          <button className="btn ghost" onClick={rejeitar} disabled={acting || selected.status !== "pendente"}>Rejeitar</button>
-          <button className="btn ghost" onClick={ajustar} disabled={acting || selected.status !== "pendente"}>Ajustar</button>
+          <button className="btn ghost" onClick={rejeitar} disabled={acting || selected.status !== "pendente"}>Reject</button>
+          <button className="btn ghost" onClick={ajustar} disabled={acting || selected.status !== "pendente"}>Adjust</button>
           <div className="counts">
-            {tickets.filter((t) => t.status === "pendente").length} pendentes · {groups.length} portfólio{groups.length !== 1 ? "s" : ""}
+            {tickets.filter((t) => t.status === "pendente").length} pending · {groups.length} portfolio{groups.length !== 1 ? "s" : ""}
           </div>
         </div>
       )}

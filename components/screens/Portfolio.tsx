@@ -142,9 +142,9 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
   useEffect(() => {
     if (!p) return;
     publishScreenData("portfolio",
-      `${p.nome}, US$ ${p.alocado_usd.toLocaleString("pt-BR")} alocado, regime ${p.regime}, Risk Number ${p.risk_number}`,
+      `${p.nome}, $${p.alocado_usd.toLocaleString("en-US")} allocated, regime ${p.regime}, Risk Number ${p.risk_number}`,
       { portfolio: p, composicao: comp, tickets },
-      { briefing: `Portfólio ${p.nome} com US$ ${p.alocado_usd.toLocaleString("pt-BR")} alocados em regime ${p.regime}. Exposição ${p.exposicao_pct}%, DD mês ${p.dd_mes_pct.toFixed(1)}%. ${comp ? `${comp.motores.length} motor(es)` : ""}` },
+      { briefing: `Portfolio ${p.nome} with $${p.alocado_usd.toLocaleString("en-US")} allocated in regime ${p.regime}. Exposure ${p.exposicao_pct}%, monthly DD ${p.dd_mes_pct.toFixed(1)}%. ${comp ? `${comp.motores.length} engine(s)` : ""}` },
     );
   }, [p, comp, tickets]);
 
@@ -182,14 +182,14 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
             {p?.nome || portfolioId}
             {p && (
               <span className="tag" style={{ marginLeft: 12, background: isModel ? "rgba(125,150,179,0.12)" : "rgba(74,144,217,0.18)", color: isModel ? "var(--tx3)" : "var(--blue)", border: `1px solid ${isModel ? "rgba(125,150,179,0.35)" : "var(--blue)"}`, fontSize: 10, letterSpacing: 1, verticalAlign: "middle" }}>
-                {isModel ? "MODELO · DEMO" : "ATIVO · ETP"}
+                {isModel ? "MODEL · DEMO" : "ACTIVE · ETP"}
               </span>
             )}
           </div>
-          <div className="sub">{p?.descricao} · Motor {p?.motor} {p?.motor_version}</div>
+          <div className="sub">{p?.descricao} · Engine {p?.motor} {p?.motor_version}</div>
         </div>
         <div className={`tag ${conn === "ok" ? "b" : conn === "error" ? "r" : "b"}`}>
-          {conn === "loading" ? "carregando…" : conn === "ok" ? "● API ao vivo" : "✕ offline"}
+          {conn === "loading" ? "loading…" : conn === "ok" ? "● API live" : "✕ offline"}
         </div>
       </div>
 
@@ -198,9 +198,9 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
           {/* KPIs */}
           <div className="grid g4 mb">
             <div className="kpi">
-              <div className="l">{isModel ? "Capital simbólico" : "Alocado (real)"}</div>
+              <div className="l">{isModel ? "Symbolic capital" : "Allocated (real)"}</div>
               <div className="v">{fmtUSD(p.alocado_usd)}</div>
-              <div className="s">{isModel ? "portfolio modelo" : `IBKR ${p.ibkr_account_id || "—"}`}</div>
+              <div className="s">{isModel ? "model portfolio" : `IBKR ${p.ibkr_account_id || "—"}`}</div>
             </div>
             <div className="kpi">
               <div className="l">Regime</div>
@@ -213,24 +213,24 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
               <div className="s">CAGR · Sortino {p.sortino?.toFixed(2) || "—"}</div>
             </div>
             <div className="kpi">
-              <div className="l">Drawdown máx</div>
+              <div className="l">Max drawdown</div>
               <div className="v" style={{ color: "var(--red)" }}>{p.max_dd_pct ? `${p.max_dd_pct.toFixed(1)}%` : "—"}</div>
-              <div className="s">DD mês {p.dd_mes_pct.toFixed(1).replace(".", ",")}%</div>
+              <div className="s">Monthly DD {p.dd_mes_pct.toFixed(1)}%</div>
             </div>
           </div>
 
-          {/* ══════════ TREE: Composição hierárquica ══════════ */}
+          {/* ══════════ TREE: hierarchical composition ══════════ */}
           <div className="card mb">
             <div className="flex between" style={{ alignItems: "center" }}>
               <h2 style={{ margin: 0 }}>
                 <i className={`ti ${I.maestro}`} style={{ marginRight: 6 }} />
-                Arquitetura do Portfólio
+                Portfolio Architecture
               </h2>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                {momLoading && <span style={{ fontSize: 10, color: "var(--tx3)" }}>calculando momentum…</span>}
-                {momData && !momLoading && <span style={{ fontSize: 10, color: "var(--green)" }}>momentum ao vivo</span>}
-                <button className="btn-sm" onClick={expandAll}>Expandir tudo</button>
-                <button className="btn-sm" onClick={collapseAll}>Colapsar</button>
+                {momLoading && <span style={{ fontSize: 10, color: "var(--tx3)" }}>computing momentum…</span>}
+                {momData && !momLoading && <span style={{ fontSize: 10, color: "var(--green)" }}>momentum live</span>}
+                <button className="btn-sm" onClick={expandAll}>Expand all</button>
+                <button className="btn-sm" onClick={collapseAll}>Collapse</button>
               </div>
             </div>
 
@@ -243,7 +243,7 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
                     <div style={{ ...treeRow, ...treeIndent(0) }} onClick={() => setExp(toggle(exp, "maestro"))}>
                       <i className="ti ti-chevron-right" style={chevron(!!exp.maestro)} />
                       <i className={`ti ${I.maestro}`} style={{ color: "var(--gold)", fontSize: 15 }} />
-                      <b style={{ color: "var(--gold)" }}>MAESTRO · Balanceamento Dinâmico</b>
+                      <b style={{ color: "var(--gold)" }}>MAESTRO · Dynamic Balancing</b>
                       <span className="tag a" style={{ fontSize: 8 }}>GRADUAL</span>
                     </div>
                     {exp.maestro && (
@@ -257,14 +257,14 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
                         ))}
                         {perfis.length > 0 && (
                           <div style={{ marginTop: 4 }}>
-                            <div style={{ fontSize: 10, color: "var(--tx3)", paddingLeft: 32, marginBottom: 4 }}>PERFIS DE CARGA</div>
+                            <div style={{ fontSize: 10, color: "var(--tx3)", paddingLeft: 32, marginBottom: 4 }}>LOAD PROFILES</div>
                             {perfis.map(pf => (
                               <div key={pf.id} style={{ ...treeRow, ...treeIndent(1), opacity: pf.ativo ? 1 : 0.6 }}>
                                 <i className={`ti ${I.perfil}`} style={{ color: pf.ativo ? "var(--gold)" : "var(--tx3)", fontSize: 13 }} />
                                 <span style={{ fontSize: 12 }}>
                                   <b>{pf.nome}</b> — w<sub>min</sub> {(pf.w_min * 100).toFixed(1)}% · w<sub>max</sub> {(pf.w_max * 100).toFixed(1)}%
                                 </span>
-                                {pf.ativo && <span className="tag g" style={{ fontSize: 8 }}>ATIVO</span>}
+                                {pf.ativo && <span className="tag g" style={{ fontSize: 8 }}>ACTIVE</span>}
                                 {pf.cagr_10y != null && <span style={{ fontSize: 10, color: "var(--tx3)" }}>CAGR {pf.cagr_10y}% · Calmar {pf.calmar}</span>}
                               </div>
                             ))}
@@ -275,7 +275,7 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
                   </>
                 )}
 
-                {/* ── MOTORES ── */}
+                {/* ── ENGINES ── */}
                 {comp!.motores.map(m => {
                   const mKey = `m:${m.id}`;
                   const mOpen = !!exp[mKey];
@@ -284,16 +284,16 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
                   const nAtivos = pilares.reduce((sum, pil) => sum + pil.esteiras.reduce((s, e) => s + (e.ativos?.length || 0), 0), 0);
                   const nEsteiras = pilares.reduce((sum, pil) => sum + pil.esteiras.length, 0);
                   const pesoLabel = m.peso.modo === "dinamico"
-                    ? `dinâmico (${perfilAtivo ? `${(perfilAtivo.w_min * 100).toFixed(0)}–${(perfilAtivo.w_max * 100).toFixed(0)}%` : "regra"})`
+                    ? `dynamic (${perfilAtivo ? `${(perfilAtivo.w_min * 100).toFixed(0)}–${(perfilAtivo.w_max * 100).toFixed(0)}%` : "rule"})`
                     : m.peso.valor != null ? `${(m.peso.valor * 100).toFixed(0)}%` : m.peso.modo;
 
                   return (
                     <div key={m.id}>
-                      {/* motor row */}
+                      {/* engine row */}
                       <div style={{ ...treeRow, ...treeIndent(0) }} onClick={() => setExp(toggle(exp, mKey))}>
                         <i className="ti ti-chevron-right" style={chevron(mOpen)} />
                         <i className={`ti ${motorIcon(m.tipo)}`} style={{ color: motorColor(m.tipo), fontSize: 16 }} />
-                        <b style={{ fontSize: 13 }}>Motor {m.id}: {m.nome}</b>
+                        <b style={{ fontSize: 13 }}>Engine {m.id}: {m.nome}</b>
                         <span style={{ fontSize: 10, color: "var(--tx3)" }}>{m.versao}</span>
                         {statusTag(m.status)}
                         <span className="tag b" style={{ fontSize: 8, marginLeft: "auto" }}>{pesoLabel}</span>
@@ -301,10 +301,10 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
 
                       {mOpen && (
                         <div style={treeIndent(1)}>
-                          {/* motor meta */}
+                          {/* engine meta */}
                           {m.tipo.startsWith("attack") && (
                             <div style={{ fontSize: 10, color: "var(--tx3)", padding: "2px 0 6px 32px" }}>
-                              {pilares.length} pilar(es) · {nEsteiras} estratégia(s) · {nAtivos} ativos
+                              {pilares.length} pillar(s) · {nEsteiras} strategy(ies) · {nAtivos} assets
                             </div>
                           )}
                           {m.estrutura?.buckets_n && (
@@ -318,7 +318,7 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
                             <div key={f.id} style={{ ...treeRow, ...treeIndent(1) }}>
                               <i className="ti ti-math-function" style={{ color: "var(--tx3)", fontSize: 12 }} />
                               <span style={{ fontSize: 11 }}>{f.descricao}</span>
-                              <span className="tag b" style={{ fontSize: 8 }}>peso {f.peso}</span>
+                              <span className="tag b" style={{ fontSize: 8 }}>weight {f.peso}</span>
                             </div>
                           ))}
 
@@ -334,7 +334,7 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
                                   <b style={{ fontSize: 12.5 }}>{pil.nome}</b>
                                   <span className="tag b" style={{ fontSize: 8 }}>{pil.peso_pct}%</span>
                                   {pil.peso_modo && <span style={{ fontSize: 9, color: "var(--tx3)" }}>{pil.peso_modo}</span>}
-                                  <span style={{ fontSize: 10, color: "var(--tx3)", marginLeft: "auto" }}>{pil.esteiras.length} estratégia(s)</span>
+                                  <span style={{ fontSize: 10, color: "var(--tx3)", marginLeft: "auto" }}>{pil.esteiras.length} strategy(ies)</span>
                                 </div>
 
                                 {pOpen && pil.esteiras.map(est => {
@@ -347,7 +347,7 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
                                         <i className={`ti ${I.esteira}`} style={{ color: "var(--tx2)", fontSize: 13 }} />
                                         <span style={{ fontSize: 12, fontWeight: 600 }}>{est.nome}</span>
                                         <span className="tag b" style={{ fontSize: 8 }}>{est.peso_pct}%</span>
-                                        <span style={{ fontSize: 10, color: "var(--tx3)" }}>{est.ativos?.length || 0} ativos</span>
+                                        <span style={{ fontSize: 10, color: "var(--tx3)" }}>{est.ativos?.length || 0} assets</span>
                                       </div>
 
                                       {eOpen && est.ativos && est.ativos.length > 0 && (
@@ -355,9 +355,9 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
                                           <table style={{ width: "100%", fontSize: 11.5 }}>
                                             <thead>
                                               <tr>
-                                                <th style={{ textAlign: "left", paddingLeft: 32 }}>Ativo</th>
-                                                <th>Tipo</th>
-                                                <th style={{ textAlign: "right" }}>Peso</th>
+                                                <th style={{ textAlign: "left", paddingLeft: 32 }}>Asset</th>
+                                                <th>Type</th>
+                                                <th style={{ textAlign: "right" }}>Weight</th>
                                                 <th style={{ textAlign: "center", minWidth: 120 }}>Momentum</th>
                                               </tr>
                                             </thead>
@@ -396,7 +396,7 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
                 })}
               </div>
             ) : useLegacy ? (
-              /* legacy: pilares/esteiras at portfolio top-level */
+              /* legacy: pillars/sleeves at portfolio top-level */
               <div style={{ marginTop: 12, borderLeft: "2px solid rgba(201,160,44,0.18)", paddingLeft: 8 }}>
                 {legacyPilares.map(pil => {
                   const pKey = `lp:${pil.nome}`;
@@ -408,7 +408,7 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
                         <i className={`ti ${I.pilar}`} style={{ color: "var(--blue)", fontSize: 14 }} />
                         <b style={{ fontSize: 12.5 }}>{pil.nome}</b>
                         <span className="tag b" style={{ fontSize: 8 }}>{pil.peso_pct}%</span>
-                        <span style={{ fontSize: 10, color: "var(--tx3)", marginLeft: "auto" }}>{pil.esteiras.length} estratégia(s)</span>
+                        <span style={{ fontSize: 10, color: "var(--tx3)", marginLeft: "auto" }}>{pil.esteiras.length} strategy(ies)</span>
                       </div>
                       {pOpen && pil.esteiras.map(est => {
                         const eKey = `le:${est.nome}`;
@@ -420,12 +420,12 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
                               <i className={`ti ${I.esteira}`} style={{ color: "var(--tx2)", fontSize: 13 }} />
                               <span style={{ fontSize: 12, fontWeight: 600 }}>{est.nome}</span>
                               <span className="tag b" style={{ fontSize: 8 }}>{est.peso_pct}%</span>
-                              <span style={{ fontSize: 10, color: "var(--tx3)" }}>{est.ativos?.length || 0} ativos</span>
+                              <span style={{ fontSize: 10, color: "var(--tx3)" }}>{est.ativos?.length || 0} assets</span>
                             </div>
                             {eOpen && est.ativos && est.ativos.length > 0 && (
                               <div style={treeIndent(2)}>
                                 <table style={{ width: "100%", fontSize: 11.5 }}>
-                                  <thead><tr><th style={{ textAlign: "left", paddingLeft: 32 }}>Ativo</th><th>Tipo</th><th style={{ textAlign: "right" }}>Peso</th></tr></thead>
+                                  <thead><tr><th style={{ textAlign: "left", paddingLeft: 32 }}>Asset</th><th>Type</th><th style={{ textAlign: "right" }}>Weight</th></tr></thead>
                                   <tbody>
                                     {est.ativos.map(a => (
                                       <tr key={a.ticker}>
@@ -449,39 +449,39 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
                     <i className={`ti ${I.esteira}`} style={{ color: "var(--tx2)", fontSize: 13 }} />
                     <span style={{ fontSize: 12, fontWeight: 600 }}>{est.nome}</span>
                     <span className="tag b" style={{ fontSize: 8 }}>{est.peso_pct}%</span>
-                    <span style={{ fontSize: 10, color: "var(--tx3)" }}>{est.ativos?.length || 0} ativos</span>
+                    <span style={{ fontSize: 10, color: "var(--tx3)" }}>{est.ativos?.length || 0} assets</span>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="c-mut2" style={{ padding: 24, textAlign: "center", fontSize: 12 }}>
-                Portfólio sem composição definida — adicione motores no Portfolio Studio.
+                Portfolio has no composition defined — add engines in Portfolio Studio.
               </div>
             )}
           </div>
 
-          {/* ══════════ Tickets pendentes ══════════ */}
+          {/* ══════════ Pending tickets ══════════ */}
           <div className="card mb">
             <h2>
-              <span>Tickets pendentes</span>
+              <span>Pending tickets</span>
               <span className={`tag ${isModel ? "b" : "a"}`} style={{ marginLeft: "auto" }}>
-                {tickets.length} · {isModel ? "SIMULAÇÃO" : "EXECUTA IBKR"}
+                {tickets.length} · {isModel ? "SIMULATION" : "EXECUTES IBKR"}
               </span>
             </h2>
             {tickets.length === 0 ? (
-              <div className="c-mut2" style={{ padding: 16, textAlign: "center", fontSize: 12 }}>nenhum ticket pendente</div>
+              <div className="c-mut2" style={{ padding: 16, textAlign: "center", fontSize: 12 }}>no pending tickets</div>
             ) : (
               <table>
                 <thead>
-                  <tr><th>Ativo</th><th>Tipo</th><th>Lado</th><th style={{ textAlign: "right" }}>Valor</th><th>Motivo</th><th>Status</th></tr>
+                  <tr><th>Asset</th><th>Type</th><th>Side</th><th style={{ textAlign: "right" }}>Value</th><th>Reason</th><th>Status</th></tr>
                 </thead>
                 <tbody>
                   {tickets.map(t => (
                     <tr key={t.id} style={{ opacity: isModel ? 0.75 : 1 }}>
                       <td className="tk"><span className="tk-link" onClick={() => go("chart", t.ticker)}>{t.ticker}</span></td>
                       <td><span className={`type-badge type-${t.tipo}`}>{t.tipo}</span></td>
-                      <td><span className={`side ${t.side}`}>{t.side === "buy" ? "COMPRAR" : "VENDER"}</span></td>
-                      <td style={{ textAlign: "right" }}>US$ {(t.valor_usd / 1000).toFixed(0)}k</td>
+                      <td><span className={`side ${t.side}`}>{t.side === "buy" ? "BUY" : "SELL"}</span></td>
+                      <td style={{ textAlign: "right" }}>${(t.valor_usd / 1000).toFixed(0)}k</td>
                       <td className="c-mut" style={{ fontSize: 11 }}>{t.motivo || "—"}</td>
                       <td><span className={`tag ${t.status === "enviado" ? "g" : "a"}`}>{t.status}</span></td>
                     </tr>
@@ -494,7 +494,7 @@ export default function PortfolioScreen({ portfolioId, go }: { portfolioId: stri
       )}
 
       <div className="foot">
-        Portfólio {p?.nome} · {isModel ? "modelo (sem IBKR)" : `IBKR ${p?.ibkr_account_id}`} · Owner {p?.owner || "—"}
+        Portfolio {p?.nome} · {isModel ? "model (no IBKR)" : `IBKR ${p?.ibkr_account_id}`} · Owner {p?.owner || "—"}
       </div>
     </div>
   );

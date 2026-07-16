@@ -73,10 +73,10 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
     const cur = portfolios.find((x) => x.id === currentId);
     publishScreenData(
       "estrategias",
-      `${portfolios.length} portfólios, atual: ${cur?.nome || currentId}, CAGR ${(cur?.cagr_pct || 0).toFixed(1)}%, Sortino ${(cur?.sortino || 0).toFixed(2)}, Risk Number ${cur?.risk_number ?? "—"}`,
+      `${portfolios.length} portfolios, current: ${cur?.nome || currentId}, CAGR ${(cur?.cagr_pct || 0).toFixed(1)}%, Sortino ${(cur?.sortino || 0).toFixed(2)}, Risk Number ${cur?.risk_number ?? "—"}`,
       portfolios,
       {
-        briefing: `${portfolios.length} portfólios carregados. Portfólio selecionado: ${cur?.nome || currentId} com CAGR ${(cur?.cagr_pct || 0).toFixed(1)}% e Sortino ${(cur?.sortino || 0).toFixed(2)}.${momData ? ` Momentum: ${momData.n_esteiras} esteiras.` : ""}`,
+        briefing: `${portfolios.length} portfolios loaded. Selected portfolio: ${cur?.nome || currentId} with CAGR ${(cur?.cagr_pct || 0).toFixed(1)}% and Sortino ${(cur?.sortino || 0).toFixed(2)}.${momData ? ` Momentum: ${momData.n_esteiras} sleeves.` : ""}`,
       }
     );
   }, [portfolios, momData]);
@@ -88,25 +88,25 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
   }
 
   async function addAtivo(portId: string, esteiraNome: string) {
-    const ticker = await dialog.prompt({ title: `Novo ativo · esteira ${esteiraNome}`, label: "Ticker (ex: AAPL)" });
+    const ticker = await dialog.prompt({ title: `New asset · sleeve ${esteiraNome}`, label: "Ticker (e.g. AAPL)" });
     if (!ticker || !ticker.trim()) return;
-    const peso = await dialog.prompt({ title: `Peso de ${ticker.toUpperCase().trim()}`, label: "Peso (%)", initial: "10", type: "number" });
+    const peso = await dialog.prompt({ title: `Weight of ${ticker.toUpperCase().trim()}`, label: "Weight (%)", initial: "10", type: "number" });
     if (!peso) return;
     apiPost(`/v1/strategies/${portId}/esteira/${esteiraNome}/ativo`, { ticker: ticker.toUpperCase().trim(), tipo: "AÇÃO", peso_pct: parseFloat(peso) })
-      .then(() => { refreshData(); dialog.notify(`${ticker.toUpperCase().trim()} adicionado à esteira ${esteiraNome}.`, "success"); })
-      .catch((e) => dialog.notify("Erro: " + e.message, "error"));
+      .then(() => { refreshData(); dialog.notify(`${ticker.toUpperCase().trim()} added to sleeve ${esteiraNome}.`, "success"); })
+      .catch((e) => dialog.notify("Error: " + e.message, "error"));
   }
   async function removeAtivo(portId: string, esteiraNome: string, ticker: string) {
     const ok = await dialog.confirm({
-      title: `Remover ${ticker}?`,
-      body: `O ativo sai da esteira ${esteiraNome} deste portfolio.`,
+      title: `Remove ${ticker}?`,
+      body: `The asset will be removed from the ${esteiraNome} sleeve of this portfolio.`,
       danger: true,
-      confirmLabel: "Remover ativo",
+      confirmLabel: "Remove asset",
     });
     if (!ok) return;
     apiPost(`/v1/strategies/${portId}/esteira/${esteiraNome}/ativo/${ticker}/remove`, {})
       .then(() => refreshData())
-      .catch((e: unknown) => dialog.notify("Erro: " + ((e as Error).message || e), "error"));
+      .catch((e: unknown) => dialog.notify("Error: " + ((e as Error).message || e), "error"));
   }
 
   function renderEsteira(port: Portfolio, est: Esteira, key: string) {
@@ -118,22 +118,22 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
           const tc = `atype-${a.tipo.replace("Ã", "A").replace("Ç", "C")}`;
           return (
             <div className="ativo-row" key={a.ticker}>
-              <span className="tk-link" style={{ width: 60, display: "inline-block" }} onClick={() => go("chart", a.ticker)} title="Abrir gráfico">{a.ticker}</span>
+              <span className="tk-link" style={{ width: 60, display: "inline-block" }} onClick={() => go("chart", a.ticker)} title="Open chart">{a.ticker}</span>
               <span className={`atype ${tc}`}>{a.tipo}</span>
               <span className="aw">{a.peso_pct}%</span>
               <button
                 className="btn ghost"
                 style={{ fontSize: 11, padding: "4px 8px", color: "var(--red-text)", marginLeft: 4 }}
                 onClick={() => removeAtivo(port.id, est.nome, a.ticker)}
-                title="Remover ativo"
-                aria-label={`Remover ${a.ticker}`}
+                title="Remove asset"
+                aria-label={`Remove ${a.ticker}`}
               >
                 <i className="ti ti-x" />
               </button>
             </div>
           );
         })}
-        <button className="add-btn" onClick={() => addAtivo(port.id, est.nome)}>+ Adicionar ativo</button>
+        <button className="add-btn" onClick={() => addAtivo(port.id, est.nome)}>+ Add asset</button>
       </div>
     );
   }
@@ -141,13 +141,13 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
   return (
     <div className="screen">
       <div className="flex between mb">
-        <div><div className="h1">Estratégias / ETPs</div><div className="sub">Composição hierárquica dos portfólios. Pilar → Esteira → Ativo.</div></div>
+        <div><div className="h1">Strategies / ETPs</div><div className="sub">Hierarchical composition of portfolios. Pillar → Sleeve → Asset.</div></div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button className="btn ghost" style={{ fontSize: 11 }} onClick={() => go("portfolio-studio", currentId)}>
-            + Nova estratégia (esteira) no Studio
+            + New strategy (sleeve) in Studio
           </button>
           <div className={`tag ${conn === "ok" ? "b" : conn === "error" ? "r" : "b"}`}>
-            {conn === "loading" ? "conectando..." : conn === "ok" ? "● API ao vivo" : "✕ API offline"}
+            {conn === "loading" ? "connecting..." : conn === "ok" ? "● API live" : "✕ API offline"}
           </div>
         </div>
       </div>
@@ -160,49 +160,49 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
         </div>
         <div className="pills" style={{ margin: 0 }}>
           <div className={`pill${view === "momentum" ? " on" : ""}`} onClick={() => setView("momentum")}>Momentum (SectorSurfer)</div>
-          <div className={`pill${view === "composicao" ? " on" : ""}`} onClick={() => setView("composicao")}>Composição</div>
+          <div className={`pill${view === "composicao" ? " on" : ""}`} onClick={() => setView("composicao")}>Composition</div>
         </div>
       </div>
 
       {!p && conn === "error" && (
-        <div className="ph mb"><b>API não respondeu</b>Suba a API: <code>uvicorn app.main:app --port 8080</code></div>
+        <div className="ph mb"><b>API did not respond</b>Start the API: <code>uvicorn app.main:app --port 8080</code></div>
       )}
 
       {p && (
         <>
           <div className="grid g4 mb">
-            <div className="kpi"><div className="l">Cota</div><div className="v">US$ {(p.cota || 0).toFixed(2)}</div><div className="s">{p.descricao}</div></div>
-            <div className="kpi"><div className="l">CAGR</div><div className="v c-g">{(p.cagr_pct || 0).toFixed(1)}%</div><div className="s">anualizado</div></div>
+            <div className="kpi"><div className="l">NAV</div><div className="v">US$ {(p.cota || 0).toFixed(2)}</div><div className="s">{p.descricao}</div></div>
+            <div className="kpi"><div className="l">CAGR</div><div className="v c-g">{(p.cagr_pct || 0).toFixed(1)}%</div><div className="s">annualized</div></div>
             <div className="kpi"><div className="l">Sortino / Max DD</div><div className="v">{(p.sortino || 0).toFixed(2)} / {(p.max_dd_pct || 0).toFixed(1)}%</div><div className="s">Calmar {(p.calmar || 0).toFixed(2)}</div></div>
-            <div className="kpi"><div className="l">Risk Number</div><div className={`v c-${sem(p.regime)}`}>{p.risk_number ?? "—"}</div><div className="s">SPY = 27,6</div></div>
+            <div className="kpi"><div className="l">Risk Number</div><div className={`v c-${sem(p.regime)}`}>{p.risk_number ?? "—"}</div><div className="s">SPY = 27.6</div></div>
           </div>
 
           {view === "momentum" && (
             <div className="card mb">
               <h2>
-                <span>Momentum de esteiras · SectorSurfer</span>
+                <span>Sleeve momentum · SectorSurfer</span>
                 <span className="tag b" style={{ marginLeft: "auto" }}>
-                  {momData ? `${momData.n_esteiras} esteiras · ${momData.motor}` : "carregando…"}
+                  {momData ? `${momData.n_esteiras} sleeves · ${momData.motor}` : "loading…"}
                 </span>
               </h2>
               <table className="atv">
                 <thead>
                   <tr>
                     <th style={{ width: 40 }}></th>
-                    <th>Esteira</th>
-                    <th>Pilar</th>
-                    <th style={{ textAlign: "right" }}>Peso</th>
-                    <th style={{ textAlign: "center" }}>N ativos</th>
-                    <th style={{ textAlign: "center", minWidth: 200 }} className="momd">Momento J37 (Diogo)</th>
-                    <th style={{ textAlign: "center", minWidth: 200 }} className="momd">Momento D13</th>
+                    <th>Sleeve</th>
+                    <th>Pillar</th>
+                    <th style={{ textAlign: "right" }}>Weight</th>
+                    <th style={{ textAlign: "center" }}>N assets</th>
+                    <th style={{ textAlign: "center", minWidth: 200 }} className="momd">J37 Momentum (Diogo)</th>
+                    <th style={{ textAlign: "center", minWidth: 200 }} className="momd">D13 Momentum</th>
                     <th style={{ textAlign: "center" }}>Long / Short</th>
                   </tr>
                 </thead>
                 <tbody>
                   {momLoading || !momData ? (
-                    <tr><td colSpan={8} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>calculando momentum das esteiras…</td></tr>
+                    <tr><td colSpan={8} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>calculating sleeve momentum…</td></tr>
                   ) : momData.esteiras.length === 0 ? (
-                    <tr><td colSpan={8} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>portfólio sem esteiras</td></tr>
+                    <tr><td colSpan={8} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>portfolio with no sleeves</td></tr>
                   ) : momData.esteiras.map((e, i) => {
                     const isExp = expEst === e.nome;
                     return (
@@ -214,7 +214,7 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
                           <td className="c-mut2" style={{ fontSize: 11, textAlign: "center" }}>{isExp ? "▼" : "▶"}</td>
                           <td>
                             <span style={{ fontWeight: 700, fontSize: 13 }}>{e.nome}</span>
-                            {i === 0 && <span className="tag g" style={{ marginLeft: 8, fontSize: 9 }}>LÍDER</span>}
+                            {i === 0 && <span className="tag g" style={{ marginLeft: 8, fontSize: 9 }}>LEADER</span>}
                           </td>
                           <td className="c-mut" style={{ fontSize: 11 }}>{e.pilar || "—"}</td>
                           <td style={{ textAlign: "right", fontWeight: 700, color: "var(--gold)" }}>{e.peso_pct}%</td>
@@ -235,13 +235,13 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
                             <td></td>
                             <td colSpan={7} style={{ padding: "8px 12px" }}>
                               <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
-                                Momentum por ativo
+                                Momentum by asset
                               </div>
                               {e.ativos && e.ativos.length > 0 ? (
                                 <table style={{ width: "100%", fontSize: 12 }}>
                                   <thead>
                                     <tr>
-                                      <th style={{ textAlign: "left", paddingLeft: 8 }}>Ativo</th>
+                                      <th style={{ textAlign: "left", paddingLeft: 8 }}>Asset</th>
                                       <th style={{ textAlign: "center", minWidth: 160 }}>J37</th>
                                       <th style={{ textAlign: "center", minWidth: 160 }}>D13</th>
                                     </tr>
@@ -289,7 +289,7 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
                 </tbody>
               </table>
               <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 8 }}>
-                {momData?.note} · Fonte: {momData?.source}
+                {momData?.note} · Source: {momData?.source}
               </div>
             </div>
           )}
@@ -297,7 +297,7 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
           {view === "composicao" && (
           <div className="strat-layout">
             <div className="tree-card">
-              <h2>Composição</h2>
+              <h2>Composition</h2>
               {(p.pilares && p.pilares.length > 0) || (p.esteiras && p.esteiras.length > 0) ? (
                 <>
                   {(p.pilares || []).map((pil, pi) => {
@@ -317,22 +317,22 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
                   {(p.esteiras || []).map((est, ei) => renderEsteira(p, est, `direct_${ei}`))}
                 </>
               ) : (
-                <div className="ph"><b>Sem composição definida</b>Este portfólio ainda não tem esteiras configuradas.</div>
+                <div className="ph"><b>No composition defined</b>This portfolio doesn&apos;t have any sleeves configured yet.</div>
               )}
             </div>
 
             <div className="info-card">
-              <h2>Estratégia</h2>
+              <h2>Strategy</h2>
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 18, fontWeight: 700 }}>{p.motor}</div>
-                <div style={{ fontSize: 11, color: "var(--tx2)" }}>Versão {p.motor_version}</div>
+                <div style={{ fontSize: 11, color: "var(--tx2)" }}>Version {p.motor_version}</div>
               </div>
-              <div className="kv"><span className="c-mut">Estado</span><span className="v"><span className={`estado-chip estado-${p.estado || "lab"}`}>{(p.estado || "—").toUpperCase()}</span></span></div>
-              <div className="kv"><span className="c-mut">Regime hoje</span><span className="v"><span className={`statechip ${sem(p.regime)}`}>{p.regime}</span></span></div>
+              <div className="kv"><span className="c-mut">Status</span><span className="v"><span className={`estado-chip estado-${p.estado || "lab"}`}>{(p.estado || "—").toUpperCase()}</span></span></div>
+              <div className="kv"><span className="c-mut">Regime today</span><span className="v"><span className={`statechip ${sem(p.regime)}`}>{p.regime}</span></span></div>
               <div className="kv"><span className="c-mut">ISIN</span><span className="v" style={{ fontSize: 11 }}>{p.isin || "n/a"}</span></div>
-              <div className="kv"><span className="c-mut">Alocado</span><span className="v">US$ {(p.alocado_usd / 1e6).toFixed(1)}M</span></div>
-              <div className="kv"><span className="c-mut">Exposição</span><span className="v">{p.exposicao_pct}%</span></div>
-              <div className="kv"><span className="c-mut">DD do mês</span><span className="v c-r">{p.dd_mes_pct.toFixed(1)}%</span></div>
+              <div className="kv"><span className="c-mut">Allocated</span><span className="v">US$ {(p.alocado_usd / 1e6).toFixed(1)}M</span></div>
+              <div className="kv"><span className="c-mut">Exposure</span><span className="v">{p.exposicao_pct}%</span></div>
+              <div className="kv"><span className="c-mut">Monthly DD</span><span className="v c-r">{p.dd_mes_pct.toFixed(1)}%</span></div>
               <svg className="sparkline" viewBox="0 0 300 60" xmlns="http://www.w3.org/2000/svg">
                 <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C9A02C" stopOpacity={0.3} /><stop offset="100%" stopColor="#C9A02C" stopOpacity={0} /></linearGradient></defs>
                 <polyline points={spark} fill="none" stroke="#C9A02C" strokeWidth={1.5} />
@@ -341,13 +341,13 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
               <div style={{ fontSize: 11, color: "var(--tx2)", marginBottom: 10 }}>{p.descricao}</div>
               <div className="action-btns">
                 <button className="btn" onClick={() => go("portfolio-studio", p.id)}>
-                  <i className="ti ti-layout-grid" style={{ fontSize: 13 }} />Editar no Studio
+                  <i className="ti ti-layout-grid" style={{ fontSize: 13 }} />Edit in Studio
                 </button>
                 <button className="btn ghost" onClick={() => go("backtest")}>
-                  <i className="ti ti-history" style={{ fontSize: 13 }} />Testar no Backtest
+                  <i className="ti ti-history" style={{ fontSize: 13 }} />Test in Backtest
                 </button>
                 <button className="btn ghost" onClick={() => go("protecao")}>
-                  <i className="ti ti-shield-check" style={{ fontSize: 13 }} />Risco &amp; Proteção
+                  <i className="ti ti-shield-check" style={{ fontSize: 13 }} />Risk &amp; Protection
                 </button>
               </div>
             </div>
@@ -355,7 +355,7 @@ export default function Estrategias({ go }: { go: (id: ScreenId, param?: string)
           )}
         </>
       )}
-      <div className="foot">Estratégias · v1 · Composição editável. Pesos sincronizam com a API (/v1/strategies).</div>
+      <div className="foot">Strategies · v1 · Editable composition. Weights sync with the API (/v1/strategies).</div>
     </div>
   );
 }

@@ -56,10 +56,10 @@ export default function Setores({ go }: { go: (id: ScreenId, param?: string) => 
     const leader = data.sectors[0]?.setor || "—";
     publishScreenData(
       "setores",
-      `${data.sectors.length} setores, ${data.n_ativos} ativos, líder: ${leader}`,
+      `${data.sectors.length} sectors, ${data.n_ativos} assets, leader: ${leader}`,
       data.sectors,
       {
-        briefing: `${data.sectors.length} setores com ${data.n_ativos} ativos monitorados. Setor líder: ${leader}.`,
+        briefing: `${data.sectors.length} sectors with ${data.n_ativos} assets monitored. Leading sector: ${leader}.`,
       }
     );
   }, [data]);
@@ -68,17 +68,17 @@ export default function Setores({ go }: { go: (id: ScreenId, param?: string) => 
     <div className="screen">
       <div className="flex between wrap mb">
         <div>
-          <div className="h1">Setores · SectorSurfer</div>
-          <div className="sub">Momento agregado por setor. Padrão AlphaDroid — leadership rotativa, verde = alta, vermelho = baixa.</div>
+          <div className="h1">Sectors · SectorSurfer</div>
+          <div className="sub">Aggregate momentum by sector. AlphaDroid pattern — rotating leadership, green = up, red = down.</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button className="btn ghost" style={{ fontSize: 11 }} onClick={() => go("alphadroid")}>
-            + Adicionar setor customizado
+            + Add custom sector
           </button>
           <span className="live">
             <span className="dot" />
             <span className={`tag ${conn === "ok" ? "g" : conn === "error" ? "r" : "b"}`}>
-              {conn === "loading" ? "carregando…" : conn === "ok" ? `● ${data?.source}` : "✕ offline"}
+              {conn === "loading" ? "loading…" : conn === "ok" ? `● ${data?.source}` : "✕ offline"}
             </span>
           </span>
         </div>
@@ -86,9 +86,9 @@ export default function Setores({ go }: { go: (id: ScreenId, param?: string) => 
 
       <div className="fbar mb">
         <div className="fgrp">
-          <label>Universo</label>
+          <label>Universe</label>
           <select className="input" value={basket} onChange={(e) => setBasket(e.target.value)}>
-            <option value="ALL">★ Base inteira (todas)</option>
+            <option value="ALL">★ Entire base (all)</option>
             {baskets.map((b) => (
               <option key={b.id} value={b.id}>{b.nome} ({b.n})</option>
             ))}
@@ -96,7 +96,7 @@ export default function Setores({ go }: { go: (id: ScreenId, param?: string) => 
         </div>
         {data && (
           <div className="fcount">
-            <b>{data.sectors.length}</b> setores · {data.n_ativos} ativos
+            <b>{data.sectors.length}</b> sectors · {data.n_ativos} assets
           </div>
         )}
       </div>
@@ -106,23 +106,23 @@ export default function Setores({ go }: { go: (id: ScreenId, param?: string) => 
           <thead>
             <tr>
               <th style={{ width: 40 }}></th>
-              <th>Setor</th>
+              <th>Sector</th>
               <th style={{ textAlign: "center" }}>N</th>
-              <th style={{ textAlign: "center", minWidth: 180 }} className="momd">Momento J37 (Diogo)</th>
-              <th style={{ textAlign: "center", minWidth: 180 }} className="momd">Momento D13</th>
+              <th style={{ textAlign: "center", minWidth: 180 }} className="momd">Momentum J37 (Diogo)</th>
+              <th style={{ textAlign: "center", minWidth: 180 }} className="momd">Momentum D13</th>
               <th style={{ textAlign: "center", minWidth: 180 }}>Mom DEMA</th>
-              <th style={{ textAlign: "center" }}>Score médio</th>
+              <th style={{ textAlign: "center" }}>Average score</th>
               <th style={{ textAlign: "center" }}>Long / Short</th>
-              <th style={{ textAlign: "left" }}>Top ativo</th>
+              <th style={{ textAlign: "left" }}>Top asset</th>
             </tr>
           </thead>
           <tbody>
             {conn === "error" ? (
-              <tr><td colSpan={9} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>API não respondeu</td></tr>
+              <tr><td colSpan={9} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>API did not respond</td></tr>
             ) : conn === "loading" ? (
-              <tr><td colSpan={9} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>calculando momentum por setor…</td></tr>
+              <tr><td colSpan={9} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>calculating momentum by sector…</td></tr>
             ) : (data?.sectors || []).length === 0 ? (
-              <tr><td colSpan={9} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>nenhum setor encontrado</td></tr>
+              <tr><td colSpan={9} className="c-mut2" style={{ textAlign: "center", padding: 30 }}>no sector found</td></tr>
             ) : (data?.sectors || []).map((s, i) => {
               const isExp = expanded === s.setor;
               return (
@@ -135,7 +135,7 @@ export default function Setores({ go }: { go: (id: ScreenId, param?: string) => 
                     <td>
                       <span style={{ fontWeight: 700, fontSize: 13 }}>{s.setor}</span>
                       {i === 0 && (
-                        <span className="tag g" style={{ marginLeft: 8, fontSize: 9 }}>LÍDER</span>
+                        <span className="tag g" style={{ marginLeft: 8, fontSize: 9 }}>LEADER</span>
                       )}
                     </td>
                     <td style={{ textAlign: "center", fontWeight: 700 }}>{s.n}</td>
@@ -157,7 +157,7 @@ export default function Setores({ go }: { go: (id: ScreenId, param?: string) => 
                       <span
                         className="tk-link"
                         onClick={(e) => { e.stopPropagation(); go("chart", s.top_ticker); }}
-                        title={`Abrir gráfico ${s.top_ticker}`}
+                        title={`Open chart ${s.top_ticker}`}
                       >
                         {s.top_ticker}
                       </span>
@@ -171,7 +171,7 @@ export default function Setores({ go }: { go: (id: ScreenId, param?: string) => 
                       <td></td>
                       <td colSpan={8} style={{ padding: "8px 12px" }}>
                         <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
-                          Ativos do setor
+                          Sector assets
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                           {s.tickers.map((tk) => (

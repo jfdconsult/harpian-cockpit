@@ -143,7 +143,7 @@ export default function PortfolioStudio({
       const fresh = await fetchComposicao(portfolioId);
       onSaved(fresh);
     } catch (e) {
-      dialog.notify("Erro ao salvar: " + String(e), "error");
+      dialog.notify("Error saving: " + String(e), "error");
     } finally {
       setSaving(false);
     }
@@ -158,18 +158,18 @@ export default function PortfolioStudio({
     setForking(true);
     try {
       const res = await forkPortfolio(portfolioId);
-      dialog.notify(`Fork criado: ${res.portfolio.id} — abra em Admin › Portfolios para editar sem afetar produção.`, "success");
+      dialog.notify(`Fork created: ${res.portfolio.id} — open it under Admin › Portfolios to edit without affecting production.`, "success");
     } catch (e) {
-      dialog.notify("Erro ao criar fork: " + String(e), "error");
+      dialog.notify("Error creating fork: " + String(e), "error");
     } finally {
       setForking(false);
     }
   }
 
-  // Esteira/Ativo dentro de um motor: grava direto no backend primeiro (persistência
-  // real), e só então atualiza o draft local com dispatch — assim uma falha na API
-  // não deixa o rascunho "mentindo" sobre o que foi salvo, e mudanças pendentes de
-  // motor/regra/perfil (ainda não salvas) não são perdidas por um reload completo.
+  // Esteira/Ativo inside an engine: writes straight to the backend first (real
+  // persistence), and only then updates the local draft via dispatch — this way an API
+  // failure doesn't leave the draft "lying" about what was saved, and pending
+  // engine/rule/profile changes (not yet saved) aren't lost to a full reload.
   async function handleAddEsteiraMotor(motorId: string, pilarNome: string | null, esteiraNome: string, pesoPct: number) {
     try {
       const motorPendente = diff.motoresAdded.find((m) => m.id === motorId);
@@ -194,7 +194,7 @@ export default function PortfolioStudio({
         esteira: { nome: esteiraNome, peso_pct: pesoPct, ativos: [] },
       });
     } catch (e) {
-      dialog.notify("Erro ao adicionar esteira: " + String(e), "error");
+      dialog.notify("Error adding strategy: " + String(e), "error");
     }
   }
 
@@ -203,7 +203,7 @@ export default function PortfolioStudio({
       await removeEsteiraFromMotor(portfolioId, motorId, esteiraNome);
       dispatch({ type: "REMOVE_ESTEIRA", motor_id: motorId, esteira_nome: esteiraNome });
     } catch (e) {
-      dialog.notify("Erro ao remover esteira: " + String(e), "error");
+      dialog.notify("Error removing strategy: " + String(e), "error");
     }
   }
 
@@ -217,7 +217,7 @@ export default function PortfolioStudio({
         ativo: { ticker: ticker.toUpperCase(), peso_pct: pesoPct, tipo },
       });
     } catch (e) {
-      dialog.notify("Erro ao adicionar ativo: " + String(e), "error");
+      dialog.notify("Error adding asset: " + String(e), "error");
     }
   }
 
@@ -226,7 +226,7 @@ export default function PortfolioStudio({
       await removeAtivoFromMotorEsteira(portfolioId, motorId, esteiraNome, ticker);
       dispatch({ type: "REMOVE_ATIVO", motor_id: motorId, esteira_nome: esteiraNome, ticker });
     } catch (e) {
-      dialog.notify("Erro ao remover ativo: " + String(e), "error");
+      dialog.notify("Error removing asset: " + String(e), "error");
     }
   }
 
@@ -234,15 +234,15 @@ export default function PortfolioStudio({
     try {
       await patchArenaEsteira(portfolioId, motorId, esteiraNome, arena);
       dispatch({ type: "PATCH_ARENA", motor_id: motorId, esteira_nome: esteiraNome, arena });
-      dialog.notify("Arena da estratégia atualizada.", "success");
+      dialog.notify("Strategy arena updated.", "success");
     } catch (e) {
-      dialog.notify("Erro ao configurar a arena: " + String(e), "error");
+      dialog.notify("Error configuring the arena: " + String(e), "error");
     }
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 100px)", margin: "-16px -22px" }}>
-      {/* breadcrumb + ações */}
+      {/* breadcrumb + actions */}
       <div
         style={{
           display: "flex",
@@ -253,7 +253,7 @@ export default function PortfolioStudio({
         }}
       >
         <button className="btn ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={onExit}>
-          ← Sair
+          ← Exit
         </button>
         <div style={{ fontSize: 12, color: "var(--tx3)", marginLeft: 8 }}>
           <span
@@ -269,7 +269,7 @@ export default function PortfolioStudio({
                 style={{ cursor: "pointer", color: nivel === 2 ? "var(--gold)" : "var(--tx3)" }}
                 onClick={() => setNivel(2)}
               >
-                Motor {motorAtual.id} ({motorAtual.nome})
+                Engine {motorAtual.id} ({motorAtual.nome})
               </span>
             </>
           )}
@@ -283,10 +283,10 @@ export default function PortfolioStudio({
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <button className="btn ghost" style={{ fontSize: 11 }} onClick={handleDiscard} disabled={isEmptyDiff(diff)}>
-            Descartar
+            Discard
           </button>
           <button className="btn" style={{ fontSize: 11 }} onClick={handleSave} disabled={saving || isEmptyDiff(diff)}>
-            {saving ? "Salvando…" : "Salvar"}
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
       </div>
@@ -301,7 +301,7 @@ export default function PortfolioStudio({
         </div>
       </div>
 
-      {/* corpo */}
+      {/* body */}
       <div style={{ flex: 1, overflow: "auto" }}>
         {nivel === 1 && (
           <CanvasComposicao
@@ -332,7 +332,7 @@ export default function PortfolioStudio({
 
         {nivel === 2 && !motorAtual && (
           <div className="c-mut" style={{ padding: 20 }}>
-            Motor não encontrado no rascunho.
+            Engine not found in the draft.
           </div>
         )}
       </div>
@@ -363,7 +363,7 @@ export default function PortfolioStudio({
             color: "var(--tx)",
           }}
         >
-          Criando fork…
+          Creating fork…
         </div>
       )}
     </div>

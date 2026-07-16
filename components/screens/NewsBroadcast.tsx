@@ -28,8 +28,8 @@ export default function NewsBroadcast() {
 
   useEffect(() => {
     if (!all || all.length === 0) return;
-    publishScreenData("news-broadcast", `${all.length} manchetes · ${sourcesLive.length} fontes ao vivo`, all, {
-      briefing: `News Broadcast com ${all.length} manchetes de ${sourcesLive.length} fontes ao vivo.`,
+    publishScreenData("news-broadcast", `${all.length} headlines · ${sourcesLive.length} live sources`, all, {
+      briefing: `News Broadcast with ${all.length} headlines from ${sourcesLive.length} live sources.`,
     });
   }, [all, sourcesLive]);
 
@@ -43,33 +43,33 @@ export default function NewsBroadcast() {
     <div className="screen">
       <div className="crumb">Intelligence › <b>News Broadcast</b></div>
       <div className="h1">News Broadcast</div>
-      <div className="sub">Feed consolidado ao vivo · RSS financeiro grátis (CNBC · MarketWatch · Yahoo).</div>
+      <div className="sub">Live consolidated feed · free financial RSS (CNBC · MarketWatch · Yahoo).</div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "14px 0", alignItems: "center" }}>
-        <span className="flabel">Fonte:</span>
+        <span className="flabel">Source:</span>
         <select className="fsel" value={source} onChange={(e) => setSource(e.target.value)}>
-          <option value="all">Todas</option>
+          <option value="all">All</option>
           <option value="cnbc">CNBC</option>
           <option value="marketwatch">MarketWatch</option>
           <option value="yahoo">Yahoo Finance</option>
         </select>
         <select className="fsel" value={impact} onChange={(e) => setImpact(e.target.value)}>
-          <option value="all">Todos os impactos</option>
+          <option value="all">All impacts</option>
           <option value="Market Moving">Market Moving</option>
           <option value="High">High</option>
           <option value="Normal">Normal</option>
         </select>
-        <button className="btn ghost" style={{ fontSize: 11 }} onClick={load}><i className="ti ti-refresh" />Atualizar</button>
+        <button className="btn ghost" style={{ fontSize: 11 }} onClick={load}><i className="ti ti-refresh" />Refresh</button>
         <span style={{ marginLeft: "auto", fontFamily: "var(--mono)", fontSize: 9, color: "var(--tx3)" }}>
-          {conn === "ok" ? `${items.length} headlines · ${sourcesLive.length} fontes` : ""}{fetchedAt ? ` · ${fetchedAt.slice(11, 16)}Z` : ""}
+          {conn === "ok" ? `${items.length} headlines · ${sourcesLive.length} sources` : ""}{fetchedAt ? ` · ${fetchedAt.slice(11, 16)}Z` : ""}
         </span>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, alignContent: "start" }}>
         {conn === "loading" && [0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton" style={{ height: 68, borderRadius: 6 }} />)}
-        {conn === "error" && <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 12 }}>Backend offline — suba a API na porta 8080.</div>}
+        {conn === "error" && <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 12 }}>Backend offline — start the API on port 8080.</div>}
         {conn === "ok" && items.length === 0 && (
-          <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 11 }}>Nenhuma manchete com esses filtros.</div>
+          <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 48, color: "var(--tx3)", fontSize: 11 }}>No headlines match these filters.</div>
         )}
         {conn === "ok" && items.map((h) => {
           const ic = IMPACT_COLOR[h.impact] || "rgba(255,255,255,0.3)";

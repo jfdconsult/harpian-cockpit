@@ -1,12 +1,12 @@
 "use client";
 // ============================================================
-// HARPIAN COCKPIT — sistema de diálogo próprio (substitui
-// prompt()/confirm()/alert() nativos do browser).
+// HARPIAN COCKPIT — custom dialog system (replaces the
+// browser's native prompt()/confirm()/alert()).
 //   const dialog = useDialog();
 //   await dialog.confirm({ title, body, danger?, typeToConfirm? })
 //   await dialog.prompt({ title, label, initial?, type? })
 //   dialog.notify(msg, tone?)          // toast auto-dismiss
-// ESC fecha (= cancelar). Foco vai pro botão primário / input.
+// ESC closes (= cancel). Focus goes to the primary button / input.
 // ============================================================
 import {
   createContext,
@@ -24,7 +24,7 @@ interface ConfirmOpts {
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
-  /** exige digitar esta palavra pra habilitar o botão (kill-switch etc) */
+  /** requires typing this word to enable the button (kill-switch etc) */
   typeToConfirm?: string;
 }
 
@@ -53,7 +53,7 @@ const DialogCtx = createContext<DialogAPI | null>(null);
 
 export function useDialog(): DialogAPI {
   const ctx = useContext(DialogCtx);
-  if (!ctx) throw new Error("useDialog fora do DialogProvider");
+  if (!ctx) throw new Error("useDialog outside DialogProvider");
   return ctx;
 }
 
@@ -98,7 +98,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     setPending(null);
   }
 
-  // ESC = cancelar · Enter no prompt = confirmar · foco inicial
+  // ESC = cancel · Enter in prompt = confirm · initial focus
   useEffect(() => {
     if (!pending) return;
     const onKey = (e: KeyboardEvent) => {
@@ -163,7 +163,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
             {pending.kind === "confirm" && needType && (
               <div style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Digite {needType} para confirmar
+                  Type {needType} to confirm
                   <input
                     className="input"
                     value={typed}
@@ -194,7 +194,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
               <button className="btn ghost" onClick={() => close(false)}>
-                {(pending.kind === "confirm" && pending.opts.cancelLabel) || "Cancelar"}
+                {(pending.kind === "confirm" && pending.opts.cancelLabel) || "Cancel"}
               </button>
               <button
                 ref={primaryRef}
@@ -207,14 +207,14 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                     : { opacity: confirmEnabled ? 1 : 0.4 }
                 }
               >
-                {(pending.kind === "confirm" ? pending.opts.confirmLabel : pending.opts.confirmLabel) || "Confirmar"}
+                {(pending.kind === "confirm" ? pending.opts.confirmLabel : pending.opts.confirmLabel) || "Confirm"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* toasts — canto inferior direito, não roubam foco */}
+      {/* toasts — bottom-right corner, don't steal focus */}
       <div
         aria-live="polite"
         style={{

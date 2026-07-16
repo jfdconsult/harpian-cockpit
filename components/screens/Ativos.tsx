@@ -42,7 +42,7 @@ function scoreTint(s: number | null | undefined) {
   return { background: `rgba(46,204,113,${((s / 100) * 0.45).toFixed(2)})` };
 }
 function num(v: number | null | undefined, suf = "") {
-  return v == null ? "—" : v.toLocaleString("pt-BR") + suf;
+  return v == null ? "—" : v.toLocaleString("en-US") + suf;
 }
 function rsCls(rs?: string) {
   return rs === "Long" ? "long" : rs === "Short" ? "short" : rs === "L-FVG" ? "lfvg" : rs === "S-FVG" ? "sfvg" : rs === "Buy" ? "buy" : rs === "Sell" ? "sell" : "";
@@ -124,10 +124,10 @@ export default function Ativos({ go }: { go: (id: ScreenId, param?: string) => v
     const saidas = mc["SAÍDA"] || 0;
     publishScreenData(
       "ativos",
-      `${okRows.length} ativos, ${nRev} precisam revisão, ${entradas} entradas, ${saidas} saídas`,
+      `${okRows.length} assets, ${nRev} need review, ${entradas} entries, ${saidas} exits`,
       data.rows?.filter((r) => r.ok),
       {
-        briefing: `Scanner com ${okRows.length} ativos ativos. ${nRev} precisam de revisão (${entradas} entradas, ${saidas} saídas). Universo: ${data.nome}.`,
+        briefing: `Scanner with ${okRows.length} active assets. ${nRev} need review (${entradas} entries, ${saidas} exits). Universe: ${data.nome}.`,
       }
     );
   }, [data]);
@@ -143,11 +143,11 @@ export default function Ativos({ go }: { go: (id: ScreenId, param?: string) => v
     <div className="screen">
       <div className="flex between wrap mb">
         <div>
-          <div className="h1">Ativos · scanner</div>
-          <div className="sub">A base inteira — sinal RS, momentum (DEMA/TEMA), ROC 25d, posição dia/52sem, consecutivas. Dado real (Yahoo).</div>
+          <div className="h1">Assets · scanner</div>
+          <div className="sub">The whole universe — RS signal, momentum (DEMA/TEMA), ROC 25d, day/52w position, consecutive moves. Real data (Yahoo).</div>
         </div>
         <span className="live"><span className="dot" /><span className={`tag ${conn === "ok" ? "g" : conn === "error" ? "r" : "b"}`}>
-          {conn === "loading" ? "carregando…" : conn === "ok" ? `● ${data?.source}` : "✕ offline"}
+          {conn === "loading" ? "loading…" : conn === "ok" ? `● ${data?.source}` : "✕ offline"}
         </span></span>
       </div>
 
@@ -156,92 +156,92 @@ export default function Ativos({ go }: { go: (id: ScreenId, param?: string) => v
         <div>
           <div style={{ fontWeight: 700 }}>
             {nRevisao > 0
-              ? `${nRevisao}${nRevisao === 1 ? " ativo precisa de revisão" : " ativos precisam de revisão"}${
+              ? `${nRevisao}${nRevisao === 1 ? " asset needs review" : " assets need review"}${
                   resumo.mov_count ? "  ·  " + ["ENTRADA", "SAÍDA", "AUMENTO", "REDUÇÃO"].filter((k) => resumo.mov_count?.[k]).map((k) => `${resumo.mov_count?.[k]} ${k.toLowerCase()}${(resumo.mov_count?.[k] || 0) > 1 ? "s" : ""}`).join(" · ") : ""
                 }`
-              : "Nenhuma mudança hoje"}
+              : "No changes today"}
           </div>
           <div className="c-mut2" style={{ fontSize: 11 }}>
             {nRevisao > 0 ? (
-              <><b>{(resumo.precisam_revisao || []).join(", ")}</b> · clique para ver só esses · compare com o AlphaDroid antes de agir</>
-            ) : "a base está estável — nenhum ativo mudou status ou intensidade"}
+              <><b>{(resumo.precisam_revisao || []).join(", ")}</b> · click to see only these · compare with AlphaDroid before acting</>
+            ) : "the universe is stable — no asset changed status or intensity"}
           </div>
         </div>
       </div>
 
       <div className="fbar mb">
-        <div className="fgrp"><label>Universo</label>
+        <div className="fgrp"><label>Universe</label>
           <select className="input" value={basket} onChange={(e) => setBasket(e.target.value)}>
             {baskets.map((b) => <option key={b.id} value={b.id}>{b.nome} ({b.n})</option>)}
           </select>
         </div>
-        <div className="fgrp"><label>Estratégia</label>
+        <div className="fgrp"><label>Strategy</label>
           <select className="input" value={estf} onChange={(e) => setEstf(e.target.value)}>
-            <option value="">Todas</option>{estOptions.map((v) => <option key={v}>{v}</option>)}
+            <option value="">All</option>{estOptions.map((v) => <option key={v}>{v}</option>)}
           </select>
         </div>
-        <div className="fgrp"><label>Setor</label>
+        <div className="fgrp"><label>Sector</label>
           <select className="input" value={setf} onChange={(e) => setSetf(e.target.value)}>
-            <option value="">Todos os setores</option>{setOptions.map((v) => <option key={v}>{v}</option>)}
+            <option value="">All sectors</option>{setOptions.map((v) => <option key={v}>{v}</option>)}
           </select>
         </div>
-        <div className="fgrp"><label>Subsetor</label>
+        <div className="fgrp"><label>Subsector</label>
           <select className="input" value={subf} onChange={(e) => setSubf(e.target.value)}>
-            <option value="">Todos</option>{subOptions.map((v) => <option key={v}>{v}</option>)}
+            <option value="">All</option>{subOptions.map((v) => <option key={v}>{v}</option>)}
           </select>
         </div>
-        <div className="fgrp"><label>Movimento</label>
+        <div className="fgrp"><label>Movement</label>
           <select className="input" value={movf} onChange={(e) => setMovf(e.target.value)}>
-            <option value="">Todos</option><option value="REVISAO">Só revisão (mudou)</option>
-            <option value="ENTRADA">Entradas</option><option value="SAÍDA">Saídas</option>
-            <option value="AUMENTO">Aumentos</option><option value="REDUÇÃO">Reduções</option>
+            <option value="">All</option><option value="REVISAO">Review only (changed)</option>
+            <option value="ENTRADA">Entries</option><option value="SAÍDA">Exits</option>
+            <option value="AUMENTO">Increases</option><option value="REDUÇÃO">Reductions</option>
           </select>
         </div>
-        <div className="fgrp"><label>Sinal RS</label>
+        <div className="fgrp"><label>RS Signal</label>
           <select className="input" value={rsf} onChange={(e) => setRsf(e.target.value)}>
-            <option value="">Todos</option><option>Long</option><option>Short</option><option>L-FVG</option><option>S-FVG</option>
+            <option value="">All</option><option>Long</option><option>Short</option><option>L-FVG</option><option>S-FVG</option>
           </select>
         </div>
-        <div className="fgrp"><label>Ação</label>
+        <div className="fgrp"><label>Action</label>
           <select className="input" value={acf} onChange={(e) => setAcf(e.target.value)}>
-            <option value="">Todas</option><option value="AUDITAR">Só auditar</option><option value="OBSERVAR">Observar+</option>
+            <option value="">All</option><option value="AUDITAR">Audit only</option><option value="OBSERVAR">Observe+</option>
           </select>
         </div>
-        <div className="fgrp"><label>Ordenar por</label>
+        <div className="fgrp"><label>Sort by</label>
           <select className="input" value={sortf} onChange={(e) => setSortf(e.target.value)}>
-            <option value="revisao">Revisão (mudanças primeiro)</option>
-            <option value="score">Score (maior força)</option>
-            <option value="score_asc">Score (menor)</option>
-            <option value="mom">Maior momento (DEMA)</option>
-            <option value="mom_asc">Menor momento</option>
-            <option value="ytd">Maior ganho no ano</option>
-            <option value="roc">Maior ROC 25d</option>
-            <option value="net">Maior alta no dia</option>
-            <option value="net_asc">Maior queda no dia</option>
-            <option value="pos52">Posição 52s (topo)</option>
+            <option value="revisao">Review (changes first)</option>
+            <option value="score">Score (highest strength)</option>
+            <option value="score_asc">Score (lowest)</option>
+            <option value="mom">Highest momentum (DEMA)</option>
+            <option value="mom_asc">Lowest momentum</option>
+            <option value="ytd">Highest gain YTD</option>
+            <option value="roc">Highest ROC 25d</option>
+            <option value="net">Highest gain on day</option>
+            <option value="net_asc">Biggest drop on day</option>
+            <option value="pos52">52w position (top)</option>
           </select>
         </div>
         <div className="fgrp"><label>Ticker</label>
-          <input className="input" style={{ width: 120 }} placeholder="buscar…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="input" style={{ width: 120 }} placeholder="search…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <div className="fgrp" style={{ justifyContent: "flex-end" }}><label>&nbsp;</label>
-          <button className="btn ghost" onClick={clearFilters}>Limpar</button>
+          <button className="btn ghost" onClick={clearFilters}>Clear</button>
         </div>
-        <div className="fcount"><b>{filtered.length}</b> de {okRows.length} ativos</div>
+        <div className="fcount"><b>{filtered.length}</b> of {okRows.length} assets</div>
       </div>
 
       <div className="wrapx">
         <table className="atv">
           <thead>
             <tr>
-              <th>#</th><th>Symbol</th><th>Desc</th><th>Movimento</th><th>Ação</th><th>RS</th><th>Score</th><th>Last</th><th>Net%</th>
+              <th>#</th><th>Symbol</th><th>Desc</th><th>Movement</th><th>Action</th><th>RS</th><th>Score</th><th>Last</th><th>Net%</th>
               <th>Mom EMA</th><th>Mom DEMA</th><th>Mom TEMA</th><th className="momd">D13</th><th className="momd">J37</th><th>12-1</th><th>ROC25</th>
-              <th>YTD%</th><th>52w%</th><th>Dia%</th><th>MA dev</th><th>Consec</th><th>Sinais</th>
+              <th>YTD%</th><th>52w%</th><th>Day%</th><th>MA dev</th><th>Consec</th><th>Signals</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={21} className="c-mut2" style={{ textAlign: "center", padding: 20 }}>nenhum ativo no filtro</td></tr>
+              <tr><td colSpan={21} className="c-mut2" style={{ textAlign: "center", padding: 20 }}>no asset matches the filter</td></tr>
             ) : filtered.map((r) => {
               const f = r.flag;
               const cons = r.consec_up ? <span className="c-g">▲{r.consec_up}</span> : r.consec_dn ? <span className="c-r">▼{r.consec_dn}</span> : "0";
@@ -249,7 +249,7 @@ export default function Ativos({ go }: { go: (id: ScreenId, param?: string) => v
               return (
                 <tr key={r.ticker} className={f?.acao === "AUDITAR" ? "auditar" : undefined}>
                   <td className="c-mut2">{r.rank || ""}</td>
-                  <td className="tk"><span className="tk-link" onClick={() => go("chart", r.ticker)} title={`Abrir gráfico ${r.ticker}`}>{r.ticker}</span></td>
+                  <td className="tk"><span className="tk-link" onClick={() => go("chart", r.ticker)} title={`Open chart ${r.ticker}`}>{r.ticker}</span></td>
                   <td className="c-mut" style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>{r.name || ""}</td>
                   <td style={{ textAlign: "center" }}>
                     {!m ? <span className="mov mantem">—</span> : (
@@ -261,7 +261,7 @@ export default function Ativos({ go }: { go: (id: ScreenId, param?: string) => v
                       <span className="acao r" title={f.motivo}><span className="d" />AUDITAR</span>
                     ) : f.acao === "OBSERVAR" ? (
                       <span className="acao a" title={f.motivo}>OBSERVAR</span>
-                    ) : <span className="acao g" title="sem ação">OK</span>}
+                    ) : <span className="acao g" title="no action">OK</span>}
                   </td>
                   <td style={{ textAlign: "center" }}><span className={`rs ${rsCls(r.rs)}`}>{r.rs}</span></td>
                   <td style={{ textAlign: "center", fontWeight: 800, ...scoreTint(r.score) }}>{r.score ?? "—"}</td>
@@ -290,7 +290,7 @@ export default function Ativos({ go }: { go: (id: ScreenId, param?: string) => v
           </tbody>
         </table>
       </div>
-      <div className="foot">{data ? `${data.nome} · ${okRows.length} ativos · ${data.rs_note}` : "—"}</div>
+      <div className="foot">{data ? `${data.nome} · ${okRows.length} assets · ${data.rs_note}` : "—"}</div>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import Backtest from "./screens/Backtest";
 import Calibracao from "./screens/Calibracao";
 import Protecao from "./screens/Protecao";
 import DefesaInteligente from "./screens/DefesaInteligente";
+import Xri from "./screens/Xri";
 import Indicadores from "./screens/Indicadores";
 import Reconciliacao from "./screens/Reconciliacao";
 import Observador from "./screens/Observador";
@@ -86,6 +87,8 @@ export default function Cockpit() {
         return <Indicadores />;
       case "defesa-inteligente":
         return <DefesaInteligente />;
+      case "xri":
+        return <Xri />;
       case "reconciliacao":
         return <Reconciliacao go={go} />;
       case "observador":

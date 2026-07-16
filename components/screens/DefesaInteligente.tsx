@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
 import { publishScreenData } from "@/lib/jim-data";
 import { Bullet } from "@/components/RegimeGauge";
+import JimBlock from "@/components/JimBlock";
+import { buildCockpitAnalysis, cockpitAnalysisToBriefing } from "@/lib/jim-cockpit-analysis";
+import { fetchXriFeed, type XriSnapshot } from "@/lib/xri";
 
 // ---------- Types ----------
 interface IndicatorsState {
@@ -20,19 +23,24 @@ interface DefenseState {
 }
 interface PilarD { universo: string[]; top4_atual: string[]; cap_pct: number | null; rotacao_freq: string; contribuicao_ytd_pct: number | null }
 interface ReentryState { mode: string; days: number; ema_cross: boolean; velocity: number; sizing_pct: number }
+interface JimAnalysis { analysis: string; generated_at: string; sources: { jd_news: boolean; black_library: boolean; xri: boolean }; model: string }
 
+// Keys = REAL values emitted by compute_regime() in overnight_run.py
+// (RISK-ON → WARNING → RISK-OFF → RE-ENTRY → RISK-ON). It used to use
+// BEAR/CAUTELA/NEUTRO/BULL, which never matched the API — the .find() always
+// failed and fell back to (RISK-ON/green), showing the wrong regime.
 const REGIMES = [
-  { key: "BEAR", label: "Risk-Off", color: "#E74C3C", icon: "ti-shield-off" },
-  { key: "CAUTELA", label: "Cautela", color: "#F39C12", icon: "ti-alert-triangle" },
-  { key: "NEUTRO", label: "Neutro", color: "#4A90D9", icon: "ti-arrows-split" },
-  { key: "BULL", label: "Risk-On", color: "#2ECC71", icon: "ti-trending-up" },
+  { key: "RISK-OFF", label: "Risk-Off", color: "#E74C3C", icon: "ti-shield-off" },
+  { key: "WARNING", label: "Caution", color: "#F39C12", icon: "ti-alert-triangle" },
+  { key: "RE-ENTRY", label: "Re-Entry", color: "#4A90D9", icon: "ti-arrows-split" },
+  { key: "RISK-ON", label: "Risk-On", color: "#2ECC71", icon: "ti-trending-up" },
 ];
 
 const REGIME_MEANING: Record<string, string> = {
-  BULL: "Ambiente favoravel ao risco. Exposicao plena; defesa em prontidao.",
-  NEUTRO: "Sem tendencia dominante. Exposicao moderada, monitoramento proximo.",
-  CAUTELA: "Sinais de deterioracao. Reducao de risco em andamento.",
-  BEAR: "Ambiente adverso. Defesa ativa, exposicao reduzida.",
+  "RISK-ON": "Risk-favorable environment. Full exposure; defense on standby.",
+  "RE-ENTRY": "Exiting defense. Gradual re-entry, controlled sizing.",
+  "WARNING": "Signs of deterioration. Risk reduction underway.",
+  "RISK-OFF": "Adverse environment. Active defense, reduced exposure.",
 };
 
 const DEFAULTS: IndicatorsState = {
@@ -43,18 +51,18 @@ const DEFAULTS: IndicatorsState = {
 };
 
 // ---------- Helpers ----------
-function f2(n: number | null | undefined) { return n == null ? "—" : Number(n).toFixed(2).replace(".", ","); }
+function f2(n: number | null | undefined) { return n == null ? "—" : Number(n).toFixed(2); }
 function tempColor(v: number) { return v >= 0.8 ? "#E74C3C" : v >= 0.6 ? "#E67E22" : v >= 0.4 ? "#E5B800" : v >= 0.2 ? "#2ECC71" : "#1A8FE3"; }
-function tempZoneLabel(v: number) { return v >= 0.8 ? "DEFESA" : v >= 0.6 ? "ALERTA" : v >= 0.4 ? "CAUTELA" : v >= 0.2 ? "NEUTRO" : "ATAQUE"; }
+function tempZoneLabel(v: number) { return v >= 0.8 ? "DEFENSE" : v >= 0.6 ? "ALERT" : v >= 0.4 ? "CAUTION" : v >= 0.2 ? "NEUTRAL" : "ATTACK"; }
 function balPct(v: number): string { return Math.max(0, Math.round(100 - 125 * v)) + "%"; }
 function ccColor(v: number) { return v >= 0.75 ? "#E74C3C" : v >= 0.55 ? "#F39C12" : "#2ECC71"; }
 function pct01(v: number) { return Math.max(0, Math.min(100, v * 100)); }
 function sem(s: string) { return s === "ataque" ? "g" : s === "alerta" ? "a" : s === "defesa" ? "r" : "b"; }
 
 function trendArrow(dir: "up" | "down" | "flat"): { icon: string; color: string; label: string } {
-  if (dir === "up") return { icon: "ti-trending-up", color: "#E74C3C", label: "subindo" };
-  if (dir === "down") return { icon: "ti-trending-down", color: "#2ECC71", label: "caindo" };
-  return { icon: "ti-minus", color: "#7d96b3", label: "estavel" };
+  if (dir === "up") return { icon: "ti-trending-up", color: "#E74C3C", label: "rising" };
+  if (dir === "down") return { icon: "ti-trending-down", color: "#2ECC71", label: "falling" };
+  return { icon: "ti-minus", color: "#7d96b3", label: "stable" };
 }
 
 function computeTrend(current: number, previous: number): "up" | "down" | "flat" {
@@ -63,17 +71,17 @@ function computeTrend(current: number, previous: number): "up" | "down" | "flat"
   return delta > 0 ? "up" : "down";
 }
 
-// ---------- 180° Gauge — 5 zonas, 4 pontos de controle (balanceamento 0-100%) ----------
+// ---------- 180° Gauge — 5 zones, 4 control points (0-100% balancing) ----------
 function TempGauge180({ value, trend1d, trend1w }: { value: number; trend1d: "up" | "down" | "flat"; trend1w: "up" | "down" | "flat" }) {
   const cx = 150, cy = 148, r = 110;
   const deg2rad = (d: number) => (d * Math.PI) / 180;
 
   const zones = [
-    { vStart: 0.0,  vEnd: 0.2,  degStart: 0,    degEnd: 28,   color: "#1A8FE3", label: "ATAQUE",  bal: "100%" },
-    { vStart: 0.2,  vEnd: 0.4,  degStart: 28,   degEnd: 62,   color: "#2ECC71", label: "NEUTRO",  bal: "75%" },
-    { vStart: 0.4,  vEnd: 0.6,  degStart: 62,   degEnd: 102,  color: "#E5B800", label: "CAUTELA", bal: "50%" },
-    { vStart: 0.6,  vEnd: 0.8,  degStart: 102,  degEnd: 145,  color: "#E67E22", label: "ALERTA",  bal: "25%" },
-    { vStart: 0.8,  vEnd: 1.0,  degStart: 145,  degEnd: 180,  color: "#E74C3C", label: "DEFESA",  bal: "0%" },
+    { vStart: 0.0,  vEnd: 0.2,  degStart: 0,    degEnd: 28,   color: "#1A8FE3", label: "ATTACK",  bal: "100%" },
+    { vStart: 0.2,  vEnd: 0.4,  degStart: 28,   degEnd: 62,   color: "#2ECC71", label: "NEUTRAL",  bal: "75%" },
+    { vStart: 0.4,  vEnd: 0.6,  degStart: 62,   degEnd: 102,  color: "#E5B800", label: "CAUTION", bal: "50%" },
+    { vStart: 0.6,  vEnd: 0.8,  degStart: 102,  degEnd: 145,  color: "#E67E22", label: "ALERT",  bal: "25%" },
+    { vStart: 0.8,  vEnd: 1.0,  degStart: 145,  degEnd: 180,  color: "#E74C3C", label: "DEFENSE",  bal: "0%" },
   ];
 
   function v2a(v: number): number {
@@ -275,35 +283,36 @@ function JimDefensePanel({ regime, temp, cc, ema, mac, defenseState, reentry }: 
 }) {
   const insights: { type: "pos" | "neg" | "alert"; text: string }[] = [];
 
-  if (regime === "BULL") insights.push({ type: "pos", text: "Regime RISK-ON — exposicao plena, defesa em prontidao." });
-  else if (regime === "BEAR") insights.push({ type: "neg", text: "Regime RISK-OFF — defesa ativa, exposicao reduzida." });
-  else if (regime === "CAUTELA") insights.push({ type: "neg", text: "Regime CAUTELA — reducao de risco em andamento." });
+  if (regime === "RISK-ON") insights.push({ type: "pos", text: "RISK-ON regime — full exposure, defense on standby." });
+  else if (regime === "RISK-OFF") insights.push({ type: "neg", text: "RISK-OFF regime — active defense, reduced exposure." });
+  else if (regime === "WARNING") insights.push({ type: "neg", text: "WARNING regime — risk reduction underway." });
+  else if (regime === "RE-ENTRY") insights.push({ type: "alert", text: "RE-ENTRY regime — exiting defense, gradual re-entry." });
 
-  if (temp < 0.3) insights.push({ type: "pos", text: `Temperatura baixa (${f2(temp)}) — todos os pilares estaveis.` });
-  else if (temp >= 0.6) insights.push({ type: "neg", text: `Temperatura critica (${f2(temp)}) — um ou mais pilares em defesa.` });
-  else if (temp >= 0.4) insights.push({ type: "alert", text: `Temperatura em alerta (${f2(temp)}) — monitorar escalada.` });
+  if (temp < 0.3) insights.push({ type: "pos", text: `Low temperature (${f2(temp)}) — all pillars stable.` });
+  else if (temp >= 0.6) insights.push({ type: "neg", text: `Critical temperature (${f2(temp)}) — one or more pillars in defense.` });
+  else if (temp >= 0.4) insights.push({ type: "alert", text: `Temperature on alert (${f2(temp)}) — monitor for escalation.` });
 
-  if (cc >= 0.75) insights.push({ type: "neg", text: `Cross-correlation critica (${f2(cc)}) — risco sistemico elevado, gate ativo.` });
-  else if (cc >= 0.55) insights.push({ type: "alert", text: `Cross-correlation elevada (${f2(cc)}) — diversificacao perdendo efeito.` });
-  else insights.push({ type: "pos", text: `Cross-correlation saudavel (${f2(cc)}) — diversificacao funcionando.` });
+  if (cc >= 0.75) insights.push({ type: "neg", text: `Critical cross-correlation (${f2(cc)}) — elevated systemic risk, gate active.` });
+  else if (cc >= 0.55) insights.push({ type: "alert", text: `Elevated cross-correlation (${f2(cc)}) — diversification losing effect.` });
+  else insights.push({ type: "pos", text: `Healthy cross-correlation (${f2(cc)}) — diversification working.` });
 
-  if (ema === "acima") insights.push({ type: "pos", text: "Preco acima da EMA 20 — tendencia de alta intacta." });
-  else insights.push({ type: "neg", text: "Preco abaixo da EMA 20 — tendencia quebrada, defesa mantida." });
+  if (ema === "acima") insights.push({ type: "pos", text: "Price above the 20 EMA — uptrend intact." });
+  else insights.push({ type: "neg", text: "Price below the 20 EMA — trend broken, defense maintained." });
 
   if (mac != null) {
-    if (mac >= 60) insights.push({ type: "pos", text: `MAC Score positivo (${mac}/100) — ambiente macro sustenta risco.` });
-    else if (mac < 30) insights.push({ type: "neg", text: `MAC Score negativo (${mac}/100) — ambiente macro desfavoravel.` });
+    if (mac >= 60) insights.push({ type: "pos", text: `Positive MAC Score (${mac}/100) — macro environment supports risk.` });
+    else if (mac < 30) insights.push({ type: "neg", text: `Negative MAC Score (${mac}/100) — unfavorable macro environment.` });
   }
 
   if (defenseState) {
     const pilaresEmAlerta = Object.values(defenseState.pilares).filter(p => p.status === "alerta" || p.status === "defesa").length;
-    if (pilaresEmAlerta === 0) insights.push({ type: "pos", text: "Nenhum pilar em alerta — todos os motores operando normalmente." });
-    else insights.push({ type: "neg", text: `${pilaresEmAlerta} pilar${pilaresEmAlerta > 1 ? "es" : ""} em alerta ou defesa — monitorar decomposicao.` });
+    if (pilaresEmAlerta === 0) insights.push({ type: "pos", text: "No pillar on alert — all engines operating normally." });
+    else insights.push({ type: "neg", text: `${pilaresEmAlerta} pillar${pilaresEmAlerta > 1 ? "s" : ""} on alert or defense — monitor the breakdown.` });
   }
 
   if (reentry) {
-    if (reentry.mode === "re-entering") insights.push({ type: "pos", text: `Re-entry em andamento — sizing ${reentry.sizing_pct}%, velocidade ${f2(reentry.velocity)}.` });
-    else if (reentry.days > 5) insights.push({ type: "alert", text: `${reentry.days} dias em defesa — aguardando condicoes de re-entry.` });
+    if (reentry.mode === "re-entering") insights.push({ type: "pos", text: `Re-entry underway — sizing ${reentry.sizing_pct}%, velocity ${f2(reentry.velocity)}.` });
+    else if (reentry.days > 5) insights.push({ type: "alert", text: `${reentry.days} days in defense — awaiting re-entry conditions.` });
   }
 
   const positives = insights.filter((i) => i.type === "pos");
@@ -318,14 +327,14 @@ function JimDefensePanel({ regime, temp, cc, ema, mac, defenseState, reentry }: 
           background: "linear-gradient(135deg, #C9A02C 0%, #E6B800 100%)",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          <i className="ti ti-brain" style={{ fontSize: 14, color: "#0a1628" }} />
+          <i className="ti ti-brain" style={{ fontSize: 14, color: "var(--bg)" }} />
         </div>
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--gold)", fontFamily: "var(--mono)", letterSpacing: ".05em" }}>
             JIM DEFENSE INTELLIGENCE
           </div>
           <div style={{ fontSize: 10, color: "var(--tx3)" }}>
-            Analise proativa &middot; {new Date().toLocaleDateString("pt-BR")}
+            Proactive analysis &middot; {new Date().toLocaleDateString("en-US")}
           </div>
         </div>
       </div>
@@ -362,9 +371,13 @@ export default function DefesaInteligente() {
   const [defenseState, setDefenseState] = useState<DefenseState | null>(null);
   const [pilarD, setPilarD] = useState<PilarD | null>(null);
   const [reentry, setReentry] = useState<ReentryState | null>(null);
+  const [jimAnalysis, setJimAnalysis] = useState<JimAnalysis | null>(null);
+  // XRI is only here for the internal×external crossover (engine CC × XRI
+  // absorption ratio). The XRI detail lives on its own screen.
+  const [xriSnap, setXriSnap] = useState<XriSnapshot | null>(null);
   const pid = "HPC22";
 
-  const CURRENT_REGIME = defenseState?.regime || "BULL";
+  const CURRENT_REGIME = defenseState?.regime || "RISK-ON";
   const curRegime = REGIMES.find((r) => r.key === CURRENT_REGIME) || REGIMES[3];
 
   useEffect(() => {
@@ -387,6 +400,14 @@ export default function DefesaInteligente() {
     apiGet<ReentryState>(`/v1/protection/reentry?portfolio_id=${pid}`)
       .then(setReentry)
       .catch(() => {});
+
+    apiGet<{ available: boolean; analysis: JimAnalysis | null }>("/v1/protection/jim-analysis")
+      .then((r) => setJimAnalysis(r.available ? r.analysis : null))
+      .catch(() => {});
+
+    fetchXriFeed()
+      .then((f) => { if (f.ok && f.snapshot) setXriSnap(f.snapshot); })
+      .catch(() => {});
   }, [pid]);
 
   const t = ind.temperatura;
@@ -398,6 +419,15 @@ export default function DefesaInteligente() {
   const trend1d = computeTrend(t.valor, tempHistory.d1);
   const trend1w = computeTrend(t.valor, tempHistory.d7);
 
+  // Structured JIM reading (engine + XRI). Always runs — doesn't depend on the LLM.
+  const jimA = buildCockpitAnalysis(
+    ind,
+    defenseState,
+    { temp_1d_ago: tempHistory.d1, temp_7d_ago: tempHistory.d7 },
+    xriSnap
+  );
+  const ariBlock = jimA.blocks.find((b) => b.key === "ari");
+
   const tSt = t.valor >= 0.6 ? ["defesa", "r"] : t.valor >= 0.4 ? ["alerta", "a"] : ["normal", "g"];
   const ccSt = cc.valor >= 0.75 ? ["critico", "r"] : cc.valor >= 0.55 ? ["elevado", "a"] : ["normal", "g"];
   const macSt = mac ? (mac.valor >= 50 ? ["positivo", "g"] : mac.valor >= 30 ? ["neutro", "a"] : ["negativo", "r"]) : ["N/A", "b"];
@@ -407,7 +437,7 @@ export default function DefesaInteligente() {
   useEffect(() => {
     publishScreenData(
       "defesa-inteligente",
-      "Defesa Inteligente: regime + 4 sensores + temperatura por pilar + re-entry + Pilar D. Instrumentos exclusivos de defesa.",
+      "Intelligent Defense: regime + 4 sensors + pillar temperature + re-entry + Pillar D. Defense-exclusive instruments.",
       {
         regime: CURRENT_REGIME, temperatura: t.valor, trend1d, trend1w,
         cc: cc.valor, gFactor, ema: ema.valor, mac: mac?.valor ?? null,
@@ -416,31 +446,36 @@ export default function DefesaInteligente() {
         reentry: reentry ? { mode: reentry.mode, days: reentry.days, sizing_pct: reentry.sizing_pct } : null,
       },
       {
-        briefing:
-          `Regime **${curRegime.label}**. Temperatura **${f2(t.valor)}** (${tSt[0]}, ${trendArrow(trend1d).label} no dia, ${trendArrow(trend1w).label} na semana). ` +
-          `CC **${f2(cc.valor)}** (${ccSt[0]}). EMA 20 **${ema.valor}**. ` +
-          `${pilaresEmAlerta} pilares em alerta. Re-entry: ${reentry?.mode ?? "N/A"}.`,
+        // Briefing preference order: (1) overnight LLM analysis, if the key
+        // is configured; (2) rule-based structured reading, which always
+        // runs. JIM never falls back to the shallow summary when something
+        // better is available.
+        briefing: jimAnalysis?.analysis || cockpitAnalysisToBriefing(jimA),
         suggestions: [
-          "A defesa precisa ser ativada agora?",
-          "Qual pilar esta mais critico?",
-          "O re-entry pode comecar?",
+          "Does defense need to be activated now?",
+          "Which pillar is most critical?",
+          "Can re-entry begin?",
         ],
       }
     );
-  }, [t.valor, cc.valor, ema.valor, mac?.valor, trend1d, trend1w, defenseState, reentry, CURRENT_REGIME, curRegime.label, pilaresEmAlerta]);
+  }, [t.valor, cc.valor, ema.valor, mac?.valor, trend1d, trend1w, defenseState, reentry, CURRENT_REGIME, curRegime.label, pilaresEmAlerta, jimAnalysis]);
 
   return (
     <div className="screen">
-      <div className="crumb">Defesa &rsaquo; <b>Defesa Inteligente</b></div>
+      <div className="crumb">Defense &rsaquo; <b>ARI &middot; Intelligent Defense</b></div>
       <div className="flex between wrap" style={{ alignItems: "flex-start" }}>
         <div>
-          <div className="h1">Defesa Inteligente</div>
+          <div className="flex" style={{ alignItems: "baseline", gap: 10 }}>
+            <div className="h1" style={{ margin: 0 }}>Intelligent Defense</div>
+            <span className="tag b" style={{ fontFamily: "var(--mono)", fontWeight: 700 }} title="American Regime Index — domestic counterpart of the XRI (External Regime Index)">ARI</span>
+          </div>
           <div className="sub">
-            Preciso ativar defesa? Quanto? &middot; Instrumentos de protecao &middot; Analise JIM proativa
+            Does defense need to be activated? How much? &middot; Protection instruments &middot; Proactive JIM analysis
+            &middot; ARI (American Regime Index) &mdash; domestic pair of the XRI
           </div>
         </div>
         <div className={`tag ${conn === "ok" ? "b" : conn === "error" ? "r" : "b"}`}>
-          {conn === "loading" ? "conectando..." : conn === "ok" ? "● API ao vivo" : "✕ API offline"}
+          {conn === "loading" ? "connecting..." : conn === "ok" ? "● API live" : "✕ API offline"}
         </div>
       </div>
 
@@ -463,13 +498,13 @@ export default function DefesaInteligente() {
           <span style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--mono)", color: ccColor(cc.valor) }}>{f2(cc.valor)}</span>
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-          <span style={{ fontSize: 11, color: "var(--tx3)", fontFamily: "var(--mono)" }}>DEFESA</span>
+          <span style={{ fontSize: 11, color: "var(--tx3)", fontFamily: "var(--mono)" }}>DEFENSE</span>
           <span style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--mono)", color: "var(--gold)" }}>{defenseState ? `${defenseState.defesa_pct}%` : "—"}</span>
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-          <span style={{ fontSize: 11, color: "var(--tx3)", fontFamily: "var(--mono)" }}>PILARES</span>
+          <span style={{ fontSize: 11, color: "var(--tx3)", fontFamily: "var(--mono)" }}>PILLARS</span>
           <span style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--mono)", color: pilaresEmAlerta > 0 ? "#E74C3C" : "#2ECC71" }}>
-            {pilaresEmAlerta > 0 ? `${pilaresEmAlerta} alerta` : "ok"}
+            {pilaresEmAlerta > 0 ? `${pilaresEmAlerta} alert` : "ok"}
           </span>
         </div>
         <span style={{ fontSize: 12, color: "var(--tx3)", marginLeft: "auto", fontStyle: "italic" }}>
@@ -481,7 +516,7 @@ export default function DefesaInteligente() {
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 14, marginBottom: 14 }}>
         <div className="card" style={{ padding: 12, display: "flex", flexDirection: "column", alignItems: "center" }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: "var(--tx2)", marginBottom: 2, fontFamily: "var(--mono)", letterSpacing: ".06em" }}>
-            TERMOMETRO DE DEFESA
+            DEFENSE THERMOMETER
           </div>
           <TempGauge180 value={t.valor} trend1d={trend1d} trend1w={trend1w} />
         </div>
@@ -497,15 +532,91 @@ export default function DefesaInteligente() {
         />
       </div>
 
+      {/* Row 1.5: Deep JIM analysis (generated overnight by jim_deep_analysis.py — all the numbers + news + cross-reference with the XRI) */}
+      <div className="card" style={{ marginBottom: 14, borderColor: "rgba(201,160,44,.25)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <h3 style={{ margin: 0 }}><i className="ti ti-notebook" style={{ marginRight: 6 }} />JIM Analysis — Deep (Overnight)</h3>
+          {jimAnalysis && (
+            <span className="muted" style={{ fontSize: 10, fontFamily: "var(--mono)" }}>
+              {new Date(jimAnalysis.generated_at).toLocaleString("en-US")} · {jimAnalysis.model}
+              {jimAnalysis.sources.jd_news && " · w/ news"}{jimAnalysis.sources.xri && " · w/ XRI"}
+            </span>
+          )}
+        </div>
+        {jimAnalysis ? (
+          <div style={{ fontSize: 13, lineHeight: 1.7, color: "var(--tx)" }}>{jimAnalysis.analysis}</div>
+        ) : (
+          <div className="muted" style={{ fontSize: 12 }}>
+            Not generated yet. Requires <code>ANTHROPIC_API_KEY</code> in <code>.env</code> in the
+            overnight folder (<code>_SISTEMA_HC-US_IG/overnight/.env</code>) — runs automatically
+            alongside <code>overnight_run.py</code> once the key is configured.
+            Meanwhile, the structured reading below always runs, independent of the key.
+          </div>
+        )}
+      </div>
+
+      {/* Row 1.6: structured JIM reading — always available (rule-based, not LLM).
+          Crosses the engine with the XRI: this is where CC × absorption ratio meet. */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", marginBottom: 12,
+          borderRadius: 8, background: `${jimA.headlineColor}12`, border: `1px solid ${jimA.headlineColor}44`,
+        }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: "50%", flexShrink: 0, background: `${jimA.headlineColor}22`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <i className="ti ti-shield-exclamation" style={{ fontSize: 18, color: jimA.headlineColor }} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: jimA.headlineColor, lineHeight: 1.3 }}>{jimA.headline}</div>
+            <div style={{ fontSize: 12.5, color: "var(--tx2)", marginTop: 2 }}>
+              <b style={{ color: "var(--tx)" }}>What to do:</b> {jimA.acao}
+            </div>
+          </div>
+          {jimA.atencao.length > 0 && (
+            <div style={{ marginLeft: "auto", flexShrink: 0, textAlign: "right" }}>
+              <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--mono)", color: "#E67E22", lineHeight: 1 }}>{jimA.atencao.length}</div>
+              <div style={{ fontSize: 9, color: "var(--tx3)", fontFamily: "var(--mono)" }}>ALERTS</div>
+            </div>
+          )}
+        </div>
+
+        {/* Internal × external crossover */}
+        <div className="card" style={{ padding: "12px 16px", marginBottom: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--tx3)", fontFamily: "var(--mono)", letterSpacing: ".06em", marginBottom: 6 }}>
+            <i className="ti ti-arrows-shuffle" style={{ fontSize: 12, marginRight: 5 }} />
+            CROSSOVER — ENGINE (ARI) × EXTERNAL (XRI)
+          </div>
+          <div style={{ fontSize: 13, color: "var(--tx)", lineHeight: 1.65 }}>{jimA.convergencia}</div>
+        </div>
+
+        {jimA.atencao.length > 0 && (
+          <div className="card" style={{ padding: "10px 14px", marginBottom: 12, borderColor: "rgba(230,126,34,.3)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#E67E22", fontFamily: "var(--mono)", letterSpacing: ".06em", marginBottom: 6 }}>
+              <i className="ti ti-alert-triangle" style={{ fontSize: 12, marginRight: 5 }} />REQUIRES ATTENTION
+            </div>
+            {jimA.atencao.map((a, i) => (
+              <div key={i} style={{
+                fontSize: 12, color: "var(--tx2)", lineHeight: 1.55, marginBottom: 6,
+                paddingLeft: 10, borderLeft: "2px solid rgba(230,126,34,.35)",
+              }}>{a}</div>
+            ))}
+          </div>
+        )}
+
+        {ariBlock && <JimBlock block={ariBlock} />}
+      </div>
+
       {/* Row 2: 4 Sensor Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
-        <SensorCard title="Temperatura" icon="ti-temperature" value={f2(t.valor)} unit={`limiar ${f2(t.limiar)}`}
+        <SensorCard title="Temperature" icon="ti-temperature" value={f2(t.valor)} unit={`threshold ${f2(t.limiar)}`}
           color={tempColor(t.valor)} statusLabel={tSt[0]} statusTone={tSt[1]} trend={trend1d}>
           <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
             <div style={{ width: `${Math.min(100, t.valor * 100)}%`, height: "100%", background: tempColor(t.valor), borderRadius: 3 }} />
           </div>
           <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 4 }}>
-            Turbulencia 40% + Trend Break 35% + Jerk 25%
+            Turbulence 40% + Trend Break 35% + Jerk 25%
           </div>
         </SensorCard>
 
@@ -515,14 +626,14 @@ export default function DefesaInteligente() {
             <div style={{ width: `${Math.min(100, cc.valor * 100)}%`, height: "100%", background: ccColor(cc.valor), borderRadius: 3 }} />
           </div>
           <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 4 }}>
-            Bandas: {f2(cc.limiar_low)} &rarr; {f2(cc.limiar_high)}
+            Bands: {f2(cc.limiar_low)} &rarr; {f2(cc.limiar_high)}
           </div>
         </SensorCard>
 
-        <SensorCard title="EMA 20" icon="ti-chart-line" value={ema.valor === "acima" ? "ACIMA" : "ABAIXO"}
+        <SensorCard title="EMA 20" icon="ti-chart-line" value={ema.valor === "acima" ? "ABOVE" : "BELOW"}
           unit={ema.dist_pct != null ? `${ema.dist_pct >= 0 ? "+" : ""}${ema.dist_pct.toFixed(1)}%` : ""}
           color={ema.valor === "acima" ? "#2ECC71" : "#E74C3C"}
-          statusLabel={ema.valor === "acima" ? "ok" : "quebrada"} statusTone={ema.valor === "acima" ? "g" : "r"}>
+          statusLabel={ema.valor === "acima" ? "ok" : "broken"} statusTone={ema.valor === "acima" ? "g" : "r"}>
           <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden", position: "relative" }}>
             <div style={{ position: "absolute", left: "50%", top: 0, width: 2, height: "100%", background: "var(--tx3)" }} />
             <div style={{
@@ -532,7 +643,7 @@ export default function DefesaInteligente() {
             }} />
           </div>
           <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 4 }}>
-            Tendencia {ema.valor === "acima" ? "intacta — permite re-entry" : "quebrada — defesa mantida"}
+            Trend {ema.valor === "acima" ? "intact — allows re-entry" : "broken — defense maintained"}
           </div>
         </SensorCard>
 
@@ -552,20 +663,20 @@ export default function DefesaInteligente() {
               </div>
             </>
           )}
-          {!mac && <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 4 }}>Standalone, nao integrado ao gatilho.</div>}
+          {!mac && <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 4 }}>Standalone, not integrated into the trigger.</div>}
         </SensorCard>
       </div>
 
-      {/* Row 3: Temperatura por pilar */}
+      {/* Row 3: Temperature by pillar */}
       {defenseState && (
         <div className="card" style={{ padding: "14px 16px", marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <h3 style={{ margin: 0 }}>
               <i className="ti ti-flame" style={{ marginRight: 6 }} />
-              Temperatura por Pilar
+              Temperature by Pillar
             </h3>
             <span style={{ fontSize: 10, color: "var(--tx3)", fontFamily: "var(--mono)" }}>
-              Layer 1 &middot; Decomposicao turb/trend_break/jerk &middot; {pid}
+              Layer 1 &middot; Turb/trend_break/jerk breakdown &middot; {pid}
             </span>
           </div>
 
@@ -582,7 +693,7 @@ export default function DefesaInteligente() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 800, color: col, fontFamily: "var(--mono)" }}>
-                        Pilar {p.nome}
+                        Pillar {p.nome}
                       </span>
                       <span style={{
                         fontSize: 9, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
@@ -600,7 +711,7 @@ export default function DefesaInteligente() {
 
                   <div style={{ marginBottom: 6 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 2 }}>
-                      <span style={{ color: "var(--tx3)" }}>Pilar {p.nome} <span style={{ opacity: 0.6 }}>limiar {f2(p.limiar)}</span></span>
+                      <span style={{ color: "var(--tx3)" }}>Pillar {p.nome} <span style={{ opacity: 0.6 }}>threshold {f2(p.limiar)}</span></span>
                       <span style={{ color: col, fontWeight: 600, fontFamily: "var(--mono)" }}>{f2(p.temp)}</span>
                     </div>
                     <Bullet pct={pct01(p.temp)} />
@@ -630,7 +741,7 @@ export default function DefesaInteligente() {
         </div>
       )}
 
-      {/* Row 4: Re-entry Monitor + Pilar D */}
+      {/* Row 4: Re-entry Monitor + Pillar D */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
         {/* Re-entry Monitor */}
         <div className="card" style={{ padding: "14px 16px" }}>
@@ -655,7 +766,7 @@ export default function DefesaInteligente() {
                   </div>
                 </div>
                 <div style={{ padding: "8px 10px", borderRadius: 6, background: "rgba(255,255,255,0.03)" }}>
-                  <div style={{ fontSize: 10, color: "var(--tx3)", marginBottom: 2 }}>Dias em defesa</div>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", marginBottom: 2 }}>Days in defense</div>
                   <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "var(--mono)", color: reentry.days > 5 ? "#F39C12" : "var(--tx)" }}>
                     {reentry.days}
                   </div>
@@ -666,7 +777,7 @@ export default function DefesaInteligente() {
                 <div style={{ padding: "8px 10px", borderRadius: 6, background: "rgba(255,255,255,0.03)" }}>
                   <div style={{ fontSize: 10, color: "var(--tx3)", marginBottom: 2 }}>EMA cross</div>
                   <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--mono)", color: reentry.ema_cross ? "#2ECC71" : "#E74C3C" }}>
-                    {reentry.ema_cross ? "SIM" : "NAO"}
+                    {reentry.ema_cross ? "YES" : "NO"}
                   </div>
                 </div>
                 <div style={{ padding: "8px 10px", borderRadius: 6, background: "rgba(255,255,255,0.03)" }}>
@@ -679,9 +790,9 @@ export default function DefesaInteligente() {
 
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 2 }}>
-                  <span style={{ color: "var(--tx3)" }}>Velocidade</span>
+                  <span style={{ color: "var(--tx3)" }}>Velocity</span>
                   <span style={{ color: reentry.velocity >= 0 ? "#2ECC71" : "#E74C3C", fontWeight: 600, fontFamily: "var(--mono)" }}>
-                    {reentry.velocity >= 0 ? "+" : ""}{reentry.velocity.toFixed(2).replace(".", ",")}
+                    {reentry.velocity >= 0 ? "+" : ""}{reentry.velocity.toFixed(2)}
                   </span>
                 </div>
                 <Bullet pct={pct01(Math.abs(reentry.velocity) / 3)} />
@@ -689,17 +800,17 @@ export default function DefesaInteligente() {
             </div>
           ) : (
             <div style={{ padding: "20px 0", textAlign: "center", color: "var(--tx3)", fontSize: 12 }}>
-              Re-entry monitor indisponivel — API nao respondeu
+              Re-entry monitor unavailable — API did not respond
             </div>
           )}
         </div>
 
-        {/* Pilar D */}
+        {/* Pillar D */}
         <div className="card" style={{ padding: "14px 16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <h3 style={{ margin: 0 }}>
               <i className="ti ti-shield-check" style={{ marginRight: 6 }} />
-              Pilar D · Rotacao Defensiva
+              Pillar D · Defensive Rotation
             </h3>
             {pilarD && (
               <span style={{
@@ -714,7 +825,7 @@ export default function DefesaInteligente() {
           {pilarD ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ fontSize: 10, color: "var(--tx2)", textTransform: "uppercase", letterSpacing: ".8px" }}>
-                Universo &middot; {pilarD.universo.length} ETFs &middot; Freq: {pilarD.rotacao_freq}
+                Universe &middot; {pilarD.universo.length} ETFs &middot; Freq: {pilarD.rotacao_freq}
               </div>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
@@ -735,7 +846,7 @@ export default function DefesaInteligente() {
               </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderTop: "1px solid var(--line)" }}>
-                <span style={{ fontSize: 10, color: "var(--tx3)" }}>Top 4 atual</span>
+                <span style={{ fontSize: 10, color: "var(--tx3)" }}>Current Top 4</span>
                 <div style={{ display: "flex", gap: 6 }}>
                   {pilarD.top4_atual.map((tk) => (
                     <span key={tk} style={{
@@ -755,14 +866,14 @@ export default function DefesaInteligente() {
                   color: (pilarD.contribuicao_ytd_pct ?? 0) >= 0 ? "#2ECC71" : "#E74C3C",
                 }}>
                   {pilarD.contribuicao_ytd_pct != null
-                    ? `${pilarD.contribuicao_ytd_pct >= 0 ? "+" : ""}${pilarD.contribuicao_ytd_pct.toFixed(2).replace(".", ",")}%`
+                    ? `${pilarD.contribuicao_ytd_pct >= 0 ? "+" : ""}${pilarD.contribuicao_ytd_pct.toFixed(2)}%`
                     : "—"}
                 </span>
               </div>
             </div>
           ) : (
             <div style={{ padding: "20px 0", textAlign: "center", color: "var(--tx3)", fontSize: 12 }}>
-              Pilar D indisponivel — API nao respondeu
+              Pillar D unavailable — API did not respond
             </div>
           )}
         </div>
@@ -770,14 +881,14 @@ export default function DefesaInteligente() {
 
       {/* Regime posture table */}
       <div className="card">
-        <h3><i className="ti ti-shield-half" style={{ marginRight: 6 }} />Postura por regime</h3>
+        <h3><i className="ti ti-shield-half" style={{ marginRight: 6 }} />Regime Posture</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
           {REGIMES.map((r) => {
             const active = r.key === CURRENT_REGIME;
-            const posture = r.key === "BULL" ? { eq: "Plena", def: "Prontidao" }
-              : r.key === "NEUTRO" ? { eq: "Moderada", def: "Prontidao" }
-              : r.key === "CAUTELA" ? { eq: "Reduzida", def: "Ativando" }
-              : { eq: "Baixa", def: "Ativa" };
+            const posture = r.key === "RISK-ON" ? { eq: "Full", def: "Standby" }
+              : r.key === "RE-ENTRY" ? { eq: "Moderate", def: "Standby" }
+              : r.key === "WARNING" ? { eq: "Reduced", def: "Activating" }
+              : { eq: "Low", def: "Active" };
             return (
               <div key={r.key} style={{
                 padding: "10px 14px", borderRadius: 8, textAlign: "center",
@@ -786,17 +897,17 @@ export default function DefesaInteligente() {
               }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: r.color, margin: "0 auto 6px", opacity: active ? 1 : 0.3 }} />
                 <div style={{ fontSize: 12, fontWeight: 700, color: active ? r.color : "var(--tx3)", fontFamily: "var(--mono)" }}>{r.label}</div>
-                <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 4 }}>Acoes: {posture.eq}</div>
-                <div style={{ fontSize: 10, color: "var(--tx3)" }}>Defesa: {posture.def}</div>
+                <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 4 }}>Equities: {posture.eq}</div>
+                <div style={{ fontSize: 10, color: "var(--tx3)" }}>Defense: {posture.def}</div>
               </div>
             );
           })}
         </div>
-        <div className="muted" style={{ marginTop: 8, fontSize: 11 }}>Postura que cada regime dispara nos fundos — nao os sinais internos.</div>
+        <div className="muted" style={{ marginTop: 8, fontSize: 11 }}>Posture triggered by each regime across the funds — not the internal signals.</div>
       </div>
 
       <div className="legend mt">
-        <span className="muted">Harpian Defense Intelligence &middot; Instrumentos de defesa exclusivos &middot; Cockpit Gestor</span>
+        <span className="muted">Harpian Defense Intelligence &middot; Defense-exclusive instruments &middot; Manager Cockpit</span>
       </div>
     </div>
   );

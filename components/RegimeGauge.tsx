@@ -21,10 +21,10 @@ export default function RegimeGauge({ state, sub }: { state: string; sub?: strin
       <text x={50} y={222} fill="#E74C3C" fontSize={11} fontWeight={700} textAnchor="middle">RISK-OFF</text>
       <text x={128} y={58} fill="#F39C12" fontSize={9.5} fontWeight={700} textAnchor="middle">WARNING</text>
       <text x={300} y={66} fill="#2ECC71" fontSize={11} fontWeight={700} textAnchor="middle">RISK-ON</text>
-      <text x={350} y={222} fill="#4A90D9" fontSize={9.5} fontWeight={700} textAnchor="middle">CÉU ABERTO</text>
+      <text x={350} y={222} fill="#4A90D9" fontSize={9.5} fontWeight={700} textAnchor="middle">CLEAR SKIES</text>
       <line x1={200} y1={200} x2={nx.toFixed(1)} y2={ny.toFixed(1)} stroke="#fff" strokeWidth={4} strokeLinecap="round" />
       <circle cx={200} cy={200} r={9} fill="#fff" />
-      <circle cx={200} cy={200} r={4} fill="#0A1A30" />
+      <circle cx={200} cy={200} r={4} fill="var(--bg)" />
       <text x={200} y={150} fill={col} fontSize={27} fontWeight={800} textAnchor="middle">{state}</text>
       {sub && <text x={200} y={174} fill="#7d96b3" fontSize={11} textAnchor="middle">{sub}</text>}
     </svg>

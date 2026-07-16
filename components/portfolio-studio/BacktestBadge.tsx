@@ -17,7 +17,7 @@ export default function BacktestBadge({ draft, portfolioId }: Props) {
 
   async function run() {
     if (!motorPrimario) {
-      setErr("Nenhum motor de ataque no portfolio — impossível rodar backtest.");
+      setErr("No attack engine in the portfolio — cannot run backtest.");
       setState("error");
       return;
     }
@@ -47,10 +47,10 @@ export default function BacktestBadge({ draft, portfolioId }: Props) {
         {state === "running" ? (
           <>
             <i className="ti ti-loader-2 spin" style={{ marginRight: 6 }} />
-            Rodando…
+            Running…
           </>
         ) : (
-          <><i className="ti ti-player-play" style={{ marginRight: 5 }} />Rodar backtest</>
+          <><i className="ti ti-player-play" style={{ marginRight: 5 }} />Run backtest</>
         )}
       </button>
 
@@ -84,13 +84,13 @@ export default function BacktestBadge({ draft, portfolioId }: Props) {
         </div>
       )}
 
-      {state === "error" && <div style={{ color: "var(--red-text)", fontSize: 12 }}>Erro: {err}</div>}
+      {state === "error" && <div style={{ color: "var(--red-text)", fontSize: 12 }}>Error: {err}</div>}
 
       {state === "idle" && (
         <div style={{ color: "var(--tx3)", fontSize: 11 }}>
           {motorPrimario
-            ? `Motor principal: ${motorPrimario.nome}`
-            : "Adicione um motor de ataque para habilitar o backtest."}
+            ? `Primary engine: ${motorPrimario.nome}`
+            : "Add an attack engine to enable the backtest."}
         </div>
       )}
     </div>

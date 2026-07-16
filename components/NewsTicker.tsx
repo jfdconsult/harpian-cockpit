@@ -24,15 +24,15 @@ const SENTIMENT_COLORS: Record<string, string> = {
 };
 
 const FED_CALENDAR: TickerEntry[] = [
-  { label: "FOMC", text: "Próx. reunião 29-30 Jul", color: "var(--blue)", screen: "regime" },
-  { label: "CPI", text: "10 Jul 08:30 ET", color: "var(--orange)", screen: "regime" },
-  { label: "PAYROLL", text: "01 Ago 08:30 ET", color: "var(--orange)", screen: "regime" },
+  { label: "FOMC", text: "Next meeting Jul 29-30", color: "var(--blue)", screen: "regime" },
+  { label: "CPI", text: "Jul 10 08:30 ET", color: "var(--orange)", screen: "regime" },
+  { label: "PAYROLL", text: "Aug 01 08:30 ET", color: "var(--orange)", screen: "regime" },
 ];
 
 function buildEntries(news: NewsHeadline[], social: SocialPost[]): TickerEntry[] {
   const entries: TickerEntry[] = [];
 
-  entries.push({ label: "NOTÍCIAS", text: "", color: "var(--gold)" });
+  entries.push({ label: "NEWS", text: "", color: "var(--gold)" });
 
   const topNews = news.slice(0, 12);
   for (const n of topNews) {
@@ -62,7 +62,7 @@ function buildEntries(news: NewsHeadline[], social: SocialPost[]): TickerEntry[]
     });
   }
 
-  entries.push({ label: "CALENDÁRIO FED", text: "", color: "var(--gold)" });
+  entries.push({ label: "FED CALENDAR", text: "", color: "var(--gold)" });
   entries.push(...FED_CALENDAR);
 
   return entries;
@@ -82,7 +82,7 @@ function EntryView({ e, go }: { e: TickerEntry; go: (id: ScreenId) => void }) {
 
   if (e.url) {
     return (
-      <a className="tkr-item tkr-link" href={e.url} target="_blank" rel="noopener noreferrer" title="Abrir">
+      <a className="tkr-item tkr-link" href={e.url} target="_blank" rel="noopener noreferrer" title="Open">
         {content}
       </a>
     );

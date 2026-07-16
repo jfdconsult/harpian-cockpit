@@ -30,17 +30,17 @@ export default function Noticias({ go }: { go: (id: ScreenId, param?: string) =>
     const byImpact: Record<string, number> = {};
     items.forEach((h) => { byImpact[h.impact] = (byImpact[h.impact] || 0) + 1; });
     const impactSummary = Object.entries(byImpact).map(([k, v]) => `${k}:${v}`).join(", ");
-    publishScreenData("noticias", `${items.length} manchetes | ${impactSummary}`, items, {
-      briefing: `${items.length} notícias filtradas por impacto. Distribuição: ${impactSummary}.`,
+    publishScreenData("noticias", `${items.length} headlines | ${impactSummary}`, items, {
+      briefing: `${items.length} news items filtered by impact. Distribution: ${impactSummary}.`,
     });
   }, [items]);
 
   return (
     <div className="screen">
-      <div className="crumb">Mercado › <b>Notícias</b></div>
+      <div className="crumb">Market › <b>News</b></div>
       <div className="flex between wrap">
-        <div><div className="h1">Notícias que importam</div><div className="sub" style={{ margin: 0 }}>Filtradas pelo impacto no fundo · fonte RSS ao vivo (CNBC · MarketWatch · Yahoo).</div></div>
-        <button className="btn ghost" onClick={() => go("news-broadcast")}><i className="ti ti-broadcast" />News Broadcast completo</button>
+        <div><div className="h1">News that matters</div><div className="sub" style={{ margin: 0 }}>Filtered by impact on the fund · live RSS source (CNBC · MarketWatch · Yahoo).</div></div>
+        <button className="btn ghost" onClick={() => go("news-broadcast")}><i className="ti ti-broadcast" />Full News Broadcast</button>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 14 }}>
@@ -49,7 +49,7 @@ export default function Noticias({ go }: { go: (id: ScreenId, param?: string) =>
         ))}
         {conn === "error" && (
           <div style={{ textAlign: "center", padding: 40, color: "var(--tx3)", fontSize: 12 }}>
-            Não foi possível carregar as notícias. Verifique se o backend (porta 8080) está no ar.
+            Could not load the news. Check whether the backend (port 8080) is up.
           </div>
         )}
         {conn === "ok" && items.map((h) => {

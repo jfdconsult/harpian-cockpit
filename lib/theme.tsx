@@ -35,3 +35,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 export function useTheme() {
   return useContext(Ctx);
 }
+
+export function chartColors(): { bg: string; text: string; grid: string; gridH: string; border: string } {
+  const s = getComputedStyle(document.documentElement);
+  const get = (v: string) => s.getPropertyValue(v).trim() || undefined;
+  return {
+    bg: get("--panel") || "#0A1A30",
+    text: get("--tx3") || "#7d96b3",
+    grid: get("--line") || "#16304f",
+    gridH: get("--line") || "#13283f",
+    border: get("--line") || "#1d3a5f",
+  };
+}

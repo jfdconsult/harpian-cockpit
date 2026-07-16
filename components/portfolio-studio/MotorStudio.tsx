@@ -44,7 +44,7 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
             alignItems: "center",
             gap: 10,
             padding: "8px 12px",
-            background: "#3a2d10",
+            background: "var(--gold-bg)",
             border: "1px solid var(--gold)",
             borderRadius: 6,
             marginBottom: 14,
@@ -52,9 +52,9 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
           }}
         >
           <i className="ti ti-lock" style={{ color: "var(--gold)" }} />
-          <span>🔒 HOMOLOGADO · imutável — este motor está testado e em produção. Editar estratégias exige um fork.</span>
+          <span>🔒 APPROVED · immutable — this engine is tested and in production. Editing strategies requires a fork.</span>
           <button className="btn" style={{ marginLeft: "auto", padding: "4px 12px", fontSize: 11 }} onClick={onFork}>
-            <i className="ti ti-git-fork" style={{ marginRight: 5 }} />Fork p/ candidato
+            <i className="ti ti-git-fork" style={{ marginRight: 5 }} />Fork to candidate
           </button>
         </div>
       )}
@@ -63,10 +63,10 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
         <div>
           {motor.estrutura.pilares.length > 0 && (
             <div style={{ fontSize: 12, color: "var(--tx3)", marginBottom: 10 }}>
-              {motor.estrutura.pilares.length} pilares · pesos{" "}
+              {motor.estrutura.pilares.length} pillars · weights{" "}
               {motor.estrutura.pilares.some((p) => p.peso_modo === "emergente")
-                ? "emergentes (ranking global do motor)"
-                : "fixos"}
+                ? "emergent (engine's global ranking)"
+                : "fixed"}
             </div>
           )}
 
@@ -74,25 +74,25 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
           {motor.estrutura.pilares.length === 0 && !locked && (
             <div className="card" style={{ padding: 20, borderColor: "var(--gold)", borderWidth: 1.5, marginBottom: 14 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: "var(--gold)", marginBottom: 4 }}>
-                Motor sem pilares
+                Engine with no pillars
               </div>
               <div style={{ fontSize: 12, color: "var(--tx3)", marginBottom: 14, lineHeight: 1.5 }}>
-                Este motor não tem pilares nem estratégias. Crie o primeiro pilar e uma estratégia
-                para começar a adicionar ativos.
+                This engine has no pillars or strategies. Create the first pillar and a strategy
+                to start adding assets.
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Nome do pilar *</div>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Pillar name *</div>
                   <input
                     className="input"
-                    placeholder="Ex: Pilar A · Ataque"
+                    placeholder="E.g.: Pillar A · Attack"
                     value={novoPilarNome}
                     onChange={(e) => setNovoPilarNome(e.target.value)}
                     style={{ fontSize: 12, width: "100%" }}
                   />
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Primeira estratégia *</div>
+                  <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>First strategy *</div>
                   <input
                     className="input"
                     placeholder="Ex: TECH_LEADERS"
@@ -114,12 +114,12 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
                   style={{ fontSize: 12 }}
                 >
                   <i className="ti ti-plus" style={{ marginRight: 5 }} />
-                  Criar pilar + estratégia
+                  Create pillar + strategy
                 </button>
               </div>
               <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 10, lineHeight: 1.5 }}>
-                Sugestões de pilares: <b>Pilar A · Ataque</b> (ações agressivas), <b>Pilar B · Líderes</b> (blue chips),
-                <b> Pilar C · Defesa</b> (proteção). A estratégia é a cesta de ativos dentro do pilar.
+                Pillar suggestions: <b>Pillar A · Attack</b> (aggressive stocks), <b>Pillar B · Leaders</b> (blue chips),
+                <b> Pillar C · Defense</b> (protection). The strategy is the basket of assets within the pillar.
               </div>
             </div>
           )}
@@ -133,20 +133,20 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
                     className="tag"
                     style={{
                       marginLeft: 8,
-                      background: pilar.peso_modo === "emergente" ? "#3a2d10" : "#13314d",
+                      background: pilar.peso_modo === "emergente" ? "var(--gold-bg)" : "var(--blue-bg)",
                       color: pilar.peso_modo === "emergente" ? "var(--gold)" : "var(--blue)",
                     }}
                   >
-                    {pilar.peso_modo === "emergente" ? "peso emergente" : `${pilar.peso_pct}%`}
+                    {pilar.peso_modo === "emergente" ? "emergent weight" : `${pilar.peso_pct}%`}
                   </span>
                   <button
                     className="btn ghost"
                     disabled={locked}
-                    title={locked ? "🔒 motor homologado — crie um fork para adicionar estratégias" : undefined}
+                    title={locked ? "🔒 approved engine — create a fork to add strategies" : undefined}
                     style={{ marginLeft: "auto", fontSize: 10, padding: "3px 8px", opacity: locked ? 0.4 : 1, cursor: locked ? "not-allowed" : "pointer" }}
                     onClick={() => !locked && setNovaEsteiraPilar(pilar.nome)}
                   >
-                    + estratégia
+                    + strategy
                   </button>
                 </div>
 
@@ -172,15 +172,15 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
                           className="btn ghost"
                           disabled={locked}
                           style={{ marginLeft: "auto", fontSize: 11, padding: "5px 8px", color: "var(--red-text)", opacity: locked ? 0.35 : 1, cursor: locked ? "not-allowed" : "pointer" }}
-                          title={locked ? "🔒 motor homologado — crie um fork para remover estratégias" : "remover estratégia"}
+                          title={locked ? "🔒 approved engine — create a fork to remove strategies" : "remove strategy"}
                           onClick={async (e) => {
                             e.stopPropagation();
                             if (locked) return;
                             const ok = await dialog.confirm({
-                              title: `Remover a estratégia ${est.nome}?`,
-                              body: `${est.ativos.length} ativo(s) saem junto. A remoção grava direto no backend.`,
+                              title: `Remove the strategy ${est.nome}?`,
+                              body: `${est.ativos.length} asset(s) will be removed along with it. This removal writes directly to the backend.`,
                               danger: true,
-                              confirmLabel: "Remover estratégia",
+                              confirmLabel: "Remove strategy",
                             });
                             if (ok) onRemoveEsteira(est.nome);
                           }}
@@ -189,7 +189,7 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
                         </button>
                       </div>
                       <div style={{ color: "var(--tx3)", marginTop: 2 }}>
-                        {est.peso_pct}% · {est.ativos.length} ativos
+                        {est.peso_pct}% · {est.ativos.length} assets
                       </div>
                       <div style={{ color: "var(--tx2)", marginTop: 2, fontSize: 10 }}>
                         {est.ativos.map((a) => a.ticker).join(", ")}
@@ -202,7 +202,7 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
                   <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                     <input
                       className="input"
-                      placeholder="nome da estratégia"
+                      placeholder="strategy name"
                       value={novaEsteiraNome}
                       onChange={(e) => setNovaEsteiraNome(e.target.value.toUpperCase())}
                       style={{ fontSize: 11, padding: "4px 8px", flex: 1 }}
@@ -217,7 +217,7 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
                         setNovaEsteiraPilar(null);
                       }}
                     >
-                      Adicionar
+                      Add
                     </button>
                     <button
                       className="btn ghost"
@@ -227,7 +227,7 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
                         setNovaEsteiraNome("");
                       }}
                     >
-                      Cancelar
+                      Cancel
                     </button>
                   </div>
                 )}
@@ -235,7 +235,7 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
             ))}
           </div>
 
-          {/* Novo pilar (quando já existem pilares) */}
+          {/* New pillar (when pillars already exist) */}
           {!locked && motor.estrutura.pilares.length > 0 && (
             <div style={{ marginTop: 10 }}>
               {!showNovoPilar ? (
@@ -244,15 +244,15 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
                   style={{ fontSize: 11, padding: "5px 12px" }}
                   onClick={() => setShowNovoPilar(true)}
                 >
-                  <i className="ti ti-plus" style={{ marginRight: 4 }} />Novo pilar
+                  <i className="ti ti-plus" style={{ marginRight: 4 }} />New pillar
                 </button>
               ) : (
                 <div className="card" style={{ padding: 10, display: "flex", gap: 8, alignItems: "flex-end" }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Nome do pilar</div>
+                    <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Pillar name</div>
                     <input
                       className="input"
-                      placeholder="Ex: Pilar E · Novo"
+                      placeholder="E.g.: Pillar E · New"
                       value={novoPilarNome}
                       onChange={(e) => setNovoPilarNome(e.target.value)}
                       style={{ fontSize: 11, width: "100%" }}
@@ -260,10 +260,10 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>Primeira estratégia</div>
+                    <div style={{ fontSize: 10, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 4 }}>First strategy</div>
                     <input
                       className="input"
-                      placeholder="Ex: ETF_CORE"
+                      placeholder="E.g.: ETF_CORE"
                       value={novoPilarEsteira}
                       onChange={(e) => setNovoPilarEsteira(e.target.value.toUpperCase())}
                       style={{ fontSize: 11, width: "100%" }}
@@ -280,14 +280,14 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
                       setShowNovoPilar(false);
                     }}
                   >
-                    Criar
+                    Create
                   </button>
                   <button
                     className="btn ghost"
                     style={{ fontSize: 11, padding: "5px 10px" }}
                     onClick={() => { setShowNovoPilar(false); setNovoPilarNome(""); setNovoPilarEsteira(""); }}
                   >
-                    Cancelar
+                    Cancel
                   </button>
                 </div>
               )}
@@ -297,7 +297,7 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
           {motor.estrutura.regras_internas && Object.keys(motor.estrutura.regras_internas).length > 0 && (
             <div className="card" style={{ padding: 10, marginTop: 12 }}>
               <div style={{ fontSize: 11, color: "var(--tx3)", textTransform: "uppercase", marginBottom: 6 }}>
-                Regras internas do motor
+                Engine internal rules
               </div>
               <div style={{ display: "grid", gap: 4, fontSize: 11 }}>
                 {Object.entries(motor.estrutura.regras_internas).map(([k, v]) => (
@@ -317,7 +317,7 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
       {isAttackEtfs(motor.estrutura) && (
         <div className="card" style={{ padding: 14 }}>
           <div style={{ fontSize: 13, marginBottom: 10 }}>
-            Motor de rotação de ETFs — gerido pelo próprio catálogo ETF Rotation. Não editável aqui.
+            ETF rotation engine — managed by the ETF Rotation catalog itself. Not editable here.
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 12 }}>
             <div>
@@ -328,7 +328,7 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
             </div>
             {motor.estrutura.signal && (
               <div style={{ gridColumn: "span 2" }}>
-                Sinal: <b>{motor.estrutura.signal}</b>
+                Signal: <b>{motor.estrutura.signal}</b>
               </div>
             )}
             {motor.estrutura.config && (
@@ -340,7 +340,7 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
               <div style={{ gridColumn: "span 2" }}>
                 Mask anti-phantom:{" "}
                 <b style={{ color: motor.estrutura.mask_anti_phantom ? "var(--green)" : "var(--tx3)" }}>
-                  {motor.estrutura.mask_anti_phantom ? "ativo" : "inativo"}
+                  {motor.estrutura.mask_anti_phantom ? "active" : "inactive"}
                 </b>
               </div>
             )}
@@ -351,9 +351,9 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
       {isDetector(motor.estrutura) && (
         <div className="card" style={{ padding: 14 }}>
           <div style={{ fontSize: 13, marginBottom: 10 }}>
-            Motor detector — emite sinal de regime. Não tem ativos, só fórmulas ponderadas.
+            Detector engine — emits regime signal. Has no assets, only weighted formulas.
             {motor.estrutura.emite_sinal && (
-              <span style={{ color: "var(--tx3)" }}> Emite: {motor.estrutura.emite_sinal}</span>
+              <span style={{ color: "var(--tx3)" }}> Emits: {motor.estrutura.emite_sinal}</span>
             )}
           </div>
           <div style={{ display: "grid", gap: 8 }}>
@@ -388,7 +388,7 @@ export default function MotorStudio({ motor, onOpenEsteira, onAddEsteira, onRemo
             ))}
           </div>
           <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 10 }}>
-            Edição de fórmulas via Fórmula Studio (sprint 2).
+            Formula editing via Formula Studio (sprint 2).
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 // ============================================================
-// Notícias + Social REAIS — cliente dos endpoints /v1/news e /v1/social
-// (backend agrega RSS financeiro grátis + StockTwits). Substitui os
-// arrays mock NB_HEADLINES / SR_POSTS do lib/data.ts.
+// Real News + Social — client for the /v1/news and /v1/social endpoints
+// (backend aggregates free financial RSS + StockTwits). Replaces the
+// mock NB_HEADLINES / SR_POSTS arrays from lib/data.ts.
 // ============================================================
 import { apiGet } from "./api";
 
@@ -55,7 +55,7 @@ export const fetchNewsTicker = (sym: string, days = 0) =>
 export const fetchSocialTrending = () => apiGet<SocialResp>("/v1/social/trending");
 export const fetchSocialSymbol = (sym: string) => apiGet<SocialResp>(`/v1/social/symbol/${sym}`);
 
-// cor por rótulo de impacto (mantém a paleta do mock)
+// color by impact label (keeps the mock's palette)
 export const IMPACT_COLOR: Record<string, string> = {
   "Market Moving": "#E74C3C",
   High: "#F39C12",

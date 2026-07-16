@@ -37,8 +37,8 @@ interface EngineRoomData {
   pilar_d: PilarD;
 }
 
-function f2(n: number | null | undefined) { return n != null ? Number(n).toFixed(2).replace(".", ",") : "—"; }
-function f3(n: number | null | undefined) { return n != null ? Number(n).toFixed(3).replace(".", ",") : "—"; }
+function f2(n: number | null | undefined) { return n != null ? Number(n).toFixed(2) : "—"; }
+function f3(n: number | null | undefined) { return n != null ? Number(n).toFixed(3) : "—"; }
 function sign(n: number) { return n >= 0 ? "+" : ""; }
 
 export default function EngineRoom() {
@@ -57,10 +57,10 @@ export default function EngineRoom() {
     const emDefesa = (d.pilares || []).filter((p) => p.status === "GATILHO").length;
     publishScreenData(
       "engine-room",
-      `Regime ${d.regime?.estado ?? "?"}, ${emDefesa} pilar${emDefesa !== 1 ? "es" : ""} em defesa, exposição ataque ${d.regime?.exposicao_ataque_pct ?? "?"}%, orientação: ${(d.orientacao || []).map((o) => `${o.perfil} ${o.tag}`).join(", ")}`,
+      `Regime ${d.regime?.estado ?? "?"}, ${emDefesa} pillar${emDefesa !== 1 ? "s" : ""} in defense, attack exposure ${d.regime?.exposicao_ataque_pct ?? "?"}%, orientation: ${(d.orientacao || []).map((o) => `${o.perfil} ${o.tag}`).join(", ")}`,
       d,
       {
-        briefing: `Motor em regime ${d.regime?.estado ?? "?"} com CRS ${d.regime?.crs?.toFixed(3) ?? "?"}. ${emDefesa} pilar${emDefesa !== 1 ? "es" : ""} em defesa, exposição de ataque ${d.regime?.exposicao_ataque_pct ?? "?"}%.`,
+        briefing: `Engine in regime ${d.regime?.estado ?? "?"} with CRS ${d.regime?.crs?.toFixed(3) ?? "?"}. ${emDefesa} pillar${emDefesa !== 1 ? "s" : ""} in defense, attack exposure ${d.regime?.exposicao_ataque_pct ?? "?"}%.`,
       }
     );
   }, [d]);
@@ -69,33 +69,33 @@ export default function EngineRoom() {
     <div className="screen">
       <div className="metabar">
         <div>
-          {d && <>Dados: <b style={{ color: "var(--tx2)" }}>{d.data_source}</b> · as-of {d.as_of} · gerado {d.gerado} <span className="pill-mode">{d.mode}</span></>}
+          {d && <>Data: <b style={{ color: "var(--tx2)" }}>{d.data_source}</b> · as-of {d.as_of} · generated {d.gerado} <span className="pill-mode">{d.mode}</span></>}
         </div>
         <div className={`tag ${status === "ok" ? "g" : status === "error" ? "r" : "b"}`}>
-          {status === "connecting" ? "conectando…" : status === "ok" ? "● ao vivo" : `✕ offline (${err})`}
+          {status === "connecting" ? "connecting…" : status === "ok" ? "● live" : `✕ offline (${err})`}
         </div>
       </div>
 
       {!d && status === "error" && (
-        <div className="ph"><b>API não respondeu</b><br /><code>uvicorn app.main:app --port 8080</code></div>
+        <div className="ph"><b>API did not respond</b><br /><code>uvicorn app.main:app --port 8080</code></div>
       )}
 
       {d && (
         <>
           <div className="g12">
             <div className="card s4 gz">
-              <h2>Regime de Mercado · 4 estados</h2>
-              <RegimeGauge state={d.regime.estado} sub={`exposição de ataque: ${d.regime.exposicao_ataque_pct}%`} />
+              <h2>Market Regime · 4 states</h2>
+              <RegimeGauge state={d.regime.estado} sub={`attack exposure: ${d.regime.exposicao_ataque_pct}%`} />
               <div className="gsub">CRS <b style={{ color: "#fff" }}>{f3(d.regime.crs)}</b> · WATCH {f2(d.regime.watch)} · DEFESA {f3(d.regime.defesa)}</div>
-              <div className="glegend"><span style={{ color: "var(--red)" }}>◀ defesa</span><span style={{ color: "var(--green)" }}>ataque ▶</span></div>
+              <div className="glegend"><span style={{ color: "var(--red)" }}>◀ defense</span><span style={{ color: "var(--green)" }}>attack ▶</span></div>
             </div>
 
             <div className="card s4">
-              <h2>Temperatura por Pilar · distância ao gatilho</h2>
+              <h2>Temperature by Pillar · distance to trigger</h2>
               {(d.pilares || []).map((p) => {
                 const np = (1 - p.temp) * 100;
                 const dc = p.status === "GATILHO" ? "var(--orange)" : "var(--green)";
-                const dt = p.status === "GATILHO" ? `GATILHO +${f3(Math.abs(p.folga))}` : `folga ${f3(p.folga)}`;
+                const dt = p.status === "GATILHO" ? `TRIGGER +${f3(Math.abs(p.folga))}` : `slack ${f3(p.folga)}`;
                 return (
                   <div className="prow" key={p.nome}>
                     <div className="phead">
@@ -110,16 +110,16 @@ export default function EngineRoom() {
                   </div>
                 );
               })}
-              <div className="legend">agulha = temperatura · esquerda = quente/defesa · direita = frio/seguro</div>
+              <div className="legend">needle = temperature · left = hot/defense · right = cold/safe</div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--tx2)", marginTop: 4 }}>
-                <span>máx <b style={{ color: "#fff" }}>{f3(d.pilares_resumo.max)}</b></span>
-                <span>média <b style={{ color: "#fff" }}>{f3(d.pilares_resumo.media)}</b></span>
-                <span>em defesa <b style={{ color: "#fff" }}>{d.pilares_resumo.em_defesa}</b></span>
+                <span>max <b style={{ color: "#fff" }}>{f3(d.pilares_resumo.max)}</b></span>
+                <span>average <b style={{ color: "#fff" }}>{f3(d.pilares_resumo.media)}</b></span>
+                <span>in defense <b style={{ color: "#fff" }}>{d.pilares_resumo.em_defesa}</b></span>
               </div>
             </div>
 
             <div className="card s4">
-              <h2>Indicadores Sistêmicos · distância ao gatilho</h2>
+              <h2>Systemic Indicators · distance to trigger</h2>
               {(d.indicadores || []).map((ind) => (
                 <div className="irow" key={ind.nome}>
                   <div className="ilab">{ind.nome}</div>
@@ -160,7 +160,7 @@ export default function EngineRoom() {
 
           <div className="g12">
             <div className="card s7">
-              <h2>Distribuição de Carga · A · B por perfil</h2>
+              <h2>Load Distribution · A · B by profile</h2>
               {(d.carga?.perfis || []).map((p) => (
                 <div className="lrow" key={p.nome}>
                   <div className="lname"><span className="sw" style={{ background: p.cor }} />{p.nome}</div>
@@ -170,11 +170,11 @@ export default function EngineRoom() {
                   </div>
                 </div>
               ))}
-              <div className="lnote"><span style={{ color: "var(--blue)" }}>●</span> A = ações HC-US 3.1 · <span style={{ color: "var(--gold2)" }}>●</span> B = ETFs HC-US 11. Range homologado: CONS 31,9→3,5% · BAL 52,7→8,4% · ADV 70→17%.</div>
+              <div className="lnote"><span style={{ color: "var(--blue)" }}>●</span> A = HC-US 3.1 stocks · <span style={{ color: "var(--gold2)" }}>●</span> B = HC-US 11 ETFs. Approved range: CONS 31.9→3.5% · BAL 52.7→8.4% · ADV 70→17%.</div>
             </div>
 
             <div className="card s5">
-              <h2>Orientação do dia · ontem → hoje</h2>
+              <h2>Orientation of the day · yesterday → today</h2>
               {(d.orientacao || []).map((o) => (
                 <div className="orow" key={o.perfil}>
                   <div className="olabel"><span className="sw" style={{ background: o.cor }} />{o.perfil}</div>
@@ -186,10 +186,10 @@ export default function EngineRoom() {
 
               <div className="pdbox">
                 <div className="pdhead">
-                  <h3>▲ PILAR D · DEFESA · {d.pilar_d?.lane_vencedora}</h3>
-                  <div className="sub">Carga: {d.pilar_d?.carga}</div>
+                  <h3>▲ PILLAR D · DEFENSE · {d.pilar_d?.lane_vencedora}</h3>
+                  <div className="sub">Load: {d.pilar_d?.carga}</div>
                 </div>
-                <div className="pdwinner">Lane vencedora (WTA ROC 6m): <b>{d.pilar_d?.lane_vencedora}</b></div>
+                <div className="pdwinner">Winning lane (WTA ROC 6m): <b>{d.pilar_d?.lane_vencedora}</b></div>
                 <div className="pdholdings">
                   {(d.pilar_d?.holdings || []).map((h) => (
                     <span className="pdh" key={h.ticker}><b>{h.ticker}</b>{h.peso_pct}%</span>
@@ -210,7 +210,7 @@ export default function EngineRoom() {
       )}
 
       <div className="foot">
-        <b>SOMENTE LEITURA</b> — zero ordens, zero movimentação. Regime/indicadores conforme OS_4_INDICADORES.md · 4 estados conforme CAP_P_ORQUESTRADOR_REGIME.md.
+        <b>READ-ONLY</b> — zero orders, zero movement. Regime/indicators per OS_4_INDICADORES.md · 4 states per CAP_P_ORQUESTRADOR_REGIME.md.
       </div>
     </div>
   );

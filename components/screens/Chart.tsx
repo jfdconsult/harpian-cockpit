@@ -6,6 +6,7 @@ import { publishScreenData } from "@/lib/jim-data";
 import TradingViewWidget from "./TradingViewWidget";
 import ExecuteOrderModal from "@/components/ExecuteOrderModal";
 import type { ScreenId } from "@/lib/nav";
+import { useTheme, chartColors } from "@/lib/theme";
 
 const RANGES = ["3mo", "6mo", "1y", "2y", "5y"] as const;
 type Range = (typeof RANGES)[number];
@@ -14,21 +15,21 @@ interface StudyDef { on: boolean; lbl: string }
 type StudyKey = "trend" | "barcolor" | "atr" | "impulse" | "barcode" | "dist" | "mom";
 const INITIAL_STUDIES: Record<StudyKey, StudyDef> = {
   trend: { on: true, lbl: "EMA/DEMA/TEMA" },
-  barcolor: { on: true, lbl: "Cor das barras" },
-  atr: { on: true, lbl: "Projeção ATR" },
-  impulse: { on: false, lbl: "Fibo impulso" },
+  barcolor: { on: true, lbl: "Bar color" },
+  atr: { on: true, lbl: "ATR Projection" },
+  impulse: { on: false, lbl: "Impulse Fib" },
   barcode: { on: true, lbl: "Barcode" },
-  dist: { on: true, lbl: "Distância EMA" },
-  mom: { on: true, lbl: "Momento D13/J37" },
+  dist: { on: true, lbl: "EMA Distance" },
+  mom: { on: true, lbl: "Momentum D13/J37" },
 };
 const SUB_OF: Partial<Record<StudyKey, "barcode" | "dist" | "mom">> = { barcode: "barcode", dist: "dist", mom: "mom" };
 
 const COL = { ema: "#E8ECF1", dema: "#FF3DFF", tema: "#4A90D9", d13: "#E0C160", j37: "#4A90D9", thr: "#5b7a99", up: "#2ECC71", dn: "#E74C3C" };
 
 const COLLEGEND: [string, string][] = [
-  ["#00E5FF", "Compra (cruz.↑)"], ["#FF3DFF", "Venda (cruz.↓)"], ["#2ECC71", "FVG alta"],
-  ["#2E86FF", "FVG alta · barra baixa"], ["#E74C3C", "FVG baixa"], ["#C9A02C", "FVG baixa · barra alta"],
-  ["#7FA8C9", "Alta normal"], ["#3E5A7E", "Baixa normal"],
+  ["#00E5FF", "Buy (cross ↑)"], ["#FF3DFF", "Sell (cross ↓)"], ["#2ECC71", "FVG up"],
+  ["#2E86FF", "FVG up · bar down"], ["#E74C3C", "FVG down"], ["#C9A02C", "FVG down · bar up"],
+  ["#7FA8C9", "Normal up"], ["#3E5A7E", "Normal down"],
 ];
 
 interface Point { time: number; value: number; color?: string }
@@ -53,6 +54,7 @@ interface PositionResp {
 function fmt(v: number | null | undefined) { return v == null ? "—" : v.toFixed(2); }
 
 export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenId, param?: string) => void }) {
+  const { theme } = useTheme();
   const mainElRef = useRef<HTMLDivElement>(null);
   const barcodeElRef = useRef<HTMLDivElement>(null);
   const distElRef = useRef<HTMLDivElement>(null);
@@ -68,7 +70,7 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
   const [range, setRange] = useState<Range>("1y");
   const [view, setView] = useState<"dspt" | "tv">("dspt");
   const [studies, setStudies] = useState(INITIAL_STUDIES);
-  const [tname, setTname] = useState("carregando...");
+  const [tname, setTname] = useState("loading...");
   const [price, setPrice] = useState("—");
   const [pct, setPct] = useState<{ text: string; up: boolean } | null>(null);
   const [meta, setMeta] = useState("—");
@@ -80,13 +82,14 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
   // Init charts once
   useEffect(() => {
     if (!mainElRef.current || !barcodeElRef.current || !distElRef.current || !momElRef.current) return;
+    const cc = chartColors();
     const baseOpts = (el: HTMLDivElement, showTime: boolean) => ({
       width: el.clientWidth, height: el.clientHeight,
-      layout: { background: { color: "#0A1A30" }, textColor: "#7d96b3", fontSize: 11 },
-      grid: { vertLines: { color: "#16304f" }, horzLines: { color: "#13283f" } },
+      layout: { background: { color: cc.bg }, textColor: cc.text, fontSize: 11 },
+      grid: { vertLines: { color: cc.grid }, horzLines: { color: cc.gridH } },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: "#1d3a5f" },
-      timeScale: { borderColor: "#1d3a5f", timeVisible: false, rightOffset: 5, visible: showTime },
+      rightPriceScale: { borderColor: cc.border },
+      timeScale: { borderColor: cc.border, timeVisible: false, rightOffset: 5, visible: showTime },
       handleScroll: true, handleScale: true,
     });
 
@@ -155,7 +158,7 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
       window.removeEventListener("resize", resizeAll);
       [main, barcode, dist, mom].forEach((c) => { try { c.remove(); } catch { /* noop */ } });
     };
-  }, []);
+  }, [theme]);
 
   function applyData(d: ChartResp) {
     lastDataRef.current = d;
@@ -226,7 +229,7 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
   useEffect(() => {
     apiGet<ChartResp>(`/v1/market/chart/${ticker}?rng=${range}`)
       .then((d) => {
-        if (!d.ok || !d.candles?.length) { setMeta(`Sem dados para ${ticker}`); return; }
+        if (!d.ok || !d.candles?.length) { setMeta(`No data for ${ticker}`); return; }
         setTname(d.name || ticker);
         const last = d.candles[d.candles.length - 1];
         const prev = d.candles.length > 1 ? d.candles[d.candles.length - 2].close : last.open;
@@ -235,9 +238,9 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
         setPct({ text: `${chg >= 0 ? "+" : ""}${chg.toFixed(2)} (${pctv >= 0 ? "+" : ""}${pctv.toFixed(2)}%)`, up: chg >= 0 });
         applyData(d);
         const imp = (d.studies?.impulses || []).length;
-        setMeta(`bars:${d.meta?.bars ?? "—"}|impulsos:${imp}`);
+        setMeta(`bars:${d.meta?.bars ?? "—"}|impulses:${imp}`);
       })
-      .catch((e) => setMeta(`Erro: ${e.message}`));
+      .catch((e) => setMeta(`Error: ${e.message}`));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticker, range]);
 
@@ -260,10 +263,10 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
   useEffect(() => {
     if (!price || price === "—") return;
     const posInfo = position?.has_position
-      ? `alocado ${position.total_weight_pct}% · ${position.action}`
-      : "sem posição";
+      ? `allocated ${position.total_weight_pct}% · ${position.action}`
+      : "no position";
     publishScreenData("chart", `${tname} (${ticker}) · ${price} · ${pct?.text ?? "—"} · ${posInfo}`, { ticker, name: tname, price, pct, position }, {
-      briefing: `Gráfico DSPT de ${tname} (${ticker}). Preço atual ${price}, variacao ${pct?.text ?? "—"}. ${posInfo}.`,
+      briefing: `DSPT Chart for ${tname} (${ticker}). Current price ${price}, change ${pct?.text ?? "—"}. ${posInfo}.`,
     });
   }, [price, pct, tname, position, ticker]);
 
@@ -272,12 +275,12 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
   }
 
   const posCls: Record<string, string> = { AUMENTAR: "buy", COMPRAR: "buy", REDUZIR: "red", ZERAR: "zero", TROCAR: "zero", MANTER: "hold", FORA: "out" };
-  const [barsCount, impCount] = meta.startsWith("bars:") ? meta.replace("bars:", "").split("|impulsos:") : ["—", "0"];
+  const [barsCount, impCount] = meta.startsWith("bars:") ? meta.replace("bars:", "").split("|impulses:") : ["—", "0"];
 
   return (
     <div className="screen ch-wrap">
       <div className="ch-bar">
-        <span className="ch-back" onClick={() => go("ativos")}>&larr; Voltar</span>
+        <span className="ch-back" onClick={() => go("ativos")}>&larr; Back</span>
         <span className="ch-ticker">{ticker}</span>
         <span className="ch-name">{tname}</span>
         <span className="ch-price">{price}</span>
@@ -287,20 +290,20 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
             <button key={r} className={r === range ? "on" : ""} onClick={() => setRange(r)}>{r.toUpperCase()}</button>
           ))}
         </div>
-        <span className="ch-daily">candles diários</span>
+        <span className="ch-daily">daily candles</span>
         {position && (
           <span className="ch-pos">
-            Alocado: {position.has_position ? (
+            Allocated: {position.has_position ? (
               <>
-                <b>{position.total_weight_pct}%</b> · US$ {position.total_value_usd?.toLocaleString("pt-BR")}
+                <b>{position.total_weight_pct}%</b> · ${position.total_value_usd?.toLocaleString("en-US")}
                 {position.holdings?.[0] ? ` · ${position.holdings[0].portfolio}` : ""}
               </>
-            ) : <b>sem posição</b>}{" "}
+            ) : <b>no position</b>}{" "}
             {position.ticket_id ? (
               <span
                 className={`ch-act ${posCls[position.action] || "hold"}`}
                 style={{ cursor: "pointer" }}
-                title="Executar esta ordem"
+                title="Execute this order"
                 onClick={() => setExecTicketId(position.ticket_id!)}
               >{position.action}</span>
             ) : (
@@ -309,21 +312,21 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
           </span>
         )}
         <div className="ch-right">
-          <a className="ch-tv" href={`https://br.tradingview.com/chart/nNpCdTJZ/?symbol=${ticker}`} target="_blank" rel="noopener" title="Abrir no TradingView com template HARPIAN DSPT">
-            <svg viewBox="0 0 36 28"><path d="M14 22H7V6h7v16zm8-16h7v16h-7V6zm-2 0h-4v16h4V6z" /></svg>DSPT completo
+          <a className="ch-tv" href={`https://br.tradingview.com/chart/nNpCdTJZ/?symbol=${ticker}`} target="_blank" rel="noopener" title="Open in TradingView with HARPIAN DSPT template">
+            <svg viewBox="0 0 36 28"><path d="M14 22H7V6h7v16zm8-16h7v16h-7V6zm-2 0h-4v16h4V6z" /></svg>Full DSPT
           </a>
         </div>
       </div>
 
       <div className="ch-toolbar">
-        <span className="ch-tlabel">VISÃO</span>
+        <span className="ch-tlabel">VIEW</span>
         <div className="ch-studies" style={{ marginRight: 14 }}>
-          <button className={view === "dspt" ? "on" : ""} onClick={() => setView("dspt")}>Gráfico DSPT</button>
+          <button className={view === "dspt" ? "on" : ""} onClick={() => setView("dspt")}>DSPT Chart</button>
           <button className={view === "tv" ? "on" : ""} onClick={() => setView("tv")}>TradingView</button>
         </div>
         {view === "dspt" && (
           <>
-            <span className="ch-tlabel">ESTUDOS DSPT</span>
+            <span className="ch-tlabel">DSPT STUDIES</span>
             <div className="ch-studies">
               {(Object.keys(studies) as StudyKey[]).map((k) => (
                 <button key={k} className={studies[k].on ? "on" : ""} onClick={() => toggleStudy(k)}>{studies[k].lbl}</button>
@@ -334,7 +337,7 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
       </div>
 
       <div className="ch-collegend" style={{ display: view === "dspt" && studies.barcolor.on ? "flex" : "none" }}>
-        <span style={{ color: "var(--gold)", fontWeight: 700, letterSpacing: ".5px" }}>COR DAS BARRAS</span>
+        <span style={{ color: "var(--gold)", fontWeight: 700, letterSpacing: ".5px" }}>BAR COLOR</span>
         {COLLEGEND.map(([color, label]) => (
           <span className="ci" key={label}><span className="sw" style={{ background: color }} />{label}</span>
         ))}
@@ -352,26 +355,26 @@ export default function Chart({ ticker, go }: { ticker: string; go: (id: ScreenI
           <div className="ch-cv" ref={mainElRef} />
         </div>
         <div className="ch-pane sub" style={{ display: studies.barcode.on ? undefined : "none" }}>
-          <div className="lbl">BARCODE <b>−2…+2</b> · onde fechou + EMA/ATR</div>
+          <div className="lbl">BARCODE <b>−2…+2</b> · close position + EMA/ATR</div>
           <div className="ch-cv" ref={barcodeElRef} />
         </div>
         <div className="ch-pane sub" style={{ display: studies.dist.on ? undefined : "none" }}>
-          <div className="lbl">DISTÂNCIA <b>{distVals.dist}</b> · TR <b>{distVals.tr}</b> · LIMIAR <b>{distVals.thr}</b> · em ATR</div>
+          <div className="lbl">DISTANCE <b>{distVals.dist}</b> · TR <b>{distVals.tr}</b> · THRESHOLD <b>{distVals.thr}</b> · in ATR</div>
           <div className="ch-cv" ref={distElRef} />
         </div>
         <div className="ch-pane sub" style={{ display: studies.mom.on ? undefined : "none" }}>
-          <div className="lbl">MOMENTO · D13 <b style={{ color: "#E0C160" }}>{momVals.d13}</b> Diogo &nbsp; J37 <b style={{ color: "#4A90D9" }}>{momVals.j37}</b> João</div>
+          <div className="lbl">MOMENTUM · D13 <b style={{ color: "#E0C160" }}>{momVals.d13}</b> Diogo &nbsp; J37 <b style={{ color: "#4A90D9" }}>{momVals.j37}</b> João</div>
           <div className="ch-cv" ref={momElRef} />
         </div>
       </div>
 
       <div className="ch-meta" style={{ display: view === "dspt" ? undefined : "none" }}>
-        <span>Barras: <b>{barsCount}</b></span>
-        <span>EMA/DEMA/TEMA: <b>α=1/13 cascata (Diogo)</b></span>
-        <span>Impulsos: <b>{impCount}</b></span>
-        <span>Momento: <b>D13</b> + <b>J37</b></span>
-        <span>Fonte: <b>Yahoo EOD</b></span>
-        <span className="ch-src">estudos DSPT computados local · sem TradingView</span>
+        <span>Bars: <b>{barsCount}</b></span>
+        <span>EMA/DEMA/TEMA: <b>α=1/13 cascade (Diogo)</b></span>
+        <span>Impulses: <b>{impCount}</b></span>
+        <span>Momentum: <b>D13</b> + <b>J37</b></span>
+        <span>Source: <b>Yahoo EOD</b></span>
+        <span className="ch-src">DSPT studies computed locally · no TradingView</span>
       </div>
 
       {execTicketId && (

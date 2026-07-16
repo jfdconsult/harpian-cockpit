@@ -32,7 +32,7 @@ export default function DiffPanel({ diff }: Props) {
       >
         <i className={`ti ${open ? "ti-chevron-down" : "ti-chevron-right"}`} style={{ fontSize: 13 }} />
         <span style={{ fontSize: 12, fontWeight: 600 }}>
-          Mudanças vs original: <span style={{ color: empty ? "var(--tx3)" : "var(--gold)" }}>{n}</span>
+          Changes vs original: <span style={{ color: empty ? "var(--tx3)" : "var(--gold)" }}>{n}</span>
         </span>
       </div>
 
@@ -40,32 +40,32 @@ export default function DiffPanel({ diff }: Props) {
         <div style={{ marginTop: 10, display: "grid", gap: 8, fontSize: 11 }}>
           {diff.motoresAdded.map((m) => (
             <div key={`ma-${m.id}`} style={{ color: "var(--green)" }}>
-              + motor {m.id} adicionado ({m.nome})
+              + engine {m.id} added ({m.nome})
             </div>
           ))}
           {diff.motoresRemoved.map((m) => (
             <div key={`mr-${m.id}`} style={{ color: "var(--red)" }}>
-              − motor {m.id} removido ({m.nome})
+              − engine {m.id} removed ({m.nome})
             </div>
           ))}
           {diff.motoresChanged.map((c) => (
             <div key={`mc-${c.id}`} style={{ color: "var(--orange)" }}>
-              ~ motor {c.id} ({c.nome}) mudou: {c.changes.join(", ")}
+              ~ engine {c.id} ({c.nome}) changed: {c.changes.join(", ")}
             </div>
           ))}
           {diff.regrasAdded.map((r) => (
             <div key={`ra-${r.id}`} style={{ color: "var(--green)" }}>
-              + regra {r.id} adicionada ({r.nome})
+              + rule {r.id} added ({r.nome})
             </div>
           ))}
           {diff.regrasRemoved.map((r) => (
             <div key={`rr-${r.id}`} style={{ color: "var(--red)" }}>
-              − regra {r.id} removida ({r.nome})
+              − rule {r.id} removed ({r.nome})
             </div>
           ))}
           {diff.perfisChanged.map((p) => (
             <div key={`pc-${p.id}`} style={{ color: "var(--orange)" }}>
-              ~ perfil {p.nome} mudou:{" "}
+              ~ profile {p.nome} changed:{" "}
               {Object.entries(p.to)
                 .map(([k, v]) => `${k} ${(p.from as Record<string, unknown>)[k]}→${v}`)
                 .join(", ")}
@@ -73,14 +73,14 @@ export default function DiffPanel({ diff }: Props) {
           ))}
           {diff.perfilAtivoChanged && (
             <div style={{ color: "var(--orange)" }}>
-              ~ perfil ativo mudou: {diff.perfilAtivoChanged.from ?? "—"} → {diff.perfilAtivoChanged.to ?? "—"}
+              ~ active profile changed: {diff.perfilAtivoChanged.from ?? "—"} → {diff.perfilAtivoChanged.to ?? "—"}
             </div>
           )}
         </div>
       )}
 
       {open && empty && (
-        <div style={{ marginTop: 8, fontSize: 11, color: "var(--tx3)" }}>Nenhuma mudança pendente.</div>
+        <div style={{ marginTop: 8, fontSize: 11, color: "var(--tx3)" }}>No pending changes.</div>
       )}
     </div>
   );

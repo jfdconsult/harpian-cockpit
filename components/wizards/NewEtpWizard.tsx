@@ -5,7 +5,7 @@ import { useDialog } from "../ui/Dialog";
 import { SeloBadge } from "../portfolio-studio/ArvoreViva";
 import { seloPortfolio } from "@/lib/homologacao";
 
-// --- tipos leves só do que o wizard precisa ---
+// --- lightweight types with only what the wizard needs ---
 type Motor = {
   id: string;
   nome: string;
@@ -34,7 +34,7 @@ type BacktestResult = {
   metricas_oos: Metrica;
   metricas_full: Metrica;
   validadores: Record<string, boolean>;
-  // campos reais da Arena (backend arena_client.backtest_preview) — podem faltar em respostas antigas
+  // real fields from the Arena (backend arena_client.backtest_preview) — may be missing in older responses
   fonte?: string | null;
   arena_verdict?: "ACCEPTED" | "REPROVADO" | null;
   arena_run_name?: string | null;
@@ -58,7 +58,7 @@ const EMPTY = {
   custodia: "BNY Mellon (via Lynks)",
   jurisdicao: "Vienna Stock Exchange · EU",
   portfolio_origem: "existente" as "existente" | "novo",
-  portfolio_ids: [] as string[], // 1 ou 2 portfólios existentes (resposta do João)
+  portfolio_ids: [] as string[], // 1 or 2 existing portfolios (per João's answer)
   novo_portfolio: {
     id: "",
     nome: "",
@@ -93,7 +93,7 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
       .catch(() => setPortfolios([]));
   }, [open]);
 
-  // há trabalho não salvo? (qualquer campo preenchido além do default)
+  // any unsaved work? (any field filled beyond the default)
   const dirty =
     !!form.nome_comercial.trim() || !!form.ticker_listing.trim() || !!form.isin_provisorio.trim() ||
     form.portfolio_ids.length > 0 || !!form.motor_id || form.novo_portfolio.esteiras.length > 0 || !!bt;
@@ -102,18 +102,18 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
     if (saving) return;
     if (dirty) {
       const ok = await dialog.confirm({
-        title: "Descartar o assistente?",
-        body: "Você tem dados preenchidos neste wizard. Fechar agora descarta tudo.",
+        title: "Discard the wizard?",
+        body: "You have data filled in this wizard. Closing now discards everything.",
         danger: true,
-        confirmLabel: "Descartar",
-        cancelLabel: "Continuar editando",
+        confirmLabel: "Discard",
+        cancelLabel: "Continue editing",
       });
       if (!ok) return;
     }
     onClose();
   }
 
-  // ESC fecha (com a mesma proteção)
+  // ESC closes (with the same guard)
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") requestClose(); };
@@ -186,7 +186,7 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
   function effectivePortfolioLabel(): string {
     if (form.portfolio_origem === "novo") {
       const np = form.novo_portfolio;
-      return `${np.id} · ${np.nome} · ${np.esteiras.length} esteira(s) · NOVO`;
+      return `${np.id} · ${np.nome} · ${np.esteiras.length} sleeve(s) · NEW`;
     }
     return portsSel.map((p) => `${p.id} · ${p.nome}`).join("  +  ");
   }
@@ -211,13 +211,13 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
   async function submit() {
     setSaving(true);
     setErr(null);
-    // rollback: se criamos o portfolio novo e algo depois falhar, removemos o órfão
+    // rollback: if we created the new portfolio and something fails afterward, remove the orphan
     let createdPortfolioId: string | null = null;
     try {
       const motorObj = motores.find((m) => m.id === form.motor_id);
       const pids = effectivePortfolioIds();
 
-      // Se portfolio novo: cria antes o portfolio (modo model) + esteiras
+      // If new portfolio: create the portfolio first (model mode) + sleeves
       if (form.portfolio_origem === "novo") {
         const np = form.novo_portfolio;
         await apiPost("/v1/strategies/", {
@@ -251,16 +251,16 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
         backtest_run_id: bt?.run_id,
         backtest_grade: bt?.grade,
       });
-      dialog.notify(`ETP ${form.ticker_listing.toUpperCase()} criado com sucesso.`, "success");
+      dialog.notify(`ETP ${form.ticker_listing.toUpperCase()} created successfully.`, "success");
       onCreated();
       onClose();
     } catch (e) {
       if (createdPortfolioId) {
         try {
           await apiDelete(`/v1/strategies/${createdPortfolioId}`);
-          setErr(`${String(e)} — o portfolio ${createdPortfolioId} criado no processo foi removido (rollback).`);
+          setErr(`${String(e)} — portfolio ${createdPortfolioId} created during the process was removed (rollback).`);
         } catch {
-          setErr(`${String(e)} — ATENÇÃO: o portfolio ${createdPortfolioId} ficou criado pela metade; remova em Admin › Portfolios.`);
+          setErr(`${String(e)} — WARNING: portfolio ${createdPortfolioId} was left half-created; remove it in Admin › Portfolios.`);
         }
       } else {
         setErr(String(e));
@@ -270,7 +270,7 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
     }
   }
 
-  const STEPS = ["Identificação", "Portfolio", "Motor", "Homologação", "Promover"];
+  const STEPS = ["Identification", "Portfolio", "Engine", "Validation", "Promote"];
 
   return (
     <div
@@ -293,10 +293,10 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
         {/* Header */}
         <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center" }}>
           <div>
-            <div style={{ fontSize: 11, color: "var(--tx3)", letterSpacing: 1 }}>ADMIN · ESTRATÉGIAS</div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--gold)" }}>Novo ETP · assistente</div>
+            <div style={{ fontSize: 11, color: "var(--tx3)", letterSpacing: 1 }}>ADMIN · STRATEGIES</div>
+            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--gold)" }}>New ETP · wizard</div>
           </div>
-          <button className="btn ghost" style={{ marginLeft: "auto" }} onClick={requestClose}>Fechar</button>
+          <button className="btn ghost" style={{ marginLeft: "auto" }} onClick={requestClose}>Close</button>
         </div>
 
         {/* Stepper */}
@@ -321,19 +321,19 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
         <div style={{ padding: 20, overflow: "auto", flex: 1 }}>
           {step === 1 && (
             <div style={{ display: "grid", gap: 12 }}>
-              <FieldRow label="Nome comercial *">
-                <input className="input" value={form.nome_comercial} onChange={(e) => set("nome_comercial", e.target.value)} placeholder="ex: HPC33 · HC-US IG Advance" style={INPUT_STYLE} />
+              <FieldRow label="Commercial name *">
+                <input className="input" value={form.nome_comercial} onChange={(e) => set("nome_comercial", e.target.value)} placeholder="e.g. HPC33 · HC-US IG Advance" style={INPUT_STYLE} />
               </FieldRow>
-              <FieldRow label="Ticker de listagem *">
-                <input className="input" value={form.ticker_listing} onChange={(e) => set("ticker_listing", e.target.value.toUpperCase())} placeholder="ex: HPC33" style={INPUT_STYLE} maxLength={12} />
+              <FieldRow label="Listing ticker *">
+                <input className="input" value={form.ticker_listing} onChange={(e) => set("ticker_listing", e.target.value.toUpperCase())} placeholder="e.g. HPC33" style={INPUT_STYLE} maxLength={12} />
               </FieldRow>
-              <FieldRow label="ISIN provisório">
-                <input className="input" value={form.isin_provisorio} onChange={(e) => set("isin_provisorio", e.target.value)} placeholder="XS...  (deixa vazio se ainda não emitido)" style={INPUT_STYLE} />
+              <FieldRow label="Provisional ISIN">
+                <input className="input" value={form.isin_provisorio} onChange={(e) => set("isin_provisorio", e.target.value)} placeholder="XS...  (leave blank if not yet issued)" style={INPUT_STYLE} />
               </FieldRow>
-              <FieldRow label="Custódia">
+              <FieldRow label="Custody">
                 <input className="input" value={form.custodia} onChange={(e) => set("custodia", e.target.value)} style={INPUT_STYLE} />
               </FieldRow>
-              <FieldRow label="Jurisdição">
+              <FieldRow label="Jurisdiction">
                 <input className="input" value={form.jurisdicao} onChange={(e) => set("jurisdicao", e.target.value)} style={INPUT_STYLE} />
               </FieldRow>
             </div>
@@ -341,8 +341,8 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
 
           {step === 2 && (
             <div style={{ display: "grid", gap: 10 }}>
-              {/* toggle existente | novo */}
-              <div style={{ display: "flex", gap: 4, padding: 4, background: "#05101e", border: "1px solid var(--line)", borderRadius: 4 }}>
+              {/* toggle existing | new */}
+              <div style={{ display: "flex", gap: 4, padding: 4, background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 4 }}>
                 {(["existente", "novo"] as const).map((v) => {
                   const active = form.portfolio_origem === v;
                   return (
@@ -354,7 +354,7 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
                         color: active ? "#000" : "var(--tx2)",
                         border: "none", fontWeight: active ? 600 : 400,
                       }}>
-                      {v === "existente" ? "Portfolio existente" : "Criar novo portfolio"}
+                      {v === "existente" ? "Existing portfolio" : "Create new portfolio"}
                     </button>
                   );
                 })}
@@ -363,13 +363,13 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
               {form.portfolio_origem === "existente" && (
                 <>
                   <div style={{ fontSize: 12, color: "var(--tx3)" }}>
-                    Escolha 1 ou <b>até 2 portfólios</b> que serão materializados pelo ETP. <b>Só portfólios homologados</b>{" "}
-                    podem virar ETP — esse é o portão do Laboratório: nada cru entra na estrada.
+                    Choose 1 or <b>up to 2 portfolios</b> that will be materialized by the ETP. <b>Only validated portfolios</b>{" "}
+                    can become an ETP — this is the Lab's gate: nothing raw hits the road.
                     {form.portfolio_ids.length > 0 && (
-                      <span style={{ color: "var(--gold)" }}> · {form.portfolio_ids.length}/2 selecionado(s)</span>
+                      <span style={{ color: "var(--gold)" }}> · {form.portfolio_ids.length}/2 selected</span>
                     )}
                   </div>
-                  {portfolios.length === 0 && <div className="c-mut" style={{ fontSize: 12 }}>Nenhum portfolio disponível na API.</div>}
+                  {portfolios.length === 0 && <div className="c-mut" style={{ fontSize: 12 }}>No portfolio available from the API.</div>}
                   {portfolios.map((p) => {
                     const elegivel = portfolioElegivel(p);
                     const selecionado = form.portfolio_ids.includes(p.id);
@@ -381,9 +381,9 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
                         onClick={() => !disabled && togglePortfolio(p.id)}
                         title={
                           !elegivel
-                            ? "🔒 este portfólio não foi testado/homologado — rode a homologação no Laboratório antes"
+                            ? "🔒 this portfolio hasn't been tested/validated — run validation in the Lab first"
                             : bloqueadoPorLimite
-                            ? "máximo de 2 portfólios por ETP — desmarque um para trocar"
+                            ? "maximum of 2 portfolios per ETP — uncheck one to swap"
                             : undefined
                         }
                         style={pickCard(selecionado, disabled)}
@@ -393,7 +393,7 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
                           <div style={{ fontSize: 12 }}>{p.nome}</div>
                           {!elegivel && (
                             <div style={{ fontSize: 10.5, color: "var(--red-text)", marginTop: 2 }}>
-                              🔒 não testado — precisa homologar no Laboratório primeiro
+                              🔒 not tested — needs validation in the Lab first
                             </div>
                           )}
                         </div>
@@ -409,7 +409,7 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
               {form.portfolio_origem === "novo" && (
                 <div style={{ display: "grid", gap: 10 }}>
                   <div style={{ fontSize: 12, color: "var(--tx3)" }}>
-                    Portfolio nasce como <b>modelo</b> (capital simbólico US$ 1M). Ele é promovido a ATIVO junto com o ETP no passo final.
+                    The portfolio is born as a <b>model</b> ($1M symbolic capital). It's promoted to ACTIVE together with the ETP in the final step.
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8 }}>
                     <FieldRow label="ID *">
@@ -417,59 +417,59 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
                         onChange={(e) => setForm({ ...form, novo_portfolio: { ...form.novo_portfolio, id: e.target.value.toUpperCase() } })}
                         placeholder="HPC33" maxLength={12} style={INPUT_STYLE} />
                     </FieldRow>
-                    <FieldRow label="Nome *">
+                    <FieldRow label="Name *">
                       <input className="input" value={form.novo_portfolio.nome}
                         onChange={(e) => setForm({ ...form, novo_portfolio: { ...form.novo_portfolio, nome: e.target.value } })}
                         placeholder="HC-US IG Advance" style={INPUT_STYLE} />
                     </FieldRow>
                   </div>
-                  <FieldRow label="Descrição">
+                  <FieldRow label="Description">
                     <input className="input" value={form.novo_portfolio.descricao}
                       onChange={(e) => setForm({ ...form, novo_portfolio: { ...form.novo_portfolio, descricao: e.target.value } })}
-                      placeholder="Ex: ETF · Investment Grade" style={INPUT_STYLE} />
+                      placeholder="e.g. ETF · Investment Grade" style={INPUT_STYLE} />
                   </FieldRow>
 
-                  {/* Esteiras dinâmicas */}
+                  {/* Dynamic sleeves */}
                   <div>
                     <div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
                       <div style={{ fontSize: 11, color: "var(--tx3)", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                        Esteiras (pilar → cesta) *
+                        Sleeves (pillar → basket) *
                       </div>
                       <button className="btn" onClick={addEsteira}
-                        style={{ marginLeft: "auto", padding: "4px 10px", fontSize: 11 }}>+ esteira</button>
+                        style={{ marginLeft: "auto", padding: "4px 10px", fontSize: 11 }}>+ sleeve</button>
                     </div>
                     {form.novo_portfolio.esteiras.length === 0 && (
                       <div className="c-mut" style={{ fontSize: 11, padding: "8px 0" }}>
-                        Adicione pelo menos 1 esteira. Ativos são adicionados depois em Motores → Estratégias.
+                        Add at least 1 sleeve. Assets are added later in Engines → Strategies.
                       </div>
                     )}
                     {form.novo_portfolio.esteiras.length > 0 && (
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 90px 30px", gap: 6, marginBottom: 2, fontSize: 9, color: "var(--tx3)", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                        <span>Nome da esteira</span><span>Pilar (opcional)</span><span>Peso %</span><span />
+                        <span>Sleeve name</span><span>Pillar (optional)</span><span>Weight %</span><span />
                       </div>
                     )}
                     {form.novo_portfolio.esteiras.map((e, i) => (
                       <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 90px 30px", gap: 6, marginBottom: 4 }}>
-                        <input className="input" value={e.nome} placeholder="ex: SEMIS" aria-label="Nome da esteira"
+                        <input className="input" value={e.nome} placeholder="e.g. SEMIS" aria-label="Sleeve name"
                           onChange={(ev) => updateEsteira(i, { nome: ev.target.value.toUpperCase() })}
                           style={INPUT_STYLE} />
-                        <input className="input" value={e.pilar || ""} placeholder="ex: Pilar A" aria-label="Pilar (opcional)"
+                        <input className="input" value={e.pilar || ""} placeholder="e.g. Pillar A" aria-label="Pillar (optional)"
                           onChange={(ev) => updateEsteira(i, { pilar: ev.target.value })}
                           style={INPUT_STYLE} />
-                        <input className="input" type="number" value={e.peso_pct} min={0} max={100} aria-label="Peso em porcento"
+                        <input className="input" type="number" value={e.peso_pct} min={0} max={100} aria-label="Weight in percent"
                           onChange={(ev) => updateEsteira(i, { peso_pct: Number(ev.target.value) })}
                           style={INPUT_STYLE} />
                         <button className="btn ghost" onClick={() => removeEsteira(i)}
                           style={{ padding: "4px 8px", color: "var(--red-text)", borderColor: "var(--red)" }}
-                          title="remover esteira" aria-label={`Remover esteira ${e.nome || i + 1}`}>
+                          title="remove sleeve" aria-label={`Remove sleeve ${e.nome || i + 1}`}>
                           <i className="ti ti-x" />
                         </button>
                       </div>
                     ))}
                     {form.novo_portfolio.esteiras.length > 0 && (
                       <div style={{ fontSize: 10, color: "var(--tx3)", marginTop: 4 }}>
-                        Soma dos pesos: <b>{form.novo_portfolio.esteiras.reduce((s, e) => s + (e.peso_pct || 0), 0)}%</b>
-                        {" · "}Idealmente 100%.
+                        Sum of weights: <b>{form.novo_portfolio.esteiras.reduce((s, e) => s + (e.peso_pct || 0), 0)}%</b>
+                        {" · "}Ideally 100%.
                       </div>
                     )}
                   </div>
@@ -480,7 +480,7 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
 
           {step === 3 && (
             <div style={{ display: "grid", gap: 8 }}>
-              <div style={{ fontSize: 12, color: "var(--tx3)" }}>Motor homologado do catálogo. Motores em <b>lab</b> não podem virar ETP.</div>
+              <div style={{ fontSize: 12, color: "var(--tx3)" }}>Validated engine from the catalog. Engines in <b>lab</b> cannot become an ETP.</div>
               {motores.map((m) => {
                 const disabled = m.status !== "homologado";
                 return (
@@ -511,11 +511,11 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                 <div style={{ fontSize: 12, color: "var(--tx3)", flex: 1 }}>
-                  Homologação real do motor na <b>Arena ao vivo</b> (in-sample + holdout do mesmo run, bateria de 8 gates).
-                  <div style={{ marginTop: 4 }}>Motor: <b style={{ color: "var(--gold)" }}>{motorSel?.nome}</b> · Portfólio(s): <b>{portsSel.map((p) => p.id).join(" + ") || "—"}</b></div>
+                  Real engine validation in the <b>live Arena</b> (in-sample + holdout from the same run, 8-gate battery).
+                  <div style={{ marginTop: 4 }}>Engine: <b style={{ color: "var(--gold)" }}>{motorSel?.nome}</b> · Portfolio(s): <b>{portsSel.map((p) => p.id).join(" + ") || "—"}</b></div>
                 </div>
                 <button className="btn" onClick={runBacktest} disabled={running} style={{ background: "var(--gold)", color: "#000" }}>
-                  {running ? "Rodando…" : bt ? "Rodar novamente" : "Rodar backtest"}
+                  {running ? "Running…" : bt ? "Run again" : "Run backtest"}
                 </button>
               </div>
 
@@ -541,14 +541,14 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                    <MetricBox title={`OOS · holdout${bt.oos_split ? ` (${bt.oos_split}→hoje)` : ""}`} m={bt.metricas_oos} />
-                    <MetricBox title="IN-SAMPLE · run Arena" m={bt.metricas_full} />
+                    <MetricBox title={`OOS · holdout${bt.oos_split ? ` (${bt.oos_split}→today)` : ""}`} m={bt.metricas_oos} />
+                    <MetricBox title="IN-SAMPLE · Arena run" m={bt.metricas_full} />
                   </div>
 
                   {bt.homologacao_producao && bt.homologacao_producao.cagr != null && (
                     <div style={{ padding: 10, border: "1px solid var(--gold)", background: "var(--gold-bg)", borderRadius: 4, fontSize: 12 }}>
                       <div style={{ color: "var(--gold)", fontWeight: 600, marginBottom: 4 }}>
-                        REFERÊNCIA DE PRODUÇÃO (DeLorean · config que o ETP tradearia)
+                        PRODUCTION REFERENCE (DeLorean · config the ETP would trade)
                       </div>
                       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                         <span>CAGR <b>{bt.homologacao_producao.cagr}%</b></span>
@@ -558,7 +558,7 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
                         <span>Grade <b>{bt.homologacao_producao.grade ?? "—"}</b></span>
                       </div>
                       <div style={{ marginTop: 4, color: "var(--tx3)", fontSize: 11 }}>
-                        Números da produção diferem do run da Arena acima (variante isolada, universo de teste). Ambos reais.
+                        Production numbers differ from the Arena run above (isolated variant, test universe). Both are real.
                       </div>
                     </div>
                   )}
@@ -571,7 +571,7 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
                   )}
 
                   <div style={{ fontSize: 11, color: "var(--tx3)" }}>
-                    Validadores:{" "}
+                    Validators:{" "}
                     {Object.entries(bt.validadores).map(([k, v]) => (
                       <span key={k} style={{ marginRight: 10, color: v ? "var(--green)" : "var(--red-text)" }}>
                         <i className={`ti ${v ? "ti-check" : "ti-x"}`} style={{ fontSize: 11, marginRight: 3 }} />{k}
@@ -583,7 +583,7 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
 
               {!bt && !running && (
                 <div className="c-mut" style={{ fontSize: 12, padding: 20, textAlign: "center" }}>
-                  Rodar backtest é obrigatório antes de promover.
+                  Running a backtest is required before promoting.
                 </div>
               )}
             </div>
@@ -591,40 +591,40 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
 
           {step === 5 && bt && (
             <div style={{ display: "grid", gap: 10 }}>
-              <div style={{ fontSize: 12, color: "var(--tx3)" }}>Revisão final. Após promover, o ETP fica visível em Admin › Estratégias › ETPs e no Mission Control.</div>
-              <ReviewLine k="Nome comercial" v={form.nome_comercial} />
+              <div style={{ fontSize: 12, color: "var(--tx3)" }}>Final review. After promoting, the ETP becomes visible in Admin › Strategies › ETPs and in Mission Control.</div>
+              <ReviewLine k="Commercial name" v={form.nome_comercial} />
               <ReviewLine k="Ticker" v={form.ticker_listing} />
-              <ReviewLine k="ISIN" v={form.isin_provisorio || "— (a emitir)"} />
-              <ReviewLine k="Custódia" v={form.custodia} />
-              <ReviewLine k="Jurisdição" v={form.jurisdicao} />
+              <ReviewLine k="ISIN" v={form.isin_provisorio || "— (to be issued)"} />
+              <ReviewLine k="Custody" v={form.custodia} />
+              <ReviewLine k="Jurisdiction" v={form.jurisdicao} />
               <ReviewLine k="Portfolio" v={effectivePortfolioLabel()} />
-              <ReviewLine k="Motor" v={`${motorSel?.nome} ${motorSel?.versao}`} />
+              <ReviewLine k="Engine" v={`${motorSel?.nome} ${motorSel?.versao}`} />
               <ReviewLine k="Grade" v={<span style={{ fontWeight: 700, color: bt.grade === "A" ? "#2ECC71" : bt.grade === "B" ? "#F39C12" : "var(--red-text)" }}>{bt.grade}</span>} />
               <ReviewLine k="Backtest run" v={<span style={{ fontFamily: "monospace" }}>{bt.run_id}</span>} />
               <div style={{ fontSize: 11, color: "var(--tx3)", marginTop: 8 }}>
-                Grade A ou B → ETP entra como <b>listado</b>. Caso contrário fica como <b>candidato</b> para recalibração.
+                Grade A or B → ETP goes in as <b>listed</b>. Otherwise it stays as <b>candidate</b> for recalibration.
               </div>
             </div>
           )}
 
-          {err && <div style={{ marginTop: 12, padding: 10, background: "var(--red-bg)", color: "var(--red-text)", borderRadius: 4, fontSize: 12 }}>Erro: {err}</div>}
+          {err && <div style={{ marginTop: 12, padding: 10, background: "var(--red-bg)", color: "var(--red-text)", borderRadius: 4, fontSize: 12 }}>Error: {err}</div>}
         </div>
 
         {/* Footer */}
         <div style={{ padding: "12px 20px", borderTop: "1px solid var(--line)", display: "flex", gap: 8, alignItems: "center" }}>
-          <button className="btn ghost" onClick={requestClose}>Cancelar</button>
+          <button className="btn ghost" onClick={requestClose}>Cancel</button>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-            <button className="btn" onClick={() => setStep(Math.max(1, step - 1))} disabled={step === 1}>← Voltar</button>
+            <button className="btn" onClick={() => setStep(Math.max(1, step - 1))} disabled={step === 1}>← Back</button>
             {step < 5 && (
               <button className="btn" style={{ background: canAdvance() ? "var(--gold)" : undefined, color: canAdvance() ? "#000" : undefined }}
                 onClick={() => setStep(step + 1)} disabled={!canAdvance()}>
-                Avançar →
+                Next →
               </button>
             )}
             {step === 5 && (
               <button className="btn" style={{ background: "var(--green)", color: "#000" }}
                 onClick={submit} disabled={saving}>
-                {saving ? "Promovendo…" : <><i className="ti ti-check" style={{ marginRight: 5 }} />Promover ETP</>}
+                {saving ? "Promoting…" : <><i className="ti ti-check" style={{ marginRight: 5 }} />Promote ETP</>}
               </button>
             )}
           </div>
@@ -635,7 +635,7 @@ export default function NewEtpWizard({ open, onClose, onCreated }: Props) {
 }
 
 const INPUT_STYLE: React.CSSProperties = {
-  width: "100%", padding: "8px 10px", background: "#05101e", border: "1px solid var(--line)",
+  width: "100%", padding: "8px 10px", background: "var(--bg)", border: "1px solid var(--line)",
   borderRadius: 4, color: "var(--tx)", fontSize: 13, outline: "none",
 };
 

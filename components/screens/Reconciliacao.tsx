@@ -11,8 +11,8 @@ interface Item {
 interface Resumo { total: number; ok: number; parcial: number; pendente: number; total_delta: number }
 
 function statusSem(s: string) { return s === "ok" ? "g" : s === "parcial" ? "a" : "r"; }
-function statusLabel(s: string) { return s === "ok" ? "OK" : s === "parcial" ? "PARCIAL" : "PENDENTE"; }
-function fmtNum(n: number | null | undefined) { return n == null ? "—" : Number(n).toLocaleString("pt-BR"); }
+function statusLabel(s: string) { return s === "ok" ? "OK" : s === "parcial" ? "PARTIAL" : "PENDING"; }
+function fmtNum(n: number | null | undefined) { return n == null ? "—" : Number(n).toLocaleString("en-US"); }
 
 export default function Reconciliacao({ go }: { go: (id: ScreenId, param?: string) => void }) {
   const [items, setItems] = useState<Item[]>([]);
@@ -30,47 +30,47 @@ export default function Reconciliacao({ go }: { go: (id: ScreenId, param?: strin
     const ok = resumo?.ok ?? 0;
     const parcial = resumo?.parcial ?? 0;
     const pendente = resumo?.pendente ?? 0;
-    const totalDelta = resumo?.total_delta != null ? ` | delta total: ${resumo.total_delta}` : "";
+    const totalDelta = resumo?.total_delta != null ? ` | total delta: ${resumo.total_delta}` : "";
     publishScreenData(
       "reconciliacao",
-      `${items.length} posições | ${ok} OK, ${parcial} parcial, ${pendente} pendente${totalDelta}`,
+      `${items.length} positions | ${ok} OK, ${parcial} partial, ${pendente} pending${totalDelta}`,
       items,
-      { briefing: `Reconciliação com ${items.length} posições: ${ok} OK, ${parcial} parciais e ${pendente} pendentes de ação.` }
+      { briefing: `Reconciliation with ${items.length} positions: ${ok} OK, ${parcial} partial and ${pendente} pending action.` }
     );
   }, [items, resumo]);
 
   return (
     <div className="screen">
       <div className="flex between mb">
-        <div><div className="h1">Reconciliação — HQP × IBKR × Lynks</div><div className="sub">Compara alvo HQP × execução IBKR × contabilidade Lynks</div></div>
+        <div><div className="h1">Reconciliation — HQP × IBKR × Lynks</div><div className="sub">Compares HQP target × IBKR execution × Lynks accounting</div></div>
         <div className={`tag ${conn === "ok" ? "b" : conn === "error" ? "r" : "b"}`}>
-          {conn === "loading" ? "conectando…" : conn === "ok" ? "● API ao vivo" : "✕ API offline"}
+          {conn === "loading" ? "connecting…" : conn === "ok" ? "● API live" : "✕ API offline"}
         </div>
       </div>
 
       {conn === "error" ? (
-        <div className="ph mb"><b>API não respondeu</b>Suba a API: <code>uvicorn app.main:app --port 8080</code></div>
+        <div className="ph mb"><b>API did not respond</b>Start the API: <code>uvicorn app.main:app --port 8080</code></div>
       ) : resumo && (
         <div className="grid g4 mb">
-          <div className="kpi"><div className="l">Total itens</div><div className="v">{resumo.total}</div><div className="s">posições comparadas</div></div>
-          <div className="kpi"><div className="l">OK</div><div className="v c-g">{resumo.ok}</div><div className="s">reconciliados</div></div>
-          <div className="kpi"><div className="l">Parcial</div><div className="v c-a">{resumo.parcial}</div><div className="s">diferença menor</div></div>
-          <div className="kpi"><div className="l">Pendente</div><div className="v c-r">{resumo.pendente}</div><div className="s">ação necessária</div></div>
+          <div className="kpi"><div className="l">Total items</div><div className="v">{resumo.total}</div><div className="s">positions compared</div></div>
+          <div className="kpi"><div className="l">OK</div><div className="v c-g">{resumo.ok}</div><div className="s">reconciled</div></div>
+          <div className="kpi"><div className="l">Partial</div><div className="v c-a">{resumo.parcial}</div><div className="s">smaller difference</div></div>
+          <div className="kpi"><div className="l">Pending</div><div className="v c-r">{resumo.pendente}</div><div className="s">action needed</div></div>
         </div>
       )}
 
       <div className="card mb">
-        <h2><span>Posições</span><span className="tag b">{items.length} posições</span></h2>
+        <h2><span>Positions</span><span className="tag b">{items.length} positions</span></h2>
         <table>
           <thead>
             <tr>
               <th>Ticker</th><th style={{ textAlign: "right" }}>HQP Target</th><th style={{ textAlign: "right" }}>IBKR Fill</th>
-              <th style={{ textAlign: "right" }}>Lynks Posição</th><th style={{ textAlign: "right" }}>Delta</th><th>Status</th><th>Nota</th>
+              <th style={{ textAlign: "right" }}>Lynks Position</th><th style={{ textAlign: "right" }}>Delta</th><th>Status</th><th>Note</th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
-              <tr><td colSpan={7} className="c-mut2">Nenhuma posição para reconciliar</td></tr>
+              <tr><td colSpan={7} className="c-mut2">No positions to reconcile</td></tr>
             ) : items.map((i) => (
               <tr key={i.ticker}>
                 <td className="tk"><span className="tk-link" onClick={() => go("chart", i.ticker)}>{i.ticker}</span></td>
@@ -86,7 +86,7 @@ export default function Reconciliacao({ go }: { go: (id: ScreenId, param?: strin
         </table>
       </div>
 
-      <div className="foot">Compara alvo HQP × execução IBKR × contabilidade Lynks · Cockpit Gestor · v1</div>
+      <div className="foot">Compares HQP target × IBKR execution × Lynks accounting · Manager Cockpit · v1</div>
     </div>
   );
 }

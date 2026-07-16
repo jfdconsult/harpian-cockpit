@@ -1,7 +1,7 @@
 // ============================================================
-// PORTFOLIO STUDIO v2 — tipos + API client + diff
-// Composição: motores tipados + regras de mix + perfis institucionais
-// Fiel a ARQUITETURA_HC-US_IG_v2.md (ADR-002: só w_min/w_max variam por perfil)
+// PORTFOLIO STUDIO v2 — types + API client + diff
+// Composition: typed engines + mix rules + institutional profiles
+// Faithful to ARQUITETURA_HC-US_IG_v2.md (ADR-002: only w_min/w_max vary by profile)
 // ============================================================
 import { apiGet, apiPost, apiPatch, apiDelete } from "./api";
 
@@ -20,19 +20,19 @@ export interface AtivoNo {
   tipo?: string;
 }
 
-// A ESTRATÉGIA como arena de competição (estilo AlphaDroid, sem limite de ativos —
-// resposta do João, 2026-07-03): um universo de ativos compete via um ranker (fórmula),
-// os top-N líderes ficam comprados. `ativos` em EsteiraNo continua sendo o RESULTADO
-// atual da competição (os líderes já escolhidos); `arena` é a CONFIGURAÇÃO de como
-// competem. Sem `arena`, a estratégia é uma cesta curada manualmente (modo legado).
+// The STRATEGY as a competition arena (AlphaDroid style, no asset limit —
+// João's answer, 2026-07-03): a universe of assets competes via a ranker (formula),
+// the top-N leaders get bought. `ativos` in EsteiraNo remains the current RESULT
+// of the competition (the leaders already chosen); `arena` is the CONFIGURATION of how
+// they compete. Without `arena`, the strategy is a manually curated basket (legacy mode).
 export type RegraPeso = "igual" | "forca_sinal" | "inverse_vol" | "cap";
 
 export interface Arena {
-  universo_tickers: string[]; // candidatos que competem — até 500
-  ranker_formula_id: string | null; // fórmula do catálogo, categoria "Ranker"
-  selecao_top_n: number | null; // quantos líderes ficam comprados
+  universo_tickers: string[]; // candidates that compete — up to 500
+  ranker_formula_id: string | null; // formula from the catalog, "Ranker" category
+  selecao_top_n: number | null; // how many leaders get bought
   regra_peso: RegraPeso;
-  peso_cap_pct: number | null; // só relevante quando regra_peso === "cap"
+  peso_cap_pct: number | null; // only relevant when regra_peso === "cap"
   rebalance_freq: string;
 }
 
@@ -84,8 +84,8 @@ export interface MotorRegistryInfo {
 }
 
 export interface MotorNoPortfolio {
-  id: string; // "A" / "B" / "C" (local no portfolio)
-  ref_motor_id: string; // id no catálogo /v1/registry/motores
+  id: string; // "A" / "B" / "C" (local to the portfolio)
+  ref_motor_id: string; // id in the /v1/registry/motores catalog
   nome: string;
   versao: string;
   tipo: MotorTipo;
@@ -216,10 +216,10 @@ export const addAtivoEsteira = (
 export const removeAtivoEsteira = (pid: string, esteiraNome: string, ticker: string) =>
   apiDelete(`/v1/strategies/${pid}/esteira/${esteiraNome}/ativo/${ticker}`);
 
-// ---- Esteira/Ativo DENTRO de um motor da composição (Portfolio Studio) ----
-// Diferente dos 3 acima (que escrevem no campo legado top-level do portfolio),
-// estes escrevem dentro de composicao.motores[mid].estrutura — persistência real
-// para o que o usuário edita no nível 2/3 do Studio.
+// ---- Esteira/Ativo INSIDE an engine of the composition (Portfolio Studio) ----
+// Unlike the 3 above (which write to the portfolio's legacy top-level field),
+// these write inside composicao.motores[mid].estrutura — real persistence
+// for what the user edits at levels 2/3 of the Studio.
 
 export const addEsteiraToMotor = (
   pid: string,

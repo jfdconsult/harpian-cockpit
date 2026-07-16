@@ -6,10 +6,10 @@ import { seloMotor, seloPortfolio, seloEtp, type Selo } from "@/lib/homologacao"
 import type { ScreenId } from "@/lib/nav";
 
 // ============================================================
-// A ÁRVORE VIVA — o mapa da estrutura inteira, de um golpe.
-// ETP (estrada) → Portfólio (carro) → Motor (⚔️ ataque/🛡️ defesa/🌡️ sensor)
-//   → Pilar (pistão) → Estratégia (arena de competição) → ativos.
-// Cada peça carrega seu selo de homologação — a chave de segurança.
+// THE LIVING TREE — the map of the entire structure, at a glance.
+// ETP (road) → Portfolio (car) → Engine (⚔️ attack/🛡️ defense/🌡️ sensor)
+//   → Pillar (piston) → Strategy (competition arena) → assets.
+// Each piece carries its validation seal — the security key.
 // ============================================================
 
 interface Etp {
@@ -79,11 +79,11 @@ function Row({
 }
 
 const MOTOR_ICON: Record<string, { icon: string; tone: "atk" | "def" | "sensor"; label: string }> = {
-  attack_stocks: { icon: "⚔️", tone: "atk", label: "ataque · ações" },
-  attack_etfs: { icon: "⚔️", tone: "atk", label: "ataque · ETFs" },
-  custom: { icon: "⚔️", tone: "atk", label: "ataque · custom" },
-  defense: { icon: "🛡️", tone: "def", label: "defesa" },
-  detector: { icon: "🌡️", tone: "sensor", label: "sensor · termômetro" },
+  attack_stocks: { icon: "⚔️", tone: "atk", label: "attack · stocks" },
+  attack_etfs: { icon: "⚔️", tone: "atk", label: "attack · ETFs" },
+  custom: { icon: "⚔️", tone: "atk", label: "attack · custom" },
+  defense: { icon: "🛡️", tone: "def", label: "defense" },
+  detector: { icon: "🌡️", tone: "sensor", label: "sensor · thermometer" },
 };
 
 function MotorNode({ motor, depth, go, portfolioId }: { motor: MotorNoPortfolio; depth: number; go?: (id: ScreenId, param?: string) => void; portfolioId: string }) {
@@ -109,12 +109,12 @@ function MotorNode({ motor, depth, go, portfolioId }: { motor: MotorNoPortfolio;
 
 function PilarNode({ pilar, depth, go, portfolioId }: { pilar: PilarNo; depth: number; go?: (id: ScreenId, param?: string) => void; portfolioId: string }) {
   const [open, setOpen] = useState(false);
-  const nomeVisivel = pilar.nome === "__sem_pilar__" ? "(sem pilar)" : pilar.nome;
+  const nomeVisivel = pilar.nome === "__sem_pilar__" ? "(no pillar)" : pilar.nome;
   return (
     <>
       <Row
         depth={depth} icon="🔩" label={nomeVisivel}
-        meta={`· pistão · ${pilar.esteiras.length} estratégia${pilar.esteiras.length === 1 ? "" : "s"}`}
+        meta={`· piston · ${pilar.esteiras.length} strateg${pilar.esteiras.length === 1 ? "y" : "ies"}`}
         expandable={pilar.esteiras.length > 0} open={open}
         onClick={() => setOpen((o) => !o)}
       />
@@ -131,7 +131,7 @@ function EstrategiaNode({ estrategia, depth, go, portfolioId }: { estrategia: Es
   return (
     <Row
       depth={depth} icon="🎯" label={estrategia.nome}
-      meta={`· ${estrategia.ativos.length} ativo${estrategia.ativos.length === 1 ? "" : "s"} competindo${tickers ? ` · ${tickers}${resto}` : ""}`}
+      meta={`· ${estrategia.ativos.length} asset${estrategia.ativos.length === 1 ? "" : "s"} competing${tickers ? ` · ${tickers}${resto}` : ""}`}
       onClick={() => go?.("portfolio-studio", portfolioId)}
     />
   );
@@ -165,14 +165,14 @@ function PortfolioNode({
     <>
       <Row
         depth={1} icon="🚗" label={summary.nome || summary.id}
-        meta={nMotores != null ? `· ${nMotores} motor${nMotores === 1 ? "" : "es"} (${ataque} ataque · ${defesa} defesa)` : summary.mode === "model" ? "· modelo" : "· ativo"}
+        meta={nMotores != null ? `· ${nMotores} engine${nMotores === 1 ? "" : "s"} (${ataque} attack · ${defesa} defense)` : summary.mode === "model" ? "· model" : "· active"}
         selo={seloPortfolio(summary.estado)}
         expandable open={open}
         onClick={toggle}
       />
-      {open && loading && <Row depth={2} icon="…" label={<span style={{ color: "var(--tx3)" }}>carregando composição…</span>} />}
+      {open && loading && <Row depth={2} icon="…" label={<span style={{ color: "var(--tx3)" }}>loading composition…</span>} />}
       {open && comp && comp.motores.length === 0 && (
-        <Row depth={2} icon="—" label={<span style={{ color: "var(--tx3)" }}>nenhum motor montado ainda</span>} onClick={() => onOpen(summary)} />
+        <Row depth={2} icon="—" label={<span style={{ color: "var(--tx3)" }}>no engine assembled yet</span>} onClick={() => onOpen(summary)} />
       )}
       {open && comp && comp.motores.map((m) => (
         <MotorNode key={m.id} motor={m} depth={2} go={go} portfolioId={summary.id} />
@@ -180,7 +180,7 @@ function PortfolioNode({
       {open && comp && (
         <Row
           depth={2} icon="✏️"
-          label={<span style={{ color: "var(--gold)" }}>Abrir na Bancada (Portfolio Studio) →</span>}
+          label={<span style={{ color: "var(--gold)" }}>Open in the Workbench (Portfolio Studio) →</span>}
           onClick={() => onOpen(summary)}
         />
       )}
@@ -209,10 +209,10 @@ export default function ArvoreViva({ go, onOpenPortfolio }: { go?: (id: ScreenId
   }, []);
 
   if (conn === "loading") {
-    return <div className="c-mut" style={{ padding: 24, textAlign: "center" }}>Carregando a estrutura…</div>;
+    return <div className="c-mut" style={{ padding: 24, textAlign: "center" }}>Loading the structure…</div>;
   }
   if (conn === "error" || !etps || !portfolios) {
-    return <div style={{ padding: 24, textAlign: "center", color: "var(--red)" }}>Não consegui carregar a árvore. API offline?</div>;
+    return <div style={{ padding: 24, textAlign: "center", color: "var(--red)" }}>Could not load the tree. API offline?</div>;
   }
 
   const portfolioById = new Map(portfolios.map((p) => [p.id, p]));
@@ -224,14 +224,14 @@ export default function ArvoreViva({ go, onOpenPortfolio }: { go?: (id: ScreenId
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 14px 14px" }}>
         <div>
           <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: "var(--gold)", fontWeight: 700 }}>
-            A Árvore Viva
+            The Living Tree
           </div>
           <div style={{ fontSize: 11.5, color: "var(--tx3)", marginTop: 2 }}>
-            Estrada → Carro → Motores → Pistões → Estratégias. Clique numa peça pra abrir a Bancada.
+            Road → Car → Engines → Pistons → Strategies. Click a piece to open the Workbench.
           </div>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 14, fontFamily: "var(--mono)", fontSize: 10.5, color: "var(--tx3)" }}>
-          <span>🟢 homologado</span><span>🟡 candidato</span><span>🔴 não testado</span>
+          <span>🟢 validated</span><span>🟡 candidate</span><span>🔴 not validated</span>
         </div>
       </div>
 
@@ -243,14 +243,14 @@ export default function ArvoreViva({ go, onOpenPortfolio }: { go?: (id: ScreenId
           <div key={etp.id}>
             <Row
               depth={0} icon="🛣️" label={etp.nome}
-              meta={`${etp.isin ? `· ${etp.isin} ` : ""}${etp.portfolio_ids.length === 2 ? "· 2 portfólios" : ""}`}
+              meta={`${etp.isin ? `· ${etp.isin} ` : ""}${etp.portfolio_ids.length === 2 ? "· 2 portfolios" : ""}`}
               selo={seloEtp(etp.status)}
               expandable open={open}
               onClick={() => setOpenEtps((s) => ({ ...s, [etp.id]: !s[etp.id] }))}
             />
             {open && ps.map((p) => <PortfolioNode key={p.id} summary={p} go={go} onOpen={onOpenPortfolio} />)}
             {open && faltando.map((pid) => (
-              <Row key={pid} depth={1} icon="⚠️" label={<span style={{ color: "var(--orange)" }}>portfólio {pid} não encontrado</span>} />
+              <Row key={pid} depth={1} icon="⚠️" label={<span style={{ color: "var(--orange)" }}>portfolio {pid} not found</span>} />
             ))}
           </div>
         );
@@ -259,7 +259,7 @@ export default function ArvoreViva({ go, onOpenPortfolio }: { go?: (id: ScreenId
       {portfoliosOrfaos.length > 0 && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed var(--line)" }}>
           <div style={{ padding: "4px 14px 8px", fontSize: 10.5, textTransform: "uppercase", letterSpacing: 1, color: "var(--tx3)" }}>
-            Portfólios modelo · sem ETP ainda (laboratório)
+            Model portfolios · no ETP yet (lab)
           </div>
           {portfoliosOrfaos.map((p) => (
             <PortfolioNode key={p.id} summary={p} go={go} onOpen={onOpenPortfolio} />

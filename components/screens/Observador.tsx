@@ -20,9 +20,9 @@ function fmtTS(ts?: string) {
   if (!ts) return "";
   const d = new Date(ts);
   if (isNaN(d.getTime())) return ts;
-  return d.toLocaleDateString("pt-BR");
+  return d.toLocaleDateString("en-US");
 }
-function pilarLabel(key: string) { return key.replace("pilar_", "Pilar "); }
+function pilarLabel(key: string) { return key.replace("pilar_", "Pillar "); }
 
 export default function Observador() {
   const [d, setD] = useState<ObservadorData | null>(null);
@@ -42,9 +42,9 @@ export default function Observador() {
       : "N/A";
     publishScreenData(
       "observador",
-      `Acurácia média ${avgAccuracy}% | ${d.alertas.length} alertas | ${d.hipoteses.length} hipóteses`,
+      `Average accuracy ${avgAccuracy}% | ${d.alertas.length} alerts | ${d.hipoteses.length} hypotheses`,
       d,
-      { briefing: `Observador com acurácia média de ${avgAccuracy}% nos pilares, ${d.alertas.length} alertas ativos e ${d.hipoteses.length} hipóteses registradas.` }
+      { briefing: `Observer with average accuracy of ${avgAccuracy}% across pillars, ${d.alertas.length} active alerts, and ${d.hipoteses.length} hypotheses recorded.` }
     );
   }, [d]);
 
@@ -55,26 +55,26 @@ export default function Observador() {
   return (
     <div className="screen">
       <div className="flex between mb">
-        <div><div className="h1">Observador (IA) — Scorecard & Discovery</div><div className="sub">Acurácia por pilar, alertas e hipóteses</div></div>
+        <div><div className="h1">Observer (AI) — Scorecard & Discovery</div><div className="sub">Accuracy by pillar, alerts, and hypotheses</div></div>
         <div className={`tag ${conn === "ok" ? "b" : conn === "error" ? "r" : "b"}`}>
-          {conn === "loading" ? "conectando…" : conn === "ok" ? "● API ao vivo" : "✕ API offline"}
+          {conn === "loading" ? "connecting…" : conn === "ok" ? "● API live" : "✕ API offline"}
         </div>
       </div>
 
       {conn === "error" ? (
-        <div className="ph mb"><b>API não respondeu</b>Suba a API: <code>uvicorn app.main:app --port 8080</code></div>
+        <div className="ph mb"><b>API did not respond</b>Start the API: <code>uvicorn app.main:app --port 8080</code></div>
       ) : (
         <div className="grid g4 mb">
           {pilares.length === 0 ? (
-            <div className="ph" style={{ gridColumn: "1/-1" }}>Nenhum pilar configurado</div>
+            <div className="ph" style={{ gridColumn: "1/-1" }}>No pillar configured</div>
           ) : pilares.map(([key, p]) => {
             const col = accColor(p.acuracia_pct);
             return (
               <div className="card" style={{ textAlign: "center" }} key={key}>
                 <h2><span>{pilarLabel(key)}</span></h2>
                 <div style={{ fontSize: 32, fontWeight: 800, fontVariantNumeric: "tabular-nums", color: col }}>{p.acuracia_pct.toFixed(1)}%</div>
-                <div className="c-mut" style={{ fontSize: 11, marginTop: 4 }}>{p.acertos} acertos · {p.erros} erros</div>
-                <div style={{ height: 8, borderRadius: 4, background: "#08182c", overflow: "hidden", marginTop: 6 }}>
+                <div className="c-mut" style={{ fontSize: 11, marginTop: 4 }}>{p.acertos} hits · {p.erros} misses</div>
+                <div style={{ height: 8, borderRadius: 4, background: "var(--raise)", overflow: "hidden", marginTop: 6 }}>
                   <div style={{ height: "100%", borderRadius: 4, width: `${p.acuracia_pct}%`, background: col }} />
                 </div>
               </div>
@@ -85,14 +85,14 @@ export default function Observador() {
 
       <div className="grid g2 mb">
         <div className="card">
-          <h2><span>Alertas</span><span className="tag a">{alerts.length}</span></h2>
+          <h2><span>Alerts</span><span className="tag a">{alerts.length}</span></h2>
           {alerts.length === 0 ? (
-            <div className="c-mut2" style={{ padding: 12, textAlign: "center", fontSize: 11 }}>Nenhum alerta ativo</div>
+            <div className="c-mut2" style={{ padding: 12, textAlign: "center", fontSize: 11 }}>No active alerts</div>
           ) : alerts.map((a, i) => (
             <div className="li" key={i}>
               <div className="dot" style={{ background: a.sev === "red" ? "var(--red)" : a.sev === "green" ? "var(--green)" : "var(--orange)" }} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11 }}><b>{a.tipo}</b> {a.pilar && <> · <span className="c-mut">Pilar {a.pilar}</span></>}</div>
+                <div style={{ fontSize: 11 }}><b>{a.tipo}</b> {a.pilar && <> · <span className="c-mut">Pillar {a.pilar}</span></>}</div>
                 <div className="c-mut" style={{ fontSize: 11 }}>{a.desc}</div>
               </div>
               <span className={`tag ${sevSem(a.sev)}`}>{a.sev}</span>
@@ -102,9 +102,9 @@ export default function Observador() {
         </div>
 
         <div className="card">
-          <h2><span>Hipóteses</span><span className="tag b">{hyps.length}</span></h2>
+          <h2><span>Hypotheses</span><span className="tag b">{hyps.length}</span></h2>
           {hyps.length === 0 ? (
-            <div className="c-mut2" style={{ padding: 12, textAlign: "center", fontSize: 11 }}>Nenhuma hipótese registrada</div>
+            <div className="c-mut2" style={{ padding: 12, textAlign: "center", fontSize: 11 }}>No hypothesis recorded</div>
           ) : hyps.map((h) => (
             <div className="li" key={h.id}>
               <div style={{ flex: 1 }}>
@@ -117,7 +117,7 @@ export default function Observador() {
         </div>
       </div>
 
-      <div className="foot">Observador (IA) · Scorecard & Discovery · Cockpit Gestor · v1</div>
+      <div className="foot">Observer (AI) · Scorecard & Discovery · Manager Cockpit · v1</div>
     </div>
   );
 }

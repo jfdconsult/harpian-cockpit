@@ -80,12 +80,12 @@ interface I18nCtx {
   t: (key: string) => string;
 }
 
-const Ctx = createContext<I18nCtx>({ lang: "pt", setLang: () => {}, t: (k) => k });
+const Ctx = createContext<I18nCtx>({ lang: "en", setLang: () => {}, t: (k) => k });
 
 const STORAGE_KEY = "harpian-lang";
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("pt");
+  const [lang, setLangState] = useState<Lang>("en");
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as Lang | null;

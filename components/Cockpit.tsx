@@ -18,6 +18,7 @@ import Auditoria from "./screens/Auditoria";
 import Admin from "./screens/Admin";
 import Chart from "./screens/Chart";
 import Cotacoes from "./screens/Cotacoes";
+import Calendar from "./screens/Calendar";
 import Setores from "./screens/Setores";
 import AlphaDroid from "./screens/AlphaDroid";
 import StrategiesStrength from "./screens/StrategiesStrength";
@@ -101,6 +102,8 @@ export default function Cockpit() {
         return <Chart ticker={chartTicker || "NVDA"} go={go} />;
       case "cotacoes":
         return <Cotacoes classe={cotacoesClasse} go={go} />;
+      case "calendar":
+        return <Calendar />;
       case "setores":
         return <Setores go={go} />;
       case "alphadroid":

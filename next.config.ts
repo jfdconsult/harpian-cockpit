@@ -1,11 +1,10 @@
 import type { NextConfig } from "next";
 
-const isProd = process.env.NODE_ENV === "production";
-
+// Deployed standalone on Vercel (its own domain, e.g. harpian-cockpit.vercel.app),
+// not as a subpath of another app — no basePath needed. Regular server output
+// (not "export") so middleware.ts can gate every request with HTTP Basic Auth —
+// this app is internal-only (real partner data, unrestricted model internals).
 const nextConfig: NextConfig = {
-  output: "export",
-  basePath: isProd ? "/harpian-cockpit" : "",
-  assetPrefix: isProd ? "/harpian-cockpit/" : "",
   images: { unoptimized: true },
 };
 

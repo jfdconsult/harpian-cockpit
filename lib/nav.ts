@@ -34,7 +34,8 @@ export type ScreenId =
   | "market-dna"
   | "portfolio-studio"
   | "construtor"
-  | "ticket-news";
+  | "ticket-news"
+  | "calendar";
 
 export interface MenuItem {
   id: ScreenId;
@@ -128,6 +129,12 @@ export const MENUS: Menu[] = [
           { id: "cotacoes", label: "Crypto", icon: "ti-currency-bitcoin", param: "cripto" },
           { id: "cotacoes", label: "International Indices", icon: "ti-world", param: "indices" },
           { id: "cotacoes", label: "Forex (FX)", icon: "ti-arrows-exchange", param: "forex" },
+        ],
+      },
+      {
+        label: "Agenda",
+        items: [
+          { id: "calendar", label: "Calendar", icon: "ti-calendar-event", tag: "new" },
         ],
       },
     ],

@@ -39,3 +39,5 @@ yarn-error.log*
 # stray malformed directory from an old path-as-name bug
 C*dev*harpian-cockpit-next/
 devserver.log
+
+.vercel

@@ -157,6 +157,12 @@ ALWAYS use CSS variables. NEVER hardcode colors.
 - Uses `var(--panel)` background + `var(--tx)` text (theme-aware)
 - Chat API lives in the HQP backend (`/v1/jim/chat`, `/v1/jim/sessions`) — no local API routes
 
+## JIM / Harpian literary library path
+- Primary source of truth for book/PDF agents: `G:\Drives compartilhados\HARPIAN LLC\Library - All Books\Books`
+- Legacy compatibility path only: `C:\Users\jfdco\OneDrive\Área de Trabalho\LIVROS PDF TEXTOS`
+- If old prompts/configs mention `LIVROS PDF TEXTOS`, treat it as an alias/fallback for the GDrive primary path.
+- Never delete, deduplicate, mirror, or purge book files automatically; duplicates can be intentional.
+
 ## DefesaInteligente (new screen)
 180-degree thermometer gauge with 4 zones:
 - Defense (left, red #E74C3C) — system in full defense

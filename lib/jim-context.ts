@@ -66,6 +66,10 @@ export const SCREEN_MAP: Record<ScreenId, ScreenContext> = {
     title: "Quotes by Asset Class",
     description: "Real-time quotes by asset class: Stocks, ETFs, Commodities, Crypto, Indices, Forex.",
   },
+  calendar: {
+    title: "Calendar",
+    description: "Economic events (US + world) and earnings for the HC-US TOTAL universe (215 tickers). Three tabs: Economic (CPI, NFP, FOMC, GDP, PCE with consensus/previous/actual), Earnings (upcoming reports over the next 3-30 days with EPS consensus), Last reports (reported EPS vs. consensus + surprise%). Source: Nasdaq public data via hqp-api.",
+  },
   setores: {
     title: "Sectors",
     description: "Performance by sector — relative strength, sector rotation, leaders and laggards.",
@@ -215,6 +219,11 @@ export const SCREEN_SUGGESTIONS: Record<ScreenId, string[]> = {
     "Which assets gained the most today?",
     "What's the tech sector's variation?",
     "Is any asset showing unusual volume?",
+  ],
+  calendar: [
+    "What's the highest-impact event this week?",
+    "Which tickers in our universe report earnings in the next 5 days?",
+    "Which names just missed consensus by more than 10%?",
   ],
   setores: [
     "Which sector is leading the rotation?",

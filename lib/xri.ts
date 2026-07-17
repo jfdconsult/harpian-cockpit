@@ -112,10 +112,14 @@ export const COUNTRY_PT: Record<string, string> = {
 // same pattern as GOV_API (:8877): this SPA is output:"export", with no server route
 // of its own, so it fetches directly from an external service (client-side fetch).
 const XRI_API = process.env.NEXT_PUBLIC_XRI_API_URL || "http://localhost:8879";
+const XRI_API_KEY = process.env.NEXT_PUBLIC_XRI_API_KEY || "";
 
 export async function fetchXriFeed(): Promise<XriFeed> {
   try {
-    const r = await fetch(`${XRI_API}/xri/full`, { cache: "no-store" });
+    const r = await fetch(`${XRI_API}/xri/full`, {
+      cache: "no-store",
+      headers: XRI_API_KEY ? { "X-API-Key": XRI_API_KEY } : undefined,
+    });
     return (await r.json()) as XriFeed;
   } catch {
     return { ok: false, offline: true };

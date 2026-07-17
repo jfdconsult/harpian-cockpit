@@ -5,6 +5,43 @@ import { NextRequest, NextResponse } from "next/server";
 // absorption ratio, overlay weights) live behind this screen. Credentials
 // come from Vercel env vars (COCKPIT_AUTH_USER / COCKPIT_AUTH_PASS), never
 // hardcoded here.
+
+// Constant-time string compare: falso == verdadeiro leva o mesmo tempo,
+// bloqueando timing attacks byte-por-byte contra a senha.
+function safeEqual(a: string, b: string): boolean {
+  const ea = new TextEncoder().encode(a);
+  const eb = new TextEncoder().encode(b);
+  const len = Math.max(ea.length, eb.length);
+  let diff = ea.length ^ eb.length;
+  for (let i = 0; i < len; i++) {
+    diff |= (ea[i] ?? 0) ^ (eb[i] ?? 0);
+  }
+  return diff === 0;
+}
+
+function decodeBasic(encoded: string): [string, string] | null {
+  try {
+    const raw = atob(encoded);
+    const i = raw.indexOf(":");
+    if (i < 0) return null;
+    return [raw.slice(0, i), raw.slice(i + 1)];
+  } catch {
+    return null;
+  }
+}
+
+function unauthorized(): NextResponse {
+  const res = new NextResponse("Authentication required", {
+    status: 401,
+    headers: {
+      "WWW-Authenticate": 'Basic realm="Harpian Cockpit"',
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+  return res;
+}
+
 export function middleware(req: NextRequest) {
   const user = process.env.COCKPIT_AUTH_USER;
   const pass = process.env.COCKPIT_AUTH_PASS;
@@ -14,15 +51,22 @@ export function middleware(req: NextRequest) {
   if (auth) {
     const [scheme, encoded] = auth.split(" ");
     if (scheme === "Basic" && encoded) {
-      const [u, p] = atob(encoded).split(":");
-      if (u === user && p === pass) return NextResponse.next();
+      const creds = decodeBasic(encoded);
+      if (creds) {
+        const [u, p] = creds;
+        // sempre roda os DOIS compares (nao usa &&) pra manter o tempo constante
+        const userOk = safeEqual(u, user);
+        const passOk = safeEqual(p, pass);
+        if (userOk && passOk) {
+          const res = NextResponse.next();
+          res.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+          return res;
+        }
+      }
     }
   }
 
-  return new NextResponse("Authentication required", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Harpian Cockpit"' },
-  });
+  return unauthorized();
 }
 
 export const config = {

@@ -630,7 +630,13 @@ export default function PortfolioBuilder() {
             {JANELAS.map((j) => {
               const on = j.id === janela;
               return (
-                <button key={j.id} onClick={() => setJanela(j.id)} style={{
+                <button key={j.id} onClick={() => {
+                  // libera a janela travada do SET assim que o cliente escolhe
+                  // um periodo — a composicao do SET continua carregada, mas
+                  // agora os numeros e o grafico respondem a cada clique
+                  if (periodoFixo) setPeriodoFixo(null);
+                  setJanela(j.id);
+                }} style={{
                   font: "inherit", fontSize: 12.5, fontWeight: on ? 600 : 500,
                   padding: "5px 12px", borderRadius: 5, cursor: "pointer",
                   border: "1px solid " + (on ? "var(--gold)" : "var(--line2)"),
@@ -703,7 +709,9 @@ export default function PortfolioBuilder() {
             )}
             <span style={{ fontSize: 11.5, color: "var(--tx3)", marginLeft: "auto" }}>
               {setAtivo
-                ? "janela travada no período em que o SET foi validado"
+                ? (periodoFixo
+                    ? "janela travada no período validado — clique um período pra liberar"
+                    : "janela livre — os números respondem a cada período")
                 : "sobe montado, com os percentuais já fechados"}
             </span>
           </div>

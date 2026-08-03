@@ -1354,6 +1354,8 @@ export default function PortfolioBuilder() {
           janelaLabel={JANELAS.find((j) => j.id === janela)?.label ?? "—"}
           curvaCapitalEl={<CurvaCapital dates={sim.dates} equity={sim.equity} benchmark={sim.benchmark} />}
           faixaDefesaEl={<FaixaDefesa frac={sim.defenseFrac} dates={sim.dates} marcado={null} onHover={() => {}} />}
+          series={series}
+          maxDrawdown={Math.abs(sim.metrics?.maxDrawdown ?? 0)}
           onClose={() => setShowReport(false)}
         />
       )}

@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import type { SimResult, Sleeve, StrategyMeta } from "@/lib/portfolio-builder/types";
+import type { SimResult, Sleeve, StrategyMeta, StrategySeries } from "@/lib/portfolio-builder/types";
 import type { SetDef } from "@/lib/portfolio-builder/benchmark-sets";
 
 const MONO = "var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
@@ -25,6 +25,15 @@ const brDate = (iso: string) => {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
+};
+
+const diasParaLegivel = (dias: number): string => {
+  if (dias <= 0) return "—";
+  if (dias < 21) return `${dias} pregões`;
+  const meses = Math.round(dias / 21);
+  if (meses < 12) return `${meses} ${meses === 1 ? "mês" : "meses"}`;
+  const anos = meses / 12;
+  return `${anos.toFixed(1)} anos`;
 };
 
 const pct = (n: number, d = 1) => (n == null || isNaN(n) ? "—" : `${(n * 100).toFixed(d)}%`);
@@ -54,10 +63,137 @@ interface ReportData {
   curvaCapitalEl: React.ReactNode;
   /** JSX ja pronto da faixa de defesa */
   faixaDefesaEl: React.ReactNode;
+  /** series por sleeve — pra calcular retorno individual, trocas, defesa */
+  series: Record<string, StrategySeries>;
+  /** valor do maxdd do portfolio (0..1) — pra secao tecnica */
+  maxDrawdown: number;
+}
+
+function TechTile({ k, v, sub, tom }: { k: string; v: string; sub?: string; tom?: "pos" | "neg" }) {
+  return (
+    <div style={{
+      padding: "9px 11px", border: "1px solid #eee", borderRadius: 5, background: "#fafafa",
+    }}>
+      <div style={{ fontSize: 8.5, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 3 }}>{k}</div>
+      <div style={{
+        fontSize: 14, fontFamily: MONO, fontWeight: 700,
+        color: tom === "pos" ? "#0a7a3b" : tom === "neg" ? "#b0201f" : "#111",
+      }}>{v}</div>
+      {sub && <div style={{ fontSize: 9.5, color: "#888", marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
 }
 
 export default function ReportPrint(props: ReportData) {
-  const { autor, cliente, sim, sleeves, meta, nomeCurto, kpis, set, mode, rebalance, capital, janelaLabel, curvaCapitalEl, faixaDefesaEl } = props;
+  const { autor, cliente, sim, sleeves, meta, nomeCurto, kpis, set, mode, rebalance, capital, janelaLabel, curvaCapitalEl, faixaDefesaEl, series, maxDrawdown } = props;
+
+  /**
+   * Estatisticas tecnicas por sleeve — extraidas de sim.weights + series.
+   * Calcula uma vez por render:
+   *  - pesoMedio: media dos pesos diarios (0..1)
+   *  - pesoMax: pico historico
+   *  - pctTempoAtiva: fracao dos dias com peso > 1%
+   *  - trocas: mudancas de simbolo (sym[i] != sym[i-1]) na janela da sim
+   *  - pctEmDefesa: fracao dos dias com defensivo=1 na janela
+   *  - retornoJanela: equity[to]/equity[from] - 1 (na janela da sim)
+   *  - contribuicao: peso medio * retorno da janela (aprox 1a ordem)
+   */
+  const stats = useMemo(() => {
+    return sleeves.map((sl, sleeveIdx) => {
+      let soma = 0, n = 0, mx = 0, ativos = 0;
+      if (sim.weights?.length) {
+        for (let d = 0; d < sim.weights.length; d++) {
+          const w = sim.weights[d]?.[sleeveIdx];
+          if (w == null || !isFinite(w)) continue;
+          soma += w; n++;
+          if (w > mx) mx = w;
+          if (w > 0.01) ativos++;
+        }
+      }
+      const pesoMedio = n > 0 ? soma / n : 0;
+      const pesoMax = mx;
+      const pctTempoAtiva = n > 0 ? ativos / n : 0;
+
+      // Recorta series na janela da sim (de sim.from ate sim.to no calendario)
+      const s = series[sl.id];
+      let trocas = 0;
+      let pctEmDefesa = 0;
+      let retornoJanela = 0;
+      if (s) {
+        // s.start eh onde s comeca no calendario. sim.from tambem eh do calendario.
+        const iniIdx = Math.max(0, sim.from - s.start);
+        const fimIdx = Math.min(s.n - 1, sim.to - s.start);
+        if (fimIdx > iniIdx) {
+          for (let i = iniIdx + 1; i <= fimIdx; i++) {
+            if (s.sym[i] !== s.sym[i - 1]) trocas++;
+          }
+          let df = 0, dtot = 0;
+          for (let i = iniIdx; i <= fimIdx; i++) {
+            if (s.defensivo[i] === 1) df++;
+            dtot++;
+          }
+          pctEmDefesa = dtot > 0 ? df / dtot : 0;
+          const ei = s.equity[iniIdx];
+          const ef = s.equity[fimIdx];
+          if (ei > 0 && ef > 0) retornoJanela = ef / ei - 1;
+        }
+      }
+      const contribuicao = pesoMedio * retornoJanela;
+      return { id: sl.id, sleeveIdx, pesoMedio, pesoMax, pctTempoAtiva, trocas, pctEmDefesa, retornoJanela, contribuicao };
+    });
+  }, [sleeves, sim.weights, sim.from, sim.to, series]);
+
+  /**
+   * Estatisticas do PORTFOLIO como um todo — tempo em drawdown, recovery,
+   * meses em defesa, turnover. Usa sim.drawdown e sim.defenseFrac.
+   */
+  const portfolioStats = useMemo(() => {
+    // Tempo max em drawdown: maior sequencia consecutiva com dd < -0.1%
+    let maxSeq = 0, curSeq = 0;
+    let diasEmDD = 0;
+    for (const dd of sim.drawdown) {
+      if (dd < -0.001) {
+        curSeq++;
+        diasEmDD++;
+        if (curSeq > maxSeq) maxSeq = curSeq;
+      } else {
+        curSeq = 0;
+      }
+    }
+    // Meses em defesa (>= 50% em defesa por >= 15 dias no mes)
+    let diasComDefesa = 0;
+    for (const f of sim.defenseFrac) if (f >= 0.5) diasComDefesa++;
+    // Turnover: soma das mudancas absolutas de peso por dia
+    let turnover = 0;
+    if (sim.weights?.length > 1) {
+      for (let d = 1; d < sim.weights.length; d++) {
+        for (let s = 0; s < sim.weights[d].length; s++) {
+          turnover += Math.abs((sim.weights[d]?.[s] ?? 0) - (sim.weights[d - 1]?.[s] ?? 0));
+        }
+      }
+      // normaliza: turnover total / 2 (compra+venda contam) / (anos)
+      const anos = sim.dates.length / 252;
+      turnover = anos > 0 ? turnover / 2 / anos : 0;
+    }
+    const totalDias = sim.dates.length;
+    return {
+      diasMaxEmDD: maxSeq,
+      diasEmDD,
+      diasComDefesa,
+      totalDias,
+      pctTempoEmDD: totalDias > 0 ? diasEmDD / totalDias : 0,
+      pctTempoEmDefesa: totalDias > 0 ? diasComDefesa / totalDias : 0,
+      turnoverAnual: turnover, // vezes/ano que a carteira gira
+    };
+  }, [sim.drawdown, sim.defenseFrac, sim.weights, sim.dates]);
+
+  // Top 3 melhor e top 3 pior retorno da janela
+  const topBest = useMemo(() =>
+    [...stats].sort((a, b) => b.retornoJanela - a.retornoJanela).slice(0, 3),
+  [stats]);
+  const topWorst = useMemo(() =>
+    [...stats].sort((a, b) => a.retornoJanela - b.retornoJanela).slice(0, 3),
+  [stats]);
 
   const [analise, setAnalise] = useState<string | null>(null);
   const [erroAnalise, setErroAnalise] = useState<string | null>(null);
@@ -292,21 +428,7 @@ export default function ReportPrint(props: ReportData) {
             <tbody>
               {sleeves.map((s, sleeveIdx) => {
                 const m = meta[s.id];
-                // Para o dinamico: le a serie de pesos dessa sleeve ao longo dos
-                // dias e calcula media + max. sim.weights[dia][sleeveIdx].
-                let pesoMedio = 0;
-                let pesoMax = 0;
-                if (mode === "dynamic" && sim.weights && sim.weights.length > 0) {
-                  let soma = 0, n = 0, mx = 0;
-                  for (let d = 0; d < sim.weights.length; d++) {
-                    const w = sim.weights[d]?.[sleeveIdx];
-                    if (w == null || !isFinite(w)) continue;
-                    soma += w; n++;
-                    if (w > mx) mx = w;
-                  }
-                  pesoMedio = n > 0 ? soma / n : 0;
-                  pesoMax = mx;
-                }
+                const st = stats[sleeveIdx];
                 return (
                   <tr key={s.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
                     <td style={{ padding: "6px 8px", fontWeight: 600 }}>{m ? nomeCurto(m) : s.id}</td>
@@ -318,13 +440,102 @@ export default function ReportPrint(props: ReportData) {
                     ) : (
                       <>
                         <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#c9a02c" }}>
-                          {pct(pesoMedio, 1)}
+                          {pct(st.pesoMedio, 1)}
                         </td>
                         <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: MONO, color: "#555" }}>
-                          {pct(pesoMax, 0)}
+                          {pct(st.pesoMax, 0)}
                         </td>
                       </>
                     )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+
+        {/* ANÁLISE TÉCNICA — ASSET ALLOCATOR (página 2 típica) */}
+        <section style={{ marginBottom: 22, pageBreakInside: "avoid", pageBreakBefore: "always" }}>
+          <h2 style={{ margin: "0 0 10px", fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
+            Análise técnica do Asset Allocator
+          </h2>
+
+          {/* Estatisticas do portfolio */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
+            <TechTile k="Drawdown máx" v={pct(-Math.abs(maxDrawdown), 1)} tom="neg" />
+            <TechTile k="Tempo máx em DD" v={diasParaLegivel(portfolioStats.diasMaxEmDD)} sub={`${portfolioStats.diasMaxEmDD} pregões consecutivos`} />
+            <TechTile k="% tempo em DD" v={pct(portfolioStats.pctTempoEmDD, 1)} sub="fração dos pregões abaixo do pico" />
+            <TechTile k="% tempo em defesa" v={pct(portfolioStats.pctTempoEmDefesa, 1)} sub="pregões com ≥ 50% blindado" />
+          </div>
+
+          {/* Turnover */}
+          <div style={{ padding: "10px 12px", background: "#fafafa", border: "1px solid #eee", borderRadius: 5, marginBottom: 14, fontSize: 11.5, color: "#333" }}>
+            <b style={{ color: "#c9a02c" }}>Turnover anual da carteira:</b> {portfolioStats.turnoverAnual.toFixed(2)}× / ano — quantas vezes por ano os pesos giram (0 = estático, 1 = uma carteira totalmente nova por ano).
+          </div>
+
+          {/* Top 3 melhor e pior retorno */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+            <div>
+              <div style={{ fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#0a7a3b", fontFamily: MONO, fontWeight: 700, marginBottom: 6 }}>Melhores retornos (janela)</div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                <tbody>
+                  {topBest.map((t) => {
+                    const m = meta[t.id];
+                    return (
+                      <tr key={t.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                        <td style={{ padding: "5px 6px", fontWeight: 600 }}>{m ? nomeCurto(m) : t.id}</td>
+                        <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#0a7a3b", fontWeight: 700 }}>{pct(t.retornoJanela, 1)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div style={{ fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#b0201f", fontFamily: MONO, fontWeight: 700, marginBottom: 6 }}>Piores retornos (janela)</div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                <tbody>
+                  {topWorst.map((t) => {
+                    const m = meta[t.id];
+                    return (
+                      <tr key={t.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                        <td style={{ padding: "5px 6px", fontWeight: 600 }}>{m ? nomeCurto(m) : t.id}</td>
+                        <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#b0201f", fontWeight: 700 }}>{pct(t.retornoJanela, 1)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Detalhe por estrategia — trocas, tempo ativa, tempo em defesa */}
+          <div style={{ fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#555", fontFamily: MONO, fontWeight: 700, marginBottom: 6 }}>
+            Estatística técnica por estratégia
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #ddd" }}>
+                <th style={{ textAlign: "left", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Estratégia</th>
+                <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Retorno</th>
+                <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Contribuição</th>
+                <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% tempo ativa</th>
+                <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Nº trocas</th>
+                <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% em defesa</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sleeves.map((s, i) => {
+                const m = meta[s.id];
+                const st = stats[i];
+                return (
+                  <tr key={s.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                    <td style={{ padding: "5px 6px", fontWeight: 600 }}>{m ? nomeCurto(m) : s.id}</td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.retornoJanela >= 0 ? "#0a7a3b" : "#b0201f" }}>{pct(st.retornoJanela, 1)}</td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.contribuicao >= 0 ? "#0a7a3b" : "#b0201f", fontWeight: 700 }}>{pct(st.contribuicao, 2)}</td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{pct(st.pctTempoAtiva, 0)}</td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{st.trocas}</td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.pctEmDefesa > 0.1 ? "#0a5aa0" : "#666" }}>{pct(st.pctEmDefesa, 0)}</td>
                   </tr>
                 );
               })}

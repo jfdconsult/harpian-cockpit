@@ -18,6 +18,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { SimResult, Sleeve, StrategyMeta, StrategySeries } from "@/lib/portfolio-builder/types";
 import type { SetDef } from "@/lib/portfolio-builder/benchmark-sets";
+import { calcularRiskNumber, classificarRN, RN_BENCHMARKS } from "@/lib/portfolio-builder/risk-number";
 
 const MONO = "var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
 
@@ -67,6 +68,12 @@ interface ReportData {
   series: Record<string, StrategySeries>;
   /** valor do maxdd do portfolio (0..1) — pra secao tecnica */
   maxDrawdown: number;
+  /** CAGR anualizado do portfolio (0.15 = 15%/ano) — pra Risk Number */
+  cagr: number;
+  /** volatilidade anualizada (0.20 = 20% a.a.) — pra Risk Number */
+  volAnual: number;
+  /** RN do cliente (1..99) vindo do questionario, opcional */
+  rnCliente: number | null;
 }
 
 function TechTile({ k, v, sub, tom }: { k: string; v: string; sub?: string; tom?: "pos" | "neg" }) {
@@ -85,7 +92,13 @@ function TechTile({ k, v, sub, tom }: { k: string; v: string; sub?: string; tom?
 }
 
 export default function ReportPrint(props: ReportData) {
-  const { autor, cliente, sim, sleeves, meta, nomeCurto, kpis, set, mode, rebalance, capital, janelaLabel, curvaCapitalEl, faixaDefesaEl, series, maxDrawdown } = props;
+  const { autor, cliente, sim, sleeves, meta, nomeCurto, kpis, set, mode, rebalance, capital, janelaLabel, curvaCapitalEl, faixaDefesaEl, series, maxDrawdown, cagr, volAnual, rnCliente } = props;
+
+  // Risk Number do portfolio via Nitrogen-style downside 6M
+  const risk = useMemo(() => calcularRiskNumber(cagr, volAnual), [cagr, volAnual]);
+  const riskClass = classificarRN(risk.rn);
+  const rnGap = rnCliente != null ? risk.rn - rnCliente : null;
+  const rnClienteClass = rnCliente != null ? classificarRN(rnCliente) : null;
 
   /**
    * Estatisticas tecnicas por sleeve — extraidas de sim.weights + series.
@@ -377,6 +390,72 @@ export default function ReportPrint(props: ReportData) {
                 }}>{kp.v}</div>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* RISK NUMBER — destaque visual entre KPIs e gráfico */}
+        <section style={{ marginBottom: 22, pageBreakInside: "avoid" }}>
+          <h2 style={{ margin: "0 0 10px", fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
+            Risk Number — perfil de risco (padrão Nitrogen)
+          </h2>
+
+          <div style={{ display: "grid", gridTemplateColumns: rnCliente != null ? "1fr 1fr 1fr" : "1fr 2fr", gap: 10 }}>
+            {/* RN do portfolio */}
+            <div style={{
+              padding: "16px 18px", border: `2px solid ${riskClass.cor}`, borderRadius: 6,
+              background: "#fafafa", textAlign: "center",
+            }}>
+              <div style={{ fontSize: 9, letterSpacing: ".12em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 4 }}>
+                Portfolio proposto
+              </div>
+              <div style={{ fontSize: 44, fontWeight: 800, fontFamily: MONO, color: riskClass.cor, lineHeight: 1 }}>{risk.rn}</div>
+              <div style={{ fontSize: 11.5, color: riskClass.cor, fontWeight: 700, marginTop: 4, letterSpacing: ".02em" }}>{riskClass.label}</div>
+            </div>
+
+            {/* RN do cliente — só se informado */}
+            {rnCliente != null && rnClienteClass && (
+              <div style={{
+                padding: "16px 18px", border: `2px solid ${rnClienteClass.cor}`, borderRadius: 6,
+                background: "#fafafa", textAlign: "center",
+              }}>
+                <div style={{ fontSize: 9, letterSpacing: ".12em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 4 }}>
+                  Cliente (questionário)
+                </div>
+                <div style={{ fontSize: 44, fontWeight: 800, fontFamily: MONO, color: rnClienteClass.cor, lineHeight: 1 }}>{rnCliente}</div>
+                <div style={{ fontSize: 11.5, color: rnClienteClass.cor, fontWeight: 700, marginTop: 4, letterSpacing: ".02em" }}>{rnClienteClass.label}</div>
+              </div>
+            )}
+
+            {/* Explicação e comparação com benchmarks */}
+            <div style={{ padding: "14px 16px", background: "#f6f4ee", borderRadius: 6, fontSize: 11, color: "#333", lineHeight: 1.55 }}>
+              <div style={{ fontSize: 10, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 6 }}>Interpretação</div>
+              <div style={{ marginBottom: 6 }}>
+                Faixa 6 meses (95%): <b style={{ color: "#0a7a3b", fontFamily: MONO }}>{pct(risk.upside6, 1)}</b> alta ·{" "}
+                <b style={{ color: "#b0201f", fontFamily: MONO }}>{pct(risk.downside6, 1)}</b> baixa
+              </div>
+              <div style={{ fontSize: 10.5, color: "#666" }}>
+                Referências: AGG {RN_BENCHMARKS.AGG} · 50/50 {RN_BENCHMARKS.BLEND_50_50} · 70/30 {RN_BENCHMARKS.BLEND_70_30} · SPY {RN_BENCHMARKS.SPY}
+              </div>
+              {rnGap != null && (
+                <div style={{
+                  marginTop: 8, padding: "6px 10px", borderRadius: 4,
+                  background: Math.abs(rnGap) <= 10 ? "rgba(10,122,59,.12)" : "rgba(224,132,32,.14)",
+                  color: Math.abs(rnGap) <= 10 ? "#0a7a3b" : "#a15a10",
+                  fontSize: 11, fontWeight: 600,
+                }}>
+                  Gap: {rnGap > 0 ? "+" : ""}{rnGap} pontos —{" "}
+                  {Math.abs(rnGap) <= 10 ? "alinhado ao perfil do cliente"
+                    : rnGap > 0 ? "portfólio mais arrojado que o perfil"
+                    : "portfólio mais conservador que o perfil"}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ fontSize: 9.5, color: "#888", marginTop: 8, lineHeight: 1.45 }}>
+            Cálculo: retorno 6M {pct(risk.r6, 2)} − 1,64 × vol 6M {pct(risk.sigma6, 2)} = piso 6M {pct(risk.downside6, 2)}.
+            Metodologia baseada em <i>The Math Behind Nitrogen</i> (VaR paramétrico 95%, distribuição normal, sem Monte Carlo).
+            Réplica pública — o RN oficial do Nitrogen/Riskalyze exige a plataforma proprietária.
           </div>
         </section>
 

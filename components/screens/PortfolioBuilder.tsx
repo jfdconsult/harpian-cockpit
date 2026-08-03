@@ -218,6 +218,7 @@ export default function PortfolioBuilder() {
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [reportAutor, setReportAutor] = useState("");
   const [reportCliente, setReportCliente] = useState("");
+  const [reportRNCliente, setReportRNCliente] = useState<string>("");
   const [showReport, setShowReport] = useState(false);
   const [volTarget, setVolTarget] = useState<PortfolioConfig["volTarget"]>(null);
   const [periodoFixo, setPeriodoFixo] = useState<PortfolioConfig["periodoFixo"]>(null);
@@ -1303,6 +1304,21 @@ export default function PortfolioBuilder() {
               onChange={(e) => setReportCliente(e.target.value)}
               placeholder="Ex: Family Office XYZ"
               style={{
+                width: "100%", padding: "8px 11px", borderRadius: 5, marginBottom: 14,
+                background: "var(--bg2)", border: "1px solid var(--line)", color: "var(--tx)",
+                font: "inherit", fontSize: 13,
+              }}
+            />
+
+            <label style={{ display: "block", fontSize: 11.5, color: "var(--tx2)", marginBottom: 4 }}>
+              Risk Number do cliente <span style={{ color: "var(--tx3)", fontSize: 10.5 }}>(do questionário — opcional)</span>
+            </label>
+            <input
+              type="number" min={1} max={99}
+              value={reportRNCliente}
+              onChange={(e) => setReportRNCliente(e.target.value)}
+              placeholder="1 a 99 (ex: 45)"
+              style={{
                 width: "100%", padding: "8px 11px", borderRadius: 5, marginBottom: 20,
                 background: "var(--bg2)", border: "1px solid var(--line)", color: "var(--tx)",
                 font: "inherit", fontSize: 13,
@@ -1356,6 +1372,9 @@ export default function PortfolioBuilder() {
           faixaDefesaEl={<FaixaDefesa frac={sim.defenseFrac} dates={sim.dates} marcado={null} onHover={() => {}} />}
           series={series}
           maxDrawdown={Math.abs(sim.metrics?.maxDrawdown ?? 0)}
+          cagr={sim.metrics?.cagr ?? 0}
+          volAnual={sim.metrics?.volAnual ?? 0}
+          rnCliente={reportRNCliente ? Number(reportRNCliente) : null}
           onClose={() => setShowReport(false)}
         />
       )}

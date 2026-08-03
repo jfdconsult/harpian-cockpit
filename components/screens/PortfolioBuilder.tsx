@@ -510,15 +510,26 @@ export default function PortfolioBuilder() {
   }, [catalog, busca, grupo, defensivas]);
 
   /**
-   * Nome curto pra leitura rapida: extrai a parte apos o ultimo " - " do label
-   * (ou usa e.nome quando esse ja for distinto do label completo).
-   *   "!CORE11 S26 - US Large Cap"  ->  "US Large Cap"
-   *   "C11 - C22ACT/CD 154 - Consumer Discretionary" -> "Consumer Discretionary"
+   * Nome curto pra leitura rapida. NAO confia em e.nome — o pipeline atual
+   * gera valores truncados ("Developed Cou" em vez de "Developed Countries").
+   * Deriva sempre do label + sub:
+   *   1) se label tem " - <Nome legivel>", usa isso
+   *   2) se o "depois de - " parece codigo (C22ACT1CD 154), pula pro sub
+   *   3) se label NAO tem " - ", usa sub (formato setorial 154-171)
+   *   4) fallback: label todo
    */
   const nomeCurto = useCallback((e: StrategyMeta): string => {
-    if (e.nome && e.nome.trim() && e.nome.trim() !== e.label.trim()) return e.nome.trim();
-    const i = e.label.lastIndexOf(" - ");
-    return (i >= 0 ? e.label.slice(i + 3) : e.label).trim();
+    const label = (e.label || "").trim();
+    const sub = (e.sub || "").trim();
+    const i = label.lastIndexOf(" - ");
+    if (i >= 0) {
+      const after = label.slice(i + 3).trim();
+      // Descarta se o "depois de - " for codigo tipo "C22ACT1CD 154"
+      // (letras/digitos com espaco curto — nao e nome humano de setor).
+      if (after && !/^[A-Z0-9]+ ?\d*$/.test(after)) return after;
+    }
+    if (sub) return sub;
+    return label;
   }, []);
 
   /**

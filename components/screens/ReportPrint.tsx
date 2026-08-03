@@ -265,22 +265,66 @@ export default function ReportPrint(props: ReportData) {
           <h2 style={{ margin: "0 0 10px", fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
             Composição do portfólio · {sleeves.length} {sleeves.length === 1 ? "estratégia" : "estratégias"}
           </h2>
+          {/* Nota que muda pelo modo: no linear o peso e fixo; no dinamico
+              mostramos peso medio (media ao longo da janela) e peso maximo
+              (pico historico). O minimo do dinamico e sempre 0 — a estrategia
+              pode ficar de fora do portfolio em meses em que o momento cai. */}
+          <div style={{ fontSize: 11, color: "#555", marginBottom: 8, lineHeight: 1.5 }}>
+            {mode === "linear"
+              ? "Alocação linear: cada estratégia mantém o peso fixo o tempo todo, com rebalance " + rebalance + "."
+              : "Alocação dinâmica: os pesos variam a cada rebalance " + rebalance + " pela força do momento. A tabela mostra o peso médio (média ao longo da janela) e o pico máximo alocado. O mínimo é sempre 0% — a estratégia pode ficar de fora do portfólio quando o momento cai."}
+          </div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid #ddd" }}>
                 <th style={{ textAlign: "left", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600 }}>Estratégia</th>
                 <th style={{ textAlign: "left", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600 }}>Código AlphaDroid</th>
-                <th style={{ textAlign: "right", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, width: 80 }}>Peso</th>
+                {mode === "linear" ? (
+                  <th style={{ textAlign: "right", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, width: 80 }}>Peso fixo</th>
+                ) : (
+                  <>
+                    <th style={{ textAlign: "right", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, width: 80 }}>Peso médio</th>
+                    <th style={{ textAlign: "right", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, width: 80 }}>Máx alocado</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
-              {sleeves.map((s) => {
+              {sleeves.map((s, sleeveIdx) => {
                 const m = meta[s.id];
+                // Para o dinamico: le a serie de pesos dessa sleeve ao longo dos
+                // dias e calcula media + max. sim.weights[dia][sleeveIdx].
+                let pesoMedio = 0;
+                let pesoMax = 0;
+                if (mode === "dynamic" && sim.weights && sim.weights.length > 0) {
+                  let soma = 0, n = 0, mx = 0;
+                  for (let d = 0; d < sim.weights.length; d++) {
+                    const w = sim.weights[d]?.[sleeveIdx];
+                    if (w == null || !isFinite(w)) continue;
+                    soma += w; n++;
+                    if (w > mx) mx = w;
+                  }
+                  pesoMedio = n > 0 ? soma / n : 0;
+                  pesoMax = mx;
+                }
                 return (
                   <tr key={s.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
                     <td style={{ padding: "6px 8px", fontWeight: 600 }}>{m ? nomeCurto(m) : s.id}</td>
                     <td style={{ padding: "6px 8px", color: "#666", fontSize: 10.5, fontFamily: MONO }}>{m?.label ?? s.id}</td>
-                    <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#c9a02c" }}>{pct(s.weight, 0)}</td>
+                    {mode === "linear" ? (
+                      <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#c9a02c" }}>
+                        {pct(s.weight, 0)}
+                      </td>
+                    ) : (
+                      <>
+                        <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#c9a02c" }}>
+                          {pct(pesoMedio, 1)}
+                        </td>
+                        <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: MONO, color: "#555" }}>
+                          {pct(pesoMax, 0)}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 );
               })}

@@ -564,6 +564,23 @@ export default function PortfolioBuilder() {
     ? Math.max(...sleeves.filter((s) => meta[s.id]).map((s) => meta[s.id].start))
     : 0;
 
+  /**
+   * Quantos anos de historico o SET carregado tem. Usado pra desabilitar os
+   * botoes de periodo maiores que o SET pode cobrir — sem isso o cliente
+   * clica "20 anos" com o SET ativo e a janela colapsa pro maximo real
+   * silenciosamente, o que confunde.
+   *
+   * Le direto do setsData.janela (que foi validada no export) — nao pode ser
+   * derivado das sleeves porque os SETs usam blocos ("rotacao20", "aggbond")
+   * que nao estao no catalogo de estrategias e nao tem primeiro_dia.
+   */
+  const anosMaxDoSet = useMemo(() => {
+    if (!setAtivo || !setsData?.janela) return null;
+    const inicio = new Date(setsData.janela.de + "T00:00:00Z").getTime();
+    const fim = new Date(setsData.janela.ate + "T00:00:00Z").getTime();
+    return Math.ceil((fim - inicio) / (365.25 * 86400 * 1000));
+  }, [setAtivo, setsData]);
+
   if (erro) return <div style={{ padding: 24, color: "var(--red)" }}>{erro}</div>;
   if (!catalog) return <div style={{ padding: 24, color: "var(--tx3)" }}>Carregando catálogo…</div>;
 
@@ -629,20 +646,31 @@ export default function PortfolioBuilder() {
           <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
             {JANELAS.map((j) => {
               const on = j.id === janela;
+              // desabilita periodos que ultrapassam o historico do SET carregado
+              // (SETs comecam em 2012 — ~14 anos —, entao 20a/30a/Tudo ficam off)
+              const disabled = anosMaxDoSet != null && (j.anos == null || j.anos > anosMaxDoSet);
               return (
-                <button key={j.id} onClick={() => {
-                  // libera a janela travada do SET assim que o cliente escolhe
-                  // um periodo — a composicao do SET continua carregada, mas
-                  // agora os numeros e o grafico respondem a cada clique
-                  if (periodoFixo) setPeriodoFixo(null);
-                  setJanela(j.id);
-                }} style={{
-                  font: "inherit", fontSize: 12.5, fontWeight: on ? 600 : 500,
-                  padding: "5px 12px", borderRadius: 5, cursor: "pointer",
-                  border: "1px solid " + (on ? "var(--gold)" : "var(--line2)"),
-                  background: on ? "rgba(201,160,44,.16)" : "transparent",
-                  color: on ? "var(--gold)" : "var(--tx2)",
-                }}>{j.label}</button>
+                <button key={j.id}
+                  disabled={disabled}
+                  title={disabled
+                    ? `SET tem histórico de ~${anosMaxDoSet} anos — este período não é disponível`
+                    : undefined}
+                  onClick={() => {
+                    if (disabled) return;
+                    // libera a janela travada do SET assim que o cliente escolhe
+                    // um periodo — a composicao do SET continua carregada, mas
+                    // agora os numeros e o grafico respondem a cada clique
+                    if (periodoFixo) setPeriodoFixo(null);
+                    setJanela(j.id);
+                  }} style={{
+                    font: "inherit", fontSize: 12.5, fontWeight: on ? 600 : 500,
+                    padding: "5px 12px", borderRadius: 5,
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    border: "1px solid " + (on ? "var(--gold)" : "var(--line2)"),
+                    background: on ? "rgba(201,160,44,.16)" : "transparent",
+                    color: on ? "var(--gold)" : "var(--tx2)",
+                    opacity: disabled ? 0.35 : 1,
+                  }}>{j.label}</button>
               );
             })}
           </div>

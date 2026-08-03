@@ -27,6 +27,7 @@ import {
 import type { BenchmarkSetsData, SetDef } from "@/lib/portfolio-builder/benchmark-sets";
 import { SETS, avaliarSet } from "@/lib/portfolio-builder/benchmark-sets";
 import ApresentacaoPortfolio from "./ApresentacaoPortfolio";
+import ReportPrint from "./ReportPrint";
 import { classificar, idsDeDefesa } from "@/lib/portfolio-builder/defesa";
 
 const pct = (v: number, d = 1) => (v * 100).toFixed(d) + "%";
@@ -213,6 +214,11 @@ export default function PortfolioBuilder() {
   const [setsData, setSetsData] = useState<BenchmarkSetsData | null>(null);
   const [setAtivo, setSetAtivo] = useState<string | null>(null);
   const [descAberta, setDescAberta] = useState(false);
+  // Relatório imprimível
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportAutor, setReportAutor] = useState("");
+  const [reportCliente, setReportCliente] = useState("");
+  const [showReport, setShowReport] = useState(false);
   const [volTarget, setVolTarget] = useState<PortfolioConfig["volTarget"]>(null);
   const [periodoFixo, setPeriodoFixo] = useState<PortfolioConfig["periodoFixo"]>(null);
 
@@ -629,6 +635,22 @@ export default function PortfolioBuilder() {
           >
             <span style={{ display: "block", fontSize: 12.5, fontWeight: 650 }}>▶ Modo apresentação</span>
             <span style={{ display: "block", fontSize: 10.5, opacity: .75 }}>simular em tempo real</span>
+          </button>
+          <button
+            onClick={() => setReportModalOpen(true)}
+            disabled={!sim}
+            title={sim ? "Gerar relatório em PDF pra levar pro cliente" : "Monte um portfólio primeiro"}
+            style={{
+              font: "inherit", textAlign: "left", padding: "7px 15px", borderRadius: 6,
+              cursor: sim ? "pointer" : "not-allowed",
+              border: "1px solid " + (sim ? "var(--line2)" : "var(--line)"),
+              background: "transparent",
+              color: sim ? "var(--tx1)" : "var(--tx3)",
+              opacity: sim ? 1 : 0.55,
+            }}
+          >
+            <span style={{ display: "block", fontSize: 12.5, fontWeight: 650 }}>🖨️ Imprimir relatório</span>
+            <span style={{ display: "block", fontSize: 10.5, opacity: .75 }}>PDF com JIM AI</span>
           </button>
         </div>
       </div>
@@ -1236,6 +1258,103 @@ export default function PortfolioBuilder() {
           meta={meta}
           setsData={setsData}
           onFechar={() => setApresentando(false)}
+        />
+      )}
+
+      {/* Modal: pede autor e cliente antes de abrir o relatorio imprimivel. */}
+      {reportModalOpen && sim && (
+        <div
+          onClick={() => setReportModalOpen(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 9998,
+            background: "rgba(0,0,0,.6)", display: "flex",
+            alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "var(--panel)", border: "1px solid var(--line)",
+              borderRadius: 10, padding: "22px 24px", width: "min(440px, 92vw)",
+              boxShadow: "0 10px 40px rgba(0,0,0,.6)",
+            }}
+          >
+            <h3 style={{ margin: "0 0 4px", fontSize: 17 }}>Gerar relatório</h3>
+            <p style={{ margin: "0 0 18px", fontSize: 12.5, color: "var(--tx3)" }}>
+              PDF profissional com todos os números, gráfico, composição e análise do <b style={{ color: "var(--gold)" }}>JIM AI</b>.
+            </p>
+
+            <label style={{ display: "block", fontSize: 11.5, color: "var(--tx2)", marginBottom: 4 }}>Nome do autor (quem montou)</label>
+            <input
+              value={reportAutor}
+              onChange={(e) => setReportAutor(e.target.value)}
+              placeholder="Ex: João Daniel"
+              autoFocus
+              style={{
+                width: "100%", padding: "8px 11px", borderRadius: 5, marginBottom: 14,
+                background: "var(--bg2)", border: "1px solid var(--line)", color: "var(--tx)",
+                font: "inherit", fontSize: 13,
+              }}
+            />
+
+            <label style={{ display: "block", fontSize: 11.5, color: "var(--tx2)", marginBottom: 4 }}>Nome do cliente</label>
+            <input
+              value={reportCliente}
+              onChange={(e) => setReportCliente(e.target.value)}
+              placeholder="Ex: Family Office XYZ"
+              style={{
+                width: "100%", padding: "8px 11px", borderRadius: 5, marginBottom: 20,
+                background: "var(--bg2)", border: "1px solid var(--line)", color: "var(--tx)",
+                font: "inherit", fontSize: 13,
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setReportModalOpen(false);
+                  setShowReport(true);
+                }
+              }}
+            />
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button
+                onClick={() => setReportModalOpen(false)}
+                style={{
+                  font: "inherit", padding: "8px 16px", borderRadius: 5,
+                  background: "transparent", color: "var(--tx2)",
+                  border: "1px solid var(--line)", cursor: "pointer",
+                }}
+              >Cancelar</button>
+              <button
+                onClick={() => { setReportModalOpen(false); setShowReport(true); }}
+                style={{
+                  font: "inherit", padding: "8px 18px", borderRadius: 5,
+                  background: "var(--gold)", color: "#0b1220", fontWeight: 700,
+                  border: "none", cursor: "pointer",
+                }}
+              >Gerar relatório →</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Relatorio imprimivel — full screen com toolbar. Fecha voltando pro builder. */}
+      {showReport && sim && (
+        <ReportPrint
+          autor={reportAutor}
+          cliente={reportCliente}
+          sim={sim}
+          sleeves={sleeves}
+          meta={meta}
+          nomeCurto={nomeCurto}
+          kpis={metricas.map((x) => ({ k: x.k, v: x.v, tom: x.tom }))}
+          set={setAtivo ? SETS.find((s) => s.id === setAtivo) ?? null : null}
+          mode={mode}
+          rebalance={{ daily: "diário", weekly: "semanal", monthly: "mensal", quarterly: "trimestral", yearly: "anual" }[rebalance]}
+          capital={capital}
+          janelaLabel={JANELAS.find((j) => j.id === janela)?.label ?? "—"}
+          curvaCapitalEl={<CurvaCapital dates={sim.dates} equity={sim.equity} benchmark={sim.benchmark} />}
+          faixaDefesaEl={<FaixaDefesa frac={sim.defenseFrac} dates={sim.dates} marcado={null} onHover={() => {}} />}
+          onClose={() => setShowReport(false)}
         />
       )}
     </div>

@@ -220,6 +220,27 @@ export default function PortfolioBuilder() {
   const [reportCliente, setReportCliente] = useState("");
   const [reportRNCliente, setReportRNCliente] = useState<string>("");
   const [showReport, setShowReport] = useState(false);
+  // Origem dos dados: "questionario" = veio do Ato 2 via URL; "manual" = digitado
+  const [dadosOrigem, setDadosOrigem] = useState<"questionario" | "manual">("manual");
+
+  // Le params do Ato 2 (URL) na primeira renderizacao — cliente, RN, capital.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const rn = q.get("rn");
+      const cliente = q.get("cliente");
+      const cap = q.get("capital");
+      if (rn || cliente || cap) setDadosOrigem("questionario");
+      if (rn) setReportRNCliente(rn);
+      if (cliente) setReportCliente(cliente);
+      if (cap) {
+        const n = Number(cap);
+        if (Number.isFinite(n) && n > 0) setCapital(n);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [volTarget, setVolTarget] = useState<PortfolioConfig["volTarget"]>(null);
   const [periodoFixo, setPeriodoFixo] = useState<PortfolioConfig["periodoFixo"]>(null);
 
@@ -949,9 +970,13 @@ export default function PortfolioBuilder() {
           <Painel titulo="Como rodar">
             <Campo label="Capital inicial">
               <select value={capital} onChange={(e) => setCapital(+e.target.value)} style={sel}>
-                {[10000, 100000, 1000000].map((v) => (
-                  <option key={v} value={v}>{money(v)}</option>
-                ))}
+                {(() => {
+                  const base = [10000, 100000, 1000000];
+                  // Se o capital atual (vindo do URL, por exemplo) nao esta na
+                  // lista, adiciona como opcao extra pra ele aparecer selecionado.
+                  const opts = base.includes(capital) ? base : [...base, capital].sort((a, b) => a - b);
+                  return opts.map((v) => <option key={v} value={v}>{money(v)}</option>);
+                })()}
               </select>
             </Campo>
             <Campo label="Rebalance">
@@ -1281,9 +1306,18 @@ export default function PortfolioBuilder() {
             }}
           >
             <h3 style={{ margin: "0 0 4px", fontSize: 17 }}>Gerar relatório</h3>
-            <p style={{ margin: "0 0 18px", fontSize: 12.5, color: "var(--tx3)" }}>
+            <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "var(--tx3)" }}>
               PDF profissional com todos os números, gráfico, composição e análise do <b style={{ color: "var(--gold)" }}>JIM AI</b>.
             </p>
+            {dadosOrigem === "questionario" && (
+              <div style={{
+                marginBottom: 16, padding: "8px 12px", borderRadius: 5,
+                background: "rgba(10,122,59,.12)", border: "1px solid rgba(10,122,59,.35)",
+                fontSize: 11.5, color: "#0a7a3b",
+              }}>
+                <b>✓ Dados do questionário (Ato II) carregados.</b> Nome do cliente, RN e capital inicial vieram da apresentação — pode editar se precisar.
+              </div>
+            )}
 
             <label style={{ display: "block", fontSize: 11.5, color: "var(--tx2)", marginBottom: 4 }}>Nome do autor (quem montou)</label>
             <input

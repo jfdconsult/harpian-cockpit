@@ -212,6 +212,7 @@ export default function PortfolioBuilder() {
   // dali em diante deixa de ser o SET validado.
   const [setsData, setSetsData] = useState<BenchmarkSetsData | null>(null);
   const [setAtivo, setSetAtivo] = useState<string | null>(null);
+  const [descAberta, setDescAberta] = useState(false);
   const [volTarget, setVolTarget] = useState<PortfolioConfig["volTarget"]>(null);
   const [periodoFixo, setPeriodoFixo] = useState<PortfolioConfig["periodoFixo"]>(null);
 
@@ -681,11 +682,24 @@ export default function PortfolioBuilder() {
               })}
             </div>
             {setAtivo && (
-              <button onClick={limparSet} style={{
-                font: "inherit", fontSize: 12, background: "transparent", border: 0,
-                color: "var(--tx3)", cursor: "pointer", textDecoration: "underline",
-                textUnderlineOffset: 3,
-              }}>limpar</button>
+              <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                <button
+                  onClick={() => setDescAberta((v) => !v)}
+                  aria-pressed={descAberta}
+                  title="Ver a composição do SET e o papel de cada bloco"
+                  style={{
+                    font: "inherit", fontSize: 12, background: "transparent", border: 0,
+                    color: descAberta ? "var(--gold)" : "var(--tx2)",
+                    cursor: "pointer", textDecoration: "underline",
+                    textUnderlineOffset: 3, padding: 0,
+                  }}
+                >{descAberta ? "fechar descrição" : "descrição"}</button>
+                <button onClick={limparSet} style={{
+                  font: "inherit", fontSize: 12, background: "transparent", border: 0,
+                  color: "var(--tx3)", cursor: "pointer", textDecoration: "underline",
+                  textUnderlineOffset: 3,
+                }}>limpar</button>
+              </div>
             )}
             <span style={{ fontSize: 11.5, color: "var(--tx3)", marginLeft: "auto" }}>
               {setAtivo
@@ -1035,35 +1049,9 @@ export default function PortfolioBuilder() {
             </Painel>
           ) : (
             <>
-              <Painel
-                titulo="Capital do portfólio"
-                acao={<span style={{ fontSize: 11.5, color: "var(--tx3)", fontFamily: "var(--mono)" }}>
-                  {brDate(sim.dates[0])} → {brDate(sim.dates[sim.dates.length - 1])} · {sim.dates.length.toLocaleString("pt-BR")} pregões
-                </span>}
-              >
-                {sim.warnings.map((w, i) => (
-                  <div key={i} style={{
-                    marginBottom: 10, padding: "8px 10px", borderRadius: 6, fontSize: 12,
-                    background: "rgba(217,184,79,.1)", border: "1px solid rgba(217,184,79,.3)", color: "var(--gold2)",
-                  }}>{w}</div>
-                ))}
-                <CurvaCapital dates={sim.dates} equity={sim.equity} benchmark={sim.benchmark} />
-                <div style={{ marginTop: 6 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 3 }}>
-                    <span style={{ fontSize: 10.5, letterSpacing: ".09em", textTransform: "uppercase", color: "var(--tx3)", fontWeight: 600 }}>
-                      Quanto do portfólio estava blindado
-                    </span>
-                    <span style={{ fontSize: 11.5, color: "var(--tx3)", fontFamily: "var(--mono)" }}>
-                      {m && pct(m.pctDefesa / 100, 1)} dos pregões com mais de {LIMIAR_DEFESA * 100}% em defesa
-                    </span>
-                  </div>
-                  <FaixaDefesa
-                    frac={sim.defenseFrac} dates={sim.dates}
-                    marcado={cursor} onHover={(i) => i != null && setCursor(i)}
-                  />
-                </div>
-              </Painel>
-
+              {/* NÚMEROS EM CIMA — a leitura vai de cima pra baixo: primeiro o
+                  veredito numerico (retorno, drawdown, sharpe...), depois a
+                  curva que produziu esses numeros. */}
               {metricas.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(118px,1fr))", gap: 8 }}>
@@ -1076,9 +1064,7 @@ export default function PortfolioBuilder() {
                     ))}
                   </div>
 
-                  {/* explicação do número clicado — encostada nos tiles, e não no
-                      topo da tela: o texto tem de nascer ao lado do número que o
-                      cliente apontou, senão o olho perde a ligação entre os dois */}
+                  {/* explicação do número clicado — encostada nos tiles */}
                   {aberta && (
                     <div style={{
                       display: "flex", alignItems: "flex-start", gap: 12,
@@ -1110,6 +1096,95 @@ export default function PortfolioBuilder() {
                   )}
                 </div>
               )}
+
+              <Painel
+                titulo="Capital do portfólio"
+                acao={<span style={{ fontSize: 11.5, color: "var(--tx3)", fontFamily: "var(--mono)" }}>
+                  {brDate(sim.dates[0])} → {brDate(sim.dates[sim.dates.length - 1])} · {sim.dates.length.toLocaleString("pt-BR")} pregões
+                </span>}
+              >
+                {sim.warnings.map((w, i) => (
+                  <div key={i} style={{
+                    marginBottom: 10, padding: "8px 10px", borderRadius: 6, fontSize: 12,
+                    background: "rgba(217,184,79,.1)", border: "1px solid rgba(217,184,79,.3)", color: "var(--gold2)",
+                  }}>{w}</div>
+                ))}
+                <CurvaCapital dates={sim.dates} equity={sim.equity} benchmark={sim.benchmark} />
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 3 }}>
+                    <span style={{ fontSize: 10.5, letterSpacing: ".09em", textTransform: "uppercase", color: "var(--tx3)", fontWeight: 600 }}>
+                      Quanto do portfólio estava blindado
+                    </span>
+                    <span style={{ fontSize: 11.5, color: "var(--tx3)", fontFamily: "var(--mono)" }}>
+                      {m && pct(m.pctDefesa / 100, 1)} dos pregões com mais de {LIMIAR_DEFESA * 100}% em defesa
+                    </span>
+                  </div>
+                  <FaixaDefesa
+                    frac={sim.defenseFrac} dates={sim.dates}
+                    marcado={cursor} onHover={(i) => i != null && setCursor(i)}
+                  />
+                </div>
+              </Painel>
+
+              {/* DESCRIÇÃO DO SET — abre logo abaixo do grafico quando o cliente
+                  clica em "descricao" no bloco de sets. Fica escondida quando
+                  nao ha SET ativo ou o botao esta fechado. */}
+              {setAtivo && descAberta && (() => {
+                const preset = presetsVitrine().find((p) => p.id === setAtivo);
+                if (!preset) return null;
+                const composicao = descricaoDoSet(preset.def);
+                return (
+                  <Painel titulo={`Descrição · ${preset.rotulo}`}
+                    acao={
+                      <button onClick={() => setDescAberta(false)}
+                        title="Fechar descrição"
+                        style={{ font: "inherit", fontSize: 15, lineHeight: 1, color: "var(--tx3)", background: "transparent", border: "none", cursor: "pointer", padding: "0 2px" }}
+                      >×</button>
+                    }
+                  >
+                    <p style={{ margin: "0 0 14px", fontSize: 13.5, lineHeight: 1.55, color: "var(--tx2)" }}>
+                      {preset.def.tese}
+                    </p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {composicao.map((c) => (
+                        <div key={c.bloco} style={{
+                          display: "grid", gridTemplateColumns: "60px minmax(0,1fr)", gap: 12,
+                          padding: "10px 12px", borderRadius: 6, background: "rgba(255,255,255,.025)",
+                          border: "1px solid var(--line2)",
+                        }}>
+                          <span style={{
+                            fontFamily: "var(--mono)", fontSize: 15, fontWeight: 700, color: "var(--gold)",
+                            alignSelf: "start",
+                          }}>{Math.round(c.peso * 100)}%</span>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--tx)", marginBottom: 2 }}>
+                              {c.nome}
+                            </div>
+                            <div style={{ fontSize: 11, color: "var(--tx3)", fontFamily: "var(--mono)", letterSpacing: ".02em", marginBottom: 4 }}>
+                              {c.atribuicao}
+                            </div>
+                            <div style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--tx2)" }}>
+                              {c.explicacao}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {preset.def.volTarget && (
+                      <div style={{
+                        marginTop: 12, padding: "9px 12px", borderRadius: 6,
+                        background: "rgba(79,156,217,.08)", border: "1px solid rgba(79,156,217,.35)",
+                        fontSize: 12.5, color: "var(--tx1)", lineHeight: 1.5,
+                      }}>
+                        <strong style={{ color: "var(--blue)" }}>Alvo de volatilidade:</strong>{" "}
+                        {Math.round(preset.def.volTarget.alvo * 100)}% ao ano ·{" "}
+                        janela de {preset.def.volTarget.lookback} pregões. Reduz posição
+                        automaticamente quando a volatilidade realizada sobe acima do alvo.
+                      </div>
+                    )}
+                  </Painel>
+                );
+              })()}
 
               {m && (m.regimeDefesa.correlacao != null || m.regimeExposto.correlacao != null) && (
                 <Painel titulo="Correlação com o S&P 500, por regime">

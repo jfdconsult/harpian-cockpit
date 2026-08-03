@@ -852,6 +852,7 @@ export default function PortfolioBuilder() {
                     <SleeveRow
                       key={s.id} sleeve={s} meta={meta[s.id]} cor={CORES[i % CORES.length]}
                       mode={mode} carregando={carregando.has(s.id)}
+                      nomeCurto={meta[s.id] ? nomeCurto(meta[s.id]) : undefined}
                       onPatch={(c, v) => patch(s.id, c, v)} onRemove={() => remover(s.id)}
                     />
                   ))}
@@ -1421,16 +1422,28 @@ function BarraAlocacao({ sleeves, meta, soma }: {
   );
 }
 
-function SleeveRow({ sleeve, meta, cor, mode, carregando, onPatch, onRemove }: {
+function SleeveRow({ sleeve, meta, cor, mode, carregando, nomeCurto: nomeCurtoStr, onPatch, onRemove }: {
   sleeve: Sleeve; meta?: StrategyMeta; cor: string; mode: AllocMode; carregando: boolean;
+  nomeCurto?: string;
   onPatch: (campo: keyof Sleeve, v: number) => void; onRemove: () => void;
 }) {
+  const nomeExibicao = nomeCurtoStr || meta?.label || sleeve.id;
+  const codigoExibicao = meta?.label && meta.label !== nomeExibicao ? meta.label : null;
   return (
     <div style={{ background: "var(--bg2)", border: "1px solid var(--line)", borderRadius: 6, padding: "8px 10px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        <span style={{ width: 8, height: 8, borderRadius: 2, background: cor, flexShrink: 0 }} />
-        <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {meta?.label ?? sleeve.id}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+        <span style={{ width: 8, height: 8, borderRadius: 2, background: cor, flexShrink: 0, marginTop: 5 }} />
+        <span style={{ flex: 1, minWidth: 0 }}>
+          {/* Nome curto no topo — leitura rápida */}
+          <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--tx)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {nomeExibicao}
+          </span>
+          {/* Código AlphaDroid embaixo em mono/escuro */}
+          {codigoExibicao && (
+            <span style={{ display: "block", fontSize: 10.5, color: "var(--tx3)", fontFamily: "var(--mono)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {codigoExibicao}
+            </span>
+          )}
         </span>
         {carregando && <span style={{ fontSize: 10.5, color: "var(--tx3)" }}>carregando…</span>}
         <button onClick={onRemove} title="Remover" style={{

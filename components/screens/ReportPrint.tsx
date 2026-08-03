@@ -62,6 +62,7 @@ export default function ReportPrint(props: ReportData) {
   const [analise, setAnalise] = useState<string | null>(null);
   const [erroAnalise, setErroAnalise] = useState<string | null>(null);
   const [carregandoAnalise, setCarregandoAnalise] = useState(true);
+  const [baixando, setBaixando] = useState(false);
 
   // Dispara Claude Haiku ao montar. Análise do "JIM AI" — 3-4 parágrafos.
   useEffect(() => {
@@ -120,11 +121,39 @@ export default function ReportPrint(props: ReportData) {
           Pré-visualização do relatório · {cliente || "Cliente"}
         </span>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => window.print()} style={{
+          <button onClick={async () => {
+            // Download PDF de verdade: html2pdf.js pega o .print-page e gera arquivo binário.
+            // Fallback: se der erro, aciona window.print() (Ctrl+P nativo).
+            setBaixando(true);
+            try {
+              const html2pdf = (await import("html2pdf.js")).default;
+              const el = document.querySelector(".print-page") as HTMLElement | null;
+              if (!el) throw new Error("Página não encontrada");
+              const nomeArq = `Harpian_${(cliente || "Portfolio").replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
+              await html2pdf().set({
+                margin: [10, 10, 10, 10],
+                filename: nomeArq,
+                image: { type: "jpeg", quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+                jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+                pagebreak: { mode: ["css", "legacy"] },
+              }).from(el).save();
+            } catch (err) {
+              console.warn("html2pdf falhou, usando print nativo:", err);
+              window.print();
+            } finally {
+              setBaixando(false);
+            }
+          }} disabled={baixando} style={{
             padding: "7px 14px", background: "#c9a02c", color: "#0b1220",
-            border: "none", borderRadius: 5, cursor: "pointer", fontWeight: 700,
+            border: "none", borderRadius: 5, cursor: baixando ? "wait" : "pointer", fontWeight: 700,
+            fontFamily: "inherit", fontSize: 13, opacity: baixando ? 0.6 : 1,
+          }}>{baixando ? "Gerando PDF…" : "⬇️ Baixar PDF"}</button>
+          <button onClick={() => window.print()} style={{
+            padding: "7px 14px", background: "transparent", color: "#eee",
+            border: "1px solid #444", borderRadius: 5, cursor: "pointer",
             fontFamily: "inherit", fontSize: 13,
-          }}>🖨️ Imprimir / Salvar PDF</button>
+          }}>🖨️ Imprimir</button>
           <a
             href={`https://wa.me/?text=${encodeURIComponent(`Relatório Harpian · ${cliente || "portfólio"}\nGerado em ${agora}\n\nSalve o PDF e anexe aqui na próxima mensagem.`)}`}
             target="_blank" rel="noopener noreferrer"
@@ -133,7 +162,7 @@ export default function ReportPrint(props: ReportData) {
               border: "none", borderRadius: 5, cursor: "pointer", fontWeight: 700,
               fontFamily: "inherit", fontSize: 13, textDecoration: "none",
             }}
-          >💬 Compartilhar WhatsApp</a>
+          >💬 WhatsApp</a>
           {props.onClose && (
             <button onClick={props.onClose} style={{
               padding: "7px 14px", background: "transparent", color: "#eee",
@@ -156,14 +185,13 @@ export default function ReportPrint(props: ReportData) {
           borderBottom: "3px solid #c9a02c", paddingBottom: 14, marginBottom: 22,
         }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-              <div style={{
-                width: 34, height: 34, background: "#0b1220", color: "#c9a02c",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                borderRadius: 4, fontFamily: MONO, fontWeight: 900, fontSize: 20,
-              }}>H</div>
-              <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.01em" }}>HARPIAN</div>
-            </div>
+            {/* Logotipo real da Harpian — wordmark preto pra fundo branco do PDF */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/harpian-wordmark-dark.svg"
+              alt="HARPIAN"
+              style={{ height: 34, width: "auto", display: "block", marginBottom: 6 }}
+            />
             <div style={{ fontSize: 11, color: "#666", fontFamily: MONO, letterSpacing: ".05em", textTransform: "uppercase" }}>
               Adaptive Portfolio Engineering
             </div>

@@ -18,7 +18,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { SimResult, Sleeve, StrategyMeta, StrategySeries } from "@/lib/portfolio-builder/types";
 import type { SetDef } from "@/lib/portfolio-builder/benchmark-sets";
-import { calcularRiskNumber, classificarRN, RN_BENCHMARKS } from "@/lib/portfolio-builder/risk-number";
+import { computePortfolioRN, classifyBand, classifyStrategy } from "@/lib/portfolio-builder/hrd-engine";
 
 const MONO = "var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
 
@@ -94,11 +94,30 @@ function TechTile({ k, v, sub, tom }: { k: string; v: string; sub?: string; tom?
 export default function ReportPrint(props: ReportData) {
   const { autor, cliente, sim, sleeves, meta, nomeCurto, kpis, set, mode, rebalance, capital, janelaLabel, curvaCapitalEl, faixaDefesaEl, series, maxDrawdown, cagr, volAnual, rnCliente } = props;
 
-  // Risk Number do portfolio via Nitrogen-style downside 6M
-  const risk = useMemo(() => calcularRiskNumber(cagr, volAnual), [cagr, volAnual]);
-  const riskClass = classificarRN(risk.rn);
-  const rnGap = rnCliente != null ? risk.rn - rnCliente : null;
-  const rnClienteClass = rnCliente != null ? classificarRN(rnCliente) : null;
+  /**
+   * Risk Number via HRD Engine (harpian_engine.py portado). Calibrado com
+   * os 6 portfolios modelo Harpian — usa asset_class × CRM × liquidez, nao
+   * VaR parametrico. So depende da COMPOSICAO (sleeves + pesos), nao do
+   * retorno historico simulado.
+   */
+  const rnReport = useMemo(() => {
+    const positions = sleeves.map((s) => {
+      const m = meta[s.id];
+      const cls = classifyStrategy(s.id, m?.label, m?.sub);
+      return {
+        name: m ? m.label : s.id,
+        weight: s.weight,
+        asset_class: cls.asset_class,
+        jurisdiction: cls.jurisdiction,
+        liquidity: cls.liquidity,
+      };
+    });
+    return computePortfolioRN(positions);
+  }, [sleeves, meta]);
+  const rnPortfolio = Math.round(rnReport.final_rn);
+  const riskClass = classifyBand(rnPortfolio);
+  const rnGap = rnCliente != null ? rnPortfolio - rnCliente : null;
+  const rnClienteClass = rnCliente != null ? classifyBand(rnCliente) : null;
 
   /**
    * Estatisticas tecnicas por sleeve — extraidas de sim.weights + series.
@@ -393,10 +412,12 @@ export default function ReportPrint(props: ReportData) {
           </div>
         </section>
 
-        {/* RISK NUMBER — destaque visual entre KPIs e gráfico */}
+        {/* RISK NUMBER — HRD Engine (fórmula oficial Harpian, calibrada
+            contra os 6 portfolios modelo). Baseado em asset_class + CRM
+            + liquidez das estratégias, não em VaR paramétrico histórico. */}
         <section style={{ marginBottom: 22, pageBreakInside: "avoid" }}>
           <h2 style={{ margin: "0 0 10px", fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
-            Risk Number — perfil de risco (padrão Nitrogen)
+            Risk Number — HRD Engine
           </h2>
 
           <div style={{ display: "grid", gridTemplateColumns: rnCliente != null ? "1fr 1fr 1fr" : "1fr 2fr", gap: 10 }}>
@@ -408,8 +429,8 @@ export default function ReportPrint(props: ReportData) {
               <div style={{ fontSize: 9, letterSpacing: ".12em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 4 }}>
                 Portfolio proposto
               </div>
-              <div style={{ fontSize: 44, fontWeight: 800, fontFamily: MONO, color: riskClass.cor, lineHeight: 1 }}>{risk.rn}</div>
-              <div style={{ fontSize: 11.5, color: riskClass.cor, fontWeight: 700, marginTop: 4, letterSpacing: ".02em" }}>{riskClass.label}</div>
+              <div style={{ fontSize: 44, fontWeight: 800, fontFamily: MONO, color: riskClass.cor, lineHeight: 1 }}>{rnPortfolio}</div>
+              <div style={{ fontSize: 11.5, color: riskClass.cor, fontWeight: 700, marginTop: 4, letterSpacing: ".02em" }}>{riskClass.band}</div>
             </div>
 
             {/* RN do cliente — só se informado */}
@@ -422,19 +443,22 @@ export default function ReportPrint(props: ReportData) {
                   Cliente (questionário)
                 </div>
                 <div style={{ fontSize: 44, fontWeight: 800, fontFamily: MONO, color: rnClienteClass.cor, lineHeight: 1 }}>{rnCliente}</div>
-                <div style={{ fontSize: 11.5, color: rnClienteClass.cor, fontWeight: 700, marginTop: 4, letterSpacing: ".02em" }}>{rnClienteClass.label}</div>
+                <div style={{ fontSize: 11.5, color: rnClienteClass.cor, fontWeight: 700, marginTop: 4, letterSpacing: ".02em" }}>{rnClienteClass.band}</div>
               </div>
             )}
 
-            {/* Explicação e comparação com benchmarks */}
+            {/* Explicação e comparação */}
             <div style={{ padding: "14px 16px", background: "#f6f4ee", borderRadius: 6, fontSize: 11, color: "#333", lineHeight: 1.55 }}>
-              <div style={{ fontSize: 10, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 6 }}>Interpretação</div>
+              <div style={{ fontSize: 10, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 6 }}>Interpretação HRD Engine</div>
               <div style={{ marginBottom: 6 }}>
-                Faixa 6 meses (95%): <b style={{ color: "#0a7a3b", fontFamily: MONO }}>{pct(risk.upside6, 1)}</b> alta ·{" "}
-                <b style={{ color: "#b0201f", fontFamily: MONO }}>{pct(risk.downside6, 1)}</b> baixa
+                Score bruto: <b style={{ fontFamily: MONO }}>{rnReport.raw_rn.toFixed(1)}</b> · Peso equity:{" "}
+                <b style={{ fontFamily: MONO }}>{(rnReport.equity_weight * 100).toFixed(0)}%</b>
+                {rnReport.cf_applied > 1 && (
+                  <span> · <b style={{ color: "#e08420" }}>Correlation Factor {rnReport.cf_applied.toFixed(2)}×</b> aplicado (equity {'>'} 60%)</span>
+                )}
               </div>
               <div style={{ fontSize: 10.5, color: "#666" }}>
-                Referências: AGG {RN_BENCHMARKS.AGG} · 50/50 {RN_BENCHMARKS.BLEND_50_50} · 70/30 {RN_BENCHMARKS.BLEND_70_30} · SPY {RN_BENCHMARKS.SPY}
+                Bandas: 0-20 Cons. Extremo · 21-40 Conservador · 41-60 Moderado · 61-75 Mod. Agressivo · 76-90 Agressivo · 91-99 Ultra
               </div>
               {rnGap != null && (
                 <div style={{
@@ -453,9 +477,9 @@ export default function ReportPrint(props: ReportData) {
           </div>
 
           <div style={{ fontSize: 9.5, color: "#888", marginTop: 8, lineHeight: 1.45 }}>
-            Cálculo: retorno 6M {pct(risk.r6, 2)} − 1,64 × vol 6M {pct(risk.sigma6, 2)} = piso 6M {pct(risk.downside6, 2)}.
-            Metodologia baseada em <i>The Math Behind Nitrogen</i> (VaR paramétrico 95%, distribuição normal, sem Monte Carlo).
-            Réplica pública — o RN oficial do Nitrogen/Riskalyze exige a plataforma proprietária.
+            HRD Engine v1.0.0 — <code style={{ fontFamily: MONO }}>RS_i = min(BASE[classe] × CRM[país] + LIQUIDITY_PENALTY, 99)</code>,
+            <code style={{ fontFamily: MONO }}> RN = Σ(w_i × RS_i) × CF</code>. Calibrado contra os 6 portfólios modelo Harpian.
+            Não depende do retorno histórico simulado.
           </div>
         </section>
 

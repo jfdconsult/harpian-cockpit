@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Topbar from "./Topbar";
 import MissionControl from "./screens/MissionControl";
 import EngineRoom from "./screens/EngineRoom";
@@ -35,6 +35,7 @@ import MarketDna from "./screens/MarketDna";
 import Construtor from "./screens/Construtor";
 import TicketNews from "./screens/TicketNews";
 import PortfolioStudioScreen from "./screens/PortfolioStudioScreen";
+import PortfolioBuilder from "./screens/PortfolioBuilder";
 import Placeholder from "./screens/Placeholder";
 import JimDrawer from "./JimDrawer";
 import NewsTicker from "./NewsTicker";
@@ -42,7 +43,7 @@ import SettingsDrawer from "./SettingsDrawer";
 import { DialogProvider } from "./ui/Dialog";
 import { ThemeProvider } from "@/lib/theme";
 import { I18nProvider } from "@/lib/i18n";
-import type { ScreenId } from "@/lib/nav";
+import { isScreenId, type ScreenId } from "@/lib/nav";
 
 export default function Cockpit() {
   const [screen, setScreen] = useState<ScreenId>("mission-control");
@@ -63,8 +64,31 @@ export default function Cockpit() {
     if (id === "chart" && param) setChartTicker(param);
     if (id === "cotacoes" && param) setCotacoesClasse(param);
     if (id === "portfolio" && param) setPortfolioId(param);
-    if (typeof window !== "undefined") window.scrollTo(0, 0);
+    if (typeof window !== "undefined") {
+      // deixa a tela no endereco: permite link direto e recarregar sem cair no
+      // Mission Control. Os menus abrem por hover, entao sem isso a unica forma
+      // de chegar numa tela e passar o mouse pelo menu certo.
+      const alvo = "#" + id + (param ? "/" + encodeURIComponent(param) : "");
+      if (window.location.hash !== alvo) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search + alvo);
+      }
+      window.scrollTo(0, 0);
+    }
   };
+
+  // abre direto na tela pedida pelo endereco (#portfolio-builder, #backtest, ...)
+  useEffect(() => {
+    const abrirDoHash = () => {
+      const h = window.location.hash.replace(/^#/, "");
+      if (!h) return;
+      const [id, param] = h.split("/");
+      if (isScreenId(id)) go(id, param ? decodeURIComponent(param) : undefined);
+    };
+    abrirDoHash();
+    window.addEventListener("hashchange", abrirDoHash);
+    return () => window.removeEventListener("hashchange", abrirDoHash);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function renderScreen() {
     switch (screen) {
@@ -112,6 +136,8 @@ export default function Cockpit() {
         return <StrategiesStrength go={go} />;
       case "portfolio":
         return <PortfolioScreen portfolioId={portfolioId} go={go} />;
+      case "portfolio-builder":
+        return <PortfolioBuilder />;
       case "regime":
         return <Regime />;
       case "noticias":

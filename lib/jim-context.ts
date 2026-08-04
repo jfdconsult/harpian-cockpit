@@ -118,6 +118,10 @@ export const SCREEN_MAP: Record<ScreenId, ScreenContext> = {
     title: "COT Data Explorer",
     description: "Raw COT data — commercial, non-commercial, open interest, history.",
   },
+  "portfolio-builder": {
+    title: "Portfolio Builder",
+    description: "Four-handed portfolio construction over the 41 AlphaDroid strategies, for use live with a client. Pick strategies, set either a fixed weight (linear) or a floor/cap pair (dynamic, weight follows momentum), choose the investment window (YTD to 30 years), and see the blended capital curve, how much was armored on any day, and the exact tickers held on any date. Momentum arrives precomputed from the Diogo engine; defense state is read from each strategy's own declared universe.",
+  },
   "portfolio-studio": {
     title: "Portfolio Studio",
     description: "Visual builder — engine→pillar→strategy→assets. Drag-and-drop, approval gates 1-4.",
@@ -285,6 +289,7 @@ export const SCREEN_SUGGESTIONS: Record<ScreenId, string[]> = {
     "How's the commercial vs. non-commercial spread?",
     "Any sign of a reversal in positioning?",
   ],
+  "portfolio-builder": ["Which strategies belong in this portfolio?", "Does dynamic allocation beat linear here?", "What was this portfolio holding in 2008?"],
   "portfolio-studio": [
     "How do I add a new pillar?",
     "What's the difference between candidate and approved?",

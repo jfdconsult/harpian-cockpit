@@ -33,6 +33,7 @@ export type ScreenId =
   | "cot-legacy"
   | "market-dna"
   | "portfolio-studio"
+  | "portfolio-builder"
   | "construtor"
   | "ticket-news"
   | "calendar";
@@ -94,6 +95,7 @@ export const MENUS: Menu[] = [
       {
         items: [
           { id: "construtor", label: "Builder", icon: "ti-puzzle", tag: "create" },
+          { id: "portfolio-builder", label: "Portfolio Builder", icon: "ti-layout-grid-add", tag: "new" },
           { id: "backtest", label: "Backtest Lab", icon: "ti-history" },
           { id: "calibracao", label: "Calibration", icon: "ti-adjustments" },
           { id: "observador", label: "Observer (AI)", icon: "ti-eye-search" },
@@ -159,3 +161,14 @@ export const MENUS: Menu[] = [
   { label: "Audit", icon: "ti-notebook", direct: "auditoria" },
   { label: "Admin", icon: "ti-settings", direct: "admin" },
 ];
+
+/** O texto veio do endereco (#tela): so aceita se for uma tela que existe. */
+const IDS_VALIDOS: ReadonlySet<string> = new Set(
+  MENUS.flatMap((m) => [
+    ...(m.direct ? [m.direct as string] : []),
+    ...(m.columns ?? []).flatMap((c) => c.items.map((i) => i.id as string)),
+  ]),
+);
+export function isScreenId(v: string): v is ScreenId {
+  return IDS_VALIDOS.has(v);
+}

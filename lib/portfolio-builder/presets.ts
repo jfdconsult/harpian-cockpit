@@ -122,13 +122,21 @@ export interface Preset {
   def: SetDef;
 }
 
-/** Os botoes da barra do topo — so a linha comercial, que e a vitrine. */
+/** Os botoes da barra do topo — so a linha comercial, que e a vitrine.
+ *  Ordem de leitura pro cliente: conservador -> balanceado -> agressivo ->
+ *  max retorno. Vai do menos risco pro mais risco, mesmo padrao dos botoes
+ *  de janela (1a, 2a, 5a...). Max Retorno fica sempre por ultimo — e ate
+ *  outra familia (CAGR max, nao Sharpe max). */
+const ORDEM_VITRINE = ["d6", "d5", "d3", "dmax"];
 export function presetsVitrine(): Preset[] {
-  return SETS.filter((s) => s.linha === 1).map((s) => ({
-    id: s.id,
-    rotulo: s.rotuloCurto,
-    def: s,
-  }));
+  const linha1 = SETS.filter((s) => s.linha === 1);
+  const rank = (id: string) => {
+    const i = ORDEM_VITRINE.indexOf(id);
+    return i < 0 ? ORDEM_VITRINE.length : i;
+  };
+  return [...linha1]
+    .sort((a, b) => rank(a.id) - rank(b.id))
+    .map((s) => ({ id: s.id, rotulo: s.rotuloCurto, def: s }));
 }
 
 /** Todos os SETs, incluindo a linha institucional. */

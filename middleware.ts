@@ -75,6 +75,14 @@ export function middleware(req: NextRequest) {
 // /ato4 fica FORA do Basic Auth — e o entry-point publico que a apresentacao
 // (Ato IV · Portfolio Builder) usa. Cliente que vem do Ato III cai direto no
 // Builder sem prompt de senha. O cockpit interno (rota /) permanece protegido.
+//
+// APIs de catalogo publico tambem excluidas: strategy-catalog, benchmark-sets,
+// strategy-series — sao dados que o Builder consome pra popular listas, sem
+// secrets. Sem essa exclusao, cada fetch de dentro de /ato4 disparava um
+// prompt de Basic Auth no browser (a rota da pagina era publica, mas o
+// fetch de /api/strategy-catalog batia no middleware protegido).
+//
+// Outras APIs (/api/jim-report, /api/*-admin, etc.) continuam protegidas.
 export const config = {
-  matcher: "/((?!_next/static|_next/image|favicon.ico|ato4).*)",
+  matcher: "/((?!_next/static|_next/image|favicon.ico|ato4|api/strategy-catalog|api/benchmark-sets|api/strategy-series).*)",
 };

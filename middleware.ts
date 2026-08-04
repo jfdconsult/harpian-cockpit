@@ -72,6 +72,9 @@ export function middleware(req: NextRequest) {
   return unauthorized();
 }
 
+// /ato4 fica FORA do Basic Auth — e o entry-point publico que a apresentacao
+// (Ato IV · Portfolio Builder) usa. Cliente que vem do Ato III cai direto no
+// Builder sem prompt de senha. O cockpit interno (rota /) permanece protegido.
 export const config = {
-  matcher: "/((?!_next/static|_next/image|favicon.ico).*)",
+  matcher: "/((?!_next/static|_next/image|favicon.ico|ato4).*)",
 };

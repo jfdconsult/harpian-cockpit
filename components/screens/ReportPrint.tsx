@@ -853,10 +853,12 @@ export default function ReportPrint(props: ReportData) {
         @media print {
           @page { size: A4; margin: 12mm; }
           html, body { background: #fff !important; }
-          body > *:not(.print-only-container) { display: none !important; }
-          .print-only-container { position: static !important; overflow: visible !important; }
-          .print-hide { display: none !important; }
+          body * { visibility: hidden !important; }
+          .print-only-container, .print-only-container * { visibility: visible !important; }
+          .print-only-container { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; overflow: visible !important; }
+          .print-hide { display: none !important; visibility: hidden !important; }
           .print-page { padding: 0 !important; max-width: none !important; }
+          body::before, body::after { display: none !important; }
         }
       `}</style>
     </div>

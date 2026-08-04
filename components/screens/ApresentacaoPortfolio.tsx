@@ -266,29 +266,23 @@ export default function ApresentacaoPortfolio({
           </div>
           {linhas.map((l, i) => (
             <div key={l.id}>
-              {/* cabeçalho de seção: ataque em cima, defesa no rodapé */}
-              {(i === 0 || linhas[i - 1].secao !== l.secao) && (
-                <div style={{
-                  fontSize: 9.5, letterSpacing: ".1em", textTransform: "uppercase",
-                  fontWeight: 600, marginTop: i === 0 ? 0 : 11, marginBottom: 4,
-                  color: l.secao === "defesa" ? "#5FB98C" : "var(--tx3)",
-                  borderTop: i === 0 ? "none" : "1px solid var(--line)",
-                  paddingTop: i === 0 ? 0 : 7,
-                }}>
-                  {ROTULO_SECAO[l.secao]}
-                </div>
+              {/* Separador entre secoes: so uma linha discreta, sem titulo (JD
+                  pediu pra remover "AÇÕES SETORIAIS / ETF MACRO / DEFESA"
+                  pra sobrar espaco e caber todas as 41 sem scroll). */}
+              {i > 0 && linhas[i - 1].secao !== l.secao && (
+                <div style={{ borderTop: "1px solid var(--line)", margin: "5px 0" }} />
               )}
               <div style={{ display: "grid", gridTemplateColumns: "148px 1fr", gap: 8, alignItems: "center" }}>
                 <div
                   ref={(el) => { nomesRef.current[i] = el; }}
                   title={l.label}
                   style={{
-                    fontSize: 11, color: "var(--tx2)",
+                    fontSize: 10, color: "var(--tx2)",
                     whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                     transition: "opacity .18s",
                   }}
                 >{l.curto}</div>
-                <div style={{ height: 9, background: "rgba(255,255,255,.045)", borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ height: 8, background: "rgba(255,255,255,.045)", borderRadius: 2, overflow: "hidden" }}>
                   <div
                     ref={(el) => { barsRef.current[i] = el; }}
                     style={{

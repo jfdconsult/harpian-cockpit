@@ -485,10 +485,16 @@ export default function PortfolioBuilder() {
       },
       {
         id: "vol", k: "Volatilidade", v: pct(m.volAnual, 1),
-        explica: `Desvio-padrão anualizado dos retornos diários. Sharpe de ` +
-          `${m.sharpe.toFixed(2)} (taxa livre de risco = 0), que é o retorno dividido por essa ` +
-          `volatilidade. Atenção: o Sharpe conta a oscilação de ALTA como risco — num portfólio ` +
-          `de momento isso pune quem sobe rápido. Por isso o Sortino ao lado.`,
+        explica: `Desvio-padrão anualizado dos retornos diários — o tamanho do sobe-e-desce ` +
+          `do dia a dia, não a chance de perder. É o denominador do Sharpe ao lado: mesmo ` +
+          `retorno com metade da volatilidade vale o dobro de Sharpe.`,
+      },
+      {
+        id: "sharpe", k: "Sharpe", v: m.sharpe.toFixed(2),
+        explica: `Retorno ao ano dividido pela volatilidade (taxa livre de risco = 0, padrão ` +
+          `de toda a validação da casa). É a régua clássica de retorno por unidade de risco. ` +
+          `Atenção: ele conta a oscilação de ALTA como risco — num portfólio de momento isso ` +
+          `pune quem sobe rápido. Por isso o Sortino ao lado.`,
       },
       {
         id: "sortino", k: "Sortino", v: m.sortino.toFixed(2),
@@ -1408,6 +1414,7 @@ export default function PortfolioBuilder() {
           nomeCurto={nomeCurto}
           kpis={metricas.map((x) => ({ k: x.k, v: x.v, tom: x.tom }))}
           set={setAtivo ? SETS.find((s) => s.id === setAtivo) ?? null : null}
+          setsData={setsData}
           mode={mode}
           rebalance={{ daily: "diário", weekly: "semanal", monthly: "mensal", quarterly: "trimestral", yearly: "anual" }[rebalance]}
           capital={capital}

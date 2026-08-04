@@ -17,7 +17,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { SimResult, Sleeve, StrategyMeta, StrategySeries } from "@/lib/portfolio-builder/types";
-import type { SetDef } from "@/lib/portfolio-builder/benchmark-sets";
+import type { BenchmarkSetsData, EstatisticaEstrategia, SetDef } from "@/lib/portfolio-builder/benchmark-sets";
 import { computePortfolioRN, classifyBand, classifyStrategy } from "@/lib/portfolio-builder/hrd-engine";
 
 const MONO = "var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
@@ -38,6 +38,11 @@ const diasParaLegivel = (dias: number): string => {
 };
 
 const pct = (n: number, d = 1) => (n == null || isNaN(n) ? "—" : `${(n * 100).toFixed(d)}%`);
+/** Retorno acumulado da janela: acima de +1000% vira múltiplo (×41) pra ser legível. */
+const fmtRet = (r: number) =>
+  r == null || isNaN(r) ? "—"
+    : r >= 10 ? `×${Math.round(1 + r).toLocaleString("pt-BR")}`
+    : pct(r, Math.abs(r) >= 1 ? 0 : 1);
 const money = (n: number) => {
   if (n == null || isNaN(n)) return "—";
   if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
@@ -55,6 +60,8 @@ interface ReportData {
   nomeCurto: (m: StrategyMeta) => string;
   kpis: KPI[];
   set?: SetDef | null;
+  /** dataset dos SETs — traz a estatistica por estrategia pre-computada no export */
+  setsData?: BenchmarkSetsData | null;
   mode: "linear" | "dynamic";
   rebalance: string;
   capital: number;
@@ -226,6 +233,68 @@ export default function ReportPrint(props: ReportData) {
   const topWorst = useMemo(() =>
     [...stats].sort((a, b) => a.retornoJanela - b.retornoJanela).slice(0, 3),
   [stats]);
+
+  /**
+   * Quando um SET esta carregado, os sleeves sao BLOCOS sinteticos — a tabela
+   * tecnica acima mostraria uma linha so. Aqui o bloco e desmontado nas
+   * estrategias de verdade usando a estatistica pre-computada no export
+   * (mesma janela validada). O peso vem DENTRO do bloco; escala-se pela
+   * composicao fixa do SET. Nos SETs de bloco unico (Max Retorno) e exato;
+   * nos de 2-3 blocos e a composicao alvo, com a deriva de ~1 pp ignorada.
+   */
+  const estatSet = useMemo(() => {
+    const eb = props.setsData?.estatisticasBloco;
+    if (!set || !eb) return null;
+    type Linha = EstatisticaEstrategia & { pesoPortfolio: number; picoPortfolio: number; contribuicao: number };
+    const porId = new Map<string, Linha>();
+    const tickers = new Set<string>();
+    for (const c of set.composicao) {
+      const bloco = eb[c.bloco as keyof typeof eb];
+      if (!bloco) continue;
+      for (const s of bloco.simbolosNegociados) tickers.add(s);
+      for (const e of bloco.estrategias) {
+        const atual = porId.get(e.id);
+        if (atual) {
+          atual.pesoPortfolio += c.peso * e.pesoMedio;
+          atual.picoPortfolio += c.peso * e.pesoMax;
+        } else {
+          porId.set(e.id, {
+            ...e,
+            pesoPortfolio: c.peso * e.pesoMedio,
+            picoPortfolio: c.peso * e.pesoMax,
+            contribuicao: 0,
+          });
+        }
+      }
+    }
+    const linhas = [...porId.values()];
+    for (const l of linhas) l.contribuicao = l.pesoPortfolio * l.retornoJanela;
+    linhas.sort((a, b) => b.contribuicao - a.contribuicao);
+    const contribTotal = linhas.reduce((a, l) => a + Math.max(0, l.contribuicao), 0);
+    // relevantes: quem teve peso de verdade (>= 0,2% medio) — evita encher a
+    // tabela com quem so passou de raspao pelo corr-min
+    const relevantes = linhas.filter((l) => l.pesoPortfolio >= 0.002);
+    const melhores = [...relevantes].sort((a, b) => b.retornoJanela - a.retornoJanela).slice(0, 3);
+    const piores = [...relevantes].sort((a, b) => a.retornoJanela - b.retornoJanela).slice(0, 3);
+    const giros = linhas.reduce((a, l) => a + l.trocas, 0);
+    return { linhas, relevantes, melhores, piores, giros, nTickers: tickers.size, contribTotal };
+  }, [set, props.setsData]);
+
+  /** Meses negativos do PORTFOLIO, da curva simulada — mes-calendario cheio. */
+  const mesesPortfolio = useMemo(() => {
+    let neg = 0, tot = 0, pico = 0;
+    let iniEq = sim.equity[0];
+    for (let i = 1; i < sim.dates.length; i++) {
+      const fechouMes = sim.dates[i].slice(0, 7) !== sim.dates[i - 1].slice(0, 7);
+      if (fechouMes) {
+        const r = sim.equity[i - 1] / iniEq - 1;
+        tot++;
+        if (r < 0) neg++; else if (r > pico) pico = r;
+        iniEq = sim.equity[i - 1];
+      }
+    }
+    return { neg, tot, melhorMes: pico };
+  }, [sim.dates, sim.equity]);
 
   const [analise, setAnalise] = useState<string | null>(null);
   const [erroAnalise, setErroAnalise] = useState<string | null>(null);
@@ -564,30 +633,55 @@ export default function ReportPrint(props: ReportData) {
           </h2>
 
           {/* Estatisticas do portfolio */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 8 }}>
             <TechTile k="Drawdown máx" v={pct(-Math.abs(maxDrawdown), 1)} tom="neg" />
             <TechTile k="Tempo máx em DD" v={diasParaLegivel(portfolioStats.diasMaxEmDD)} sub={`${portfolioStats.diasMaxEmDD} pregões consecutivos`} />
             <TechTile k="% tempo em DD" v={pct(portfolioStats.pctTempoEmDD, 1)} sub="fração dos pregões abaixo do pico" />
-            <TechTile k="% tempo em defesa" v={pct(portfolioStats.pctTempoEmDefesa, 1)} sub="pregões com ≥ 50% blindado" />
+            {estatSet && props.setsData ? (
+              <TechTile
+                k="Meses no gatilho de defesa"
+                v={`${props.setsData.mesesEmDefesa.length} de ${props.setsData.rebalMensal.length}`}
+                sub="amplitude < 12 de 41 → carteira sai de risco"
+              />
+            ) : (
+              <TechTile k="% tempo em defesa" v={pct(portfolioStats.pctTempoEmDefesa, 1)} sub="pregões com ≥ 50% blindado" />
+            )}
+            <TechTile
+              k="Meses negativos" tom={mesesPortfolio.neg > 0 ? "neg" : "pos"}
+              v={`${mesesPortfolio.neg} de ${mesesPortfolio.tot}`}
+              sub={`${pct(mesesPortfolio.tot > 0 ? mesesPortfolio.neg / mesesPortfolio.tot : 0, 0)} dos meses-calendário`}
+            />
           </div>
+          {estatSet && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
+              <TechTile k="Estratégias com peso" v={`${estatSet.relevantes.length}`} sub="peso médio ≥ 0,2% na janela" />
+              <TechTile k="Giros de ativo (total)" v={estatSet.giros.toLocaleString("pt-BR")} sub="trocas de ticker somadas nas estratégias" />
+              <TechTile k="Ativos negociados" v={estatSet.nTickers.toLocaleString("pt-BR")} sub="tickers distintos na janela" />
+              <TechTile k="Melhor mês do portfólio" v={pct(mesesPortfolio.melhorMes, 1)} tom="pos" />
+            </div>
+          )}
 
-          {/* Turnover */}
-          <div style={{ padding: "10px 12px", background: "#fafafa", border: "1px solid #eee", borderRadius: 5, marginBottom: 14, fontSize: 11.5, color: "#333" }}>
-            <b style={{ color: "#c9a02c" }}>Turnover anual da carteira:</b> {portfolioStats.turnoverAnual.toFixed(2)}× / ano — quantas vezes por ano os pesos giram (0 = estático, 1 = uma carteira totalmente nova por ano).
-          </div>
+          {/* Turnover — so faz sentido quando os sleeves sao as proprias
+              estrategias; num SET o sleeve e um bloco unico de peso 100% e o
+              numero sairia zero. O giro do SET esta no tile "Giros de ativo". */}
+          {!estatSet && (
+            <div style={{ padding: "10px 12px", background: "#fafafa", border: "1px solid #eee", borderRadius: 5, marginBottom: 14, fontSize: 11.5, color: "#333" }}>
+              <b style={{ color: "#c9a02c" }}>Turnover anual da carteira:</b> {portfolioStats.turnoverAnual.toFixed(2)}× / ano — quantas vezes por ano os pesos giram (0 = estático, 1 = uma carteira totalmente nova por ano).
+            </div>
+          )}
 
-          {/* Top 3 melhor e pior retorno */}
+          {/* Top 3 melhor e pior retorno — decomposto por estrategia quando ha SET */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div>
               <div style={{ fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#0a7a3b", fontFamily: MONO, fontWeight: 700, marginBottom: 6 }}>Melhores retornos (janela)</div>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                 <tbody>
-                  {topBest.map((t) => {
+                  {(estatSet ? estatSet.melhores : topBest).map((t) => {
                     const m = meta[t.id];
                     return (
                       <tr key={t.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
                         <td style={{ padding: "5px 6px", fontWeight: 600 }}>{m ? nomeCurto(m) : t.id}</td>
-                        <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#0a7a3b", fontWeight: 700 }}>{pct(t.retornoJanela, 1)}</td>
+                        <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#0a7a3b", fontWeight: 700 }}>{fmtRet(t.retornoJanela)}</td>
                       </tr>
                     );
                   })}
@@ -598,12 +692,12 @@ export default function ReportPrint(props: ReportData) {
               <div style={{ fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#b0201f", fontFamily: MONO, fontWeight: 700, marginBottom: 6 }}>Piores retornos (janela)</div>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                 <tbody>
-                  {topWorst.map((t) => {
+                  {(estatSet ? estatSet.piores : topWorst).map((t) => {
                     const m = meta[t.id];
                     return (
                       <tr key={t.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
                         <td style={{ padding: "5px 6px", fontWeight: 600 }}>{m ? nomeCurto(m) : t.id}</td>
-                        <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#b0201f", fontWeight: 700 }}>{pct(t.retornoJanela, 1)}</td>
+                        <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#b0201f", fontWeight: 700 }}>{fmtRet(t.retornoJanela)}</td>
                       </tr>
                     );
                   })}
@@ -612,38 +706,115 @@ export default function ReportPrint(props: ReportData) {
             </div>
           </div>
 
-          {/* Detalhe por estrategia — trocas, tempo ativa, tempo em defesa */}
+          {/* Detalhe por estrategia — decomposto do SET quando ha um, senao dos sleeves */}
           <div style={{ fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#555", fontFamily: MONO, fontWeight: 700, marginBottom: 6 }}>
             Estatística técnica por estratégia
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #ddd" }}>
-                <th style={{ textAlign: "left", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Estratégia</th>
-                <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Retorno</th>
-                <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Contribuição</th>
-                <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% tempo ativa</th>
-                <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Nº trocas</th>
-                <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% em defesa</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sleeves.map((s, i) => {
-                const m = meta[s.id];
-                const st = stats[i];
-                return (
-                  <tr key={s.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                    <td style={{ padding: "5px 6px", fontWeight: 600 }}>{m ? nomeCurto(m) : s.id}</td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.retornoJanela >= 0 ? "#0a7a3b" : "#b0201f" }}>{pct(st.retornoJanela, 1)}</td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.contribuicao >= 0 ? "#0a7a3b" : "#b0201f", fontWeight: 700 }}>{pct(st.contribuicao, 2)}</td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{pct(st.pctTempoAtiva, 0)}</td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{st.trocas}</td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.pctEmDefesa > 0.1 ? "#0a5aa0" : "#666" }}>{pct(st.pctEmDefesa, 0)}</td>
+          {estatSet ? (
+            <>
+              <div style={{ fontSize: 10.5, color: "#666", marginBottom: 6, lineHeight: 1.5 }}>
+                O SET é um bloco de alocação dinâmica — a tabela abaixo o desmonta nas estratégias
+                que receberam peso na janela validada. Peso médio e pico incluem a deriva diária
+                dentro do mês (por isso o pico pode passar do teto de rebalance). Meses neg. conta
+                os meses-calendário negativos da estratégia em {estatSet.linhas[0]?.mesesTotal ?? "—"} meses.
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    {["Estratégia", "Desde", "Peso méd", "Pico", "Retorno", "% contrib", "Mês méd", "Meses neg", "Giros", "Ativos", "% defesa"].map((h, i) => (
+                      <th key={h} style={{ textAlign: i === 0 ? "left" : "right", padding: "5px 5px", color: "#666", fontFamily: MONO, fontSize: 8.5, letterSpacing: ".05em", textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
+                    ))}
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {estatSet.relevantes.map((l) => {
+                    const m = meta[l.id];
+                    return (
+                      <tr key={l.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                        <td style={{ padding: "4px 5px", fontWeight: 600 }}>{m ? nomeCurto(m) : l.id}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#666" }}>{l.desde.slice(0, 4)}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#c9a02c" }}>{pct(l.pesoPortfolio, 1)}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#555" }}>{pct(l.picoPortfolio, 0)}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: l.retornoJanela >= 0 ? "#0a7a3b" : "#b0201f" }}>{fmtRet(l.retornoJanela)}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: l.contribuicao >= 0 ? "#0a7a3b" : "#b0201f" }}>
+                          {estatSet.contribTotal > 0 ? pct(Math.max(0, l.contribuicao) / estatSet.contribTotal, 1) : "—"}
+                        </td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: l.retMesMedio >= 0 ? "#0a7a3b" : "#b0201f" }}>{pct(l.retMesMedio, 1)}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{l.mesesNeg}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{l.trocas}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{l.nAtivos}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: l.pctDefesa > 0.1 ? "#0a5aa0" : "#666" }}>{pct(l.pctDefesa, 0)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {/* Os ativos que puxaram o retorno de cada estrategia */}
+              <div style={{ fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#555", fontFamily: MONO, fontWeight: 700, margin: "14px 0 6px" }}>
+                Ativos que mais renderam, por estratégia
+              </div>
+              <div style={{ fontSize: 10.5, color: "#666", marginBottom: 6, lineHeight: 1.5 }}>
+                Retorno acumulado do ticker nos dias em que a estratégia o carregava — as 8
+                estratégias de maior contribuição. Melhor e pior mês da estratégia ao lado.
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    {["Estratégia", "1º ativo", "2º ativo", "3º ativo", "Melhor mês", "Pior mês"].map((h, i) => (
+                      <th key={h} style={{ textAlign: i === 0 ? "left" : "right", padding: "5px 5px", color: "#666", fontFamily: MONO, fontSize: 8.5, letterSpacing: ".05em", textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {estatSet.relevantes.slice(0, 8).map((l) => {
+                    const m = meta[l.id];
+                    const cel = (a?: { simbolo: string; retorno: number }) =>
+                      a ? `${a.simbolo} ${fmtRet(a.retorno)}` : "—";
+                    return (
+                      <tr key={l.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                        <td style={{ padding: "4px 5px", fontWeight: 600 }}>{m ? nomeCurto(m) : l.id}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#0a7a3b", fontWeight: 700 }}>{cel(l.topAtivos[0])}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#0a7a3b" }}>{cel(l.topAtivos[1])}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#0a7a3b" }}>{cel(l.topAtivos[2])}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#0a7a3b" }}>{pct(l.melhorMes, 0)}</td>
+                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#b0201f" }}>{pct(l.piorMes, 0)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #ddd" }}>
+                  <th style={{ textAlign: "left", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Estratégia</th>
+                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Retorno</th>
+                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Contribuição</th>
+                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% tempo ativa</th>
+                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Nº trocas</th>
+                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% em defesa</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sleeves.map((s, i) => {
+                  const m = meta[s.id];
+                  const st = stats[i];
+                  return (
+                    <tr key={s.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                      <td style={{ padding: "5px 6px", fontWeight: 600 }}>{m ? nomeCurto(m) : s.id}</td>
+                      <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.retornoJanela >= 0 ? "#0a7a3b" : "#b0201f" }}>{pct(st.retornoJanela, 1)}</td>
+                      <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.contribuicao >= 0 ? "#0a7a3b" : "#b0201f", fontWeight: 700 }}>{pct(st.contribuicao, 2)}</td>
+                      <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{pct(st.pctTempoAtiva, 0)}</td>
+                      <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{st.trocas}</td>
+                      <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.pctEmDefesa > 0.1 ? "#0a5aa0" : "#666" }}>{pct(st.pctEmDefesa, 0)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </section>
 
         {/* ANÁLISE JIM AI */}

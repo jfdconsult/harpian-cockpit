@@ -49,6 +49,7 @@ const TABELA: Record<string, { sharpe: number; cagr: number; vol: number; maxDD:
   d3: { sharpe: 1.63, cagr: 0.343, vol: 0.192, maxDD: -0.234, corr: 0.42 },
   d5: { sharpe: 1.64, cagr: 0.275, vol: 0.156, maxDD: -0.188, corr: 0.42 },
   d6: { sharpe: 1.63, cagr: 0.205, vol: 0.119, maxDD: -0.139, corr: 0.42 },
+  dmax: { sharpe: 1.65, cagr: 0.675, vol: 0.351, maxDD: -0.381, corr: 0.33 },
 };
 
 console.log("\n== cada SET rodado pelo motor do builder ==");
@@ -67,8 +68,8 @@ for (const def of SETS) {
   publicado(m.volAnual, esp.vol, 3, "vol");
   publicado(m.maxDrawdown, esp.maxDD, 3, "maxDD");
   publicado(m.correlacaoSP ?? NaN, esp.corr, 2, "corr S&P");
-  publicado(m.sortino, ({ d3: 2.42, d5: 2.44, d6: 2.43 } as Record<string, number>)[def.id], 2, "Sortino");
-  publicado(m.calmar, ({ d3: 1.47, d5: 1.46, d6: 1.48 } as Record<string, number>)[def.id], 2, "Calmar");
+  publicado(m.sortino, ({ d3: 2.42, d5: 2.44, d6: 2.43, dmax: 2.60 } as Record<string, number>)[def.id], 2, "Sortino");
+  publicado(m.calmar, ({ d3: 1.47, d5: 1.46, d6: 1.48, dmax: 1.77 } as Record<string, number>)[def.id], 2, "Calmar");
 }
 
 console.log("\n== modo dinâmico com peso de bloco travado ==");
@@ -133,10 +134,11 @@ console.log("\n== o overlay dentro do motor ==");
 console.log("\n== os botoes da vitrine ==");
 {
   const p = presetsVitrine();
-  ok(p.length === 3, "sao tres botoes na barra do topo");
-  ok(p.map((x) => x.id).join(",") === "d3,d5,d6", "e sao D3 / D5 / D6");
-  ok(p.map((x) => x.rotulo).join(" · ") === "Dinâmico Agressivo · Dinâmico Balanceado · Dinâmico Conservador",
-     "com o texto que o Joao pediu: " + p.map((x) => x.rotulo).join(" · "));
+  ok(p.length === 4, "sao quatro botoes na barra do topo");
+  ok(p.map((x) => x.id).join(",") === "d3,d5,d6,dmax", "e sao D3 / D5 / D6 / DMAX");
+  ok(p.map((x) => x.rotulo).join(" · ") ===
+     "Dinâmico Agressivo · Dinâmico Balanceado · Dinâmico Conservador · Max Retorno Dinâmico",
+     "com o texto que o Joao pediu (04/08): " + p.map((x) => x.rotulo).join(" · "));
 }
 
 console.log("\n== sem look-ahead, tambem pelo motor ==");

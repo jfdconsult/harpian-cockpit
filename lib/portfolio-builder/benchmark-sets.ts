@@ -39,7 +39,7 @@
 const DIAS_ANO = 252;
 
 /** Um bloco e uma fonte de retorno diario que os SETs combinam. */
-export type BlocoId = "rotacao20" | "corrmin20" | "aggbond";
+export type BlocoId = "rotacao20" | "corrmin20" | "aggbond" | "maxcagr10";
 
 /** 1 = comercial dinamica (rotacao) · 2 = institucional (corr-min). */
 export type LinhaId = 1 | 2;
@@ -57,6 +57,8 @@ export interface BenchmarkSetsData {
     rotacao: { k: number; teto: number; criterio: string };
     /** a chave de regime: abaixo desta amplitude a carteira sai de risco */
     gatilho: { amplitudeMinima: number; criterio: string; idsDefesa: string[] };
+    /** o SET de retorno maximo: 10 de ataque fixas, teto 25%, defesa no excedente */
+    maxcagr: { k: number; teto: number; criterio: string; idsAtaque: string[] };
   };
   janela: { de: string; ate: string; fromIdx: number; toIdx: number; n: number };
   /** cortes in-sample / hold-out, em indices do vetor de retornos */
@@ -76,6 +78,8 @@ export interface BenchmarkSetsData {
   selecaoVigente: { data: string; ids: string[] } | null;
   /** carteira do bloco de rotacao no ultimo rebalance, com os pesos */
   rotacaoVigente: { data: string; emDefesa: boolean; pesos: { id: string; peso: number }[] } | null;
+  /** carteira do SET de retorno maximo no ultimo rebalance */
+  maxcagrVigente: { data: string; emDefesa: boolean; pesos: { id: string; peso: number }[] } | null;
   /** meses em que o gatilho de amplitude disparou */
   mesesEmDefesa: string[];
   historicoSelecao: { data: string; ids: string[] }[];
@@ -90,7 +94,38 @@ export interface BenchmarkSetsData {
    * Nao e o peso do rebalance: dentro do mes ele deriva com o desempenho de
    * cada uma, e e essa deriva que a tela de apresentacao mostra respirando.
    */
-  pesosDiarios: Record<"rotacao20" | "corrmin20", number[][]>;
+  pesosDiarios: Record<"rotacao20" | "corrmin20" | "maxcagr10", number[][]>;
+  /**
+   * A analise tecnica por estrategia que o relatorio imprime quando um SET
+   * esta carregado. Pre-computada no export (mesma janela validada) porque o
+   * SET chega ao motor como bloco sintetico unico e o navegador nao tem as
+   * 41 series individuais. Pesos sao DENTRO do bloco — o relatorio escala
+   * pela composicao fixa do SET.
+   */
+  estatisticasBloco: Record<
+    "rotacao20" | "corrmin20" | "maxcagr10",
+    { estrategias: EstatisticaEstrategia[]; simbolosNegociados: string[] }
+  >;
+}
+
+/** Estatistica tecnica de uma estrategia dentro de um bloco, na janela do export. */
+export interface EstatisticaEstrategia {
+  id: string;
+  /** primeiro dia da serie da estrategia (inception, nao a janela) */
+  desde: string;
+  pesoMedio: number;
+  pesoMax: number;
+  pctTempoAtiva: number;
+  retornoJanela: number;
+  trocas: number;
+  nAtivos: number;
+  pctDefesa: number;
+  mesesNeg: number;
+  mesesTotal: number;
+  retMesMedio: number;
+  melhorMes: number;
+  piorMes: number;
+  topAtivos: { simbolo: string; retorno: number; dias: number }[];
 }
 
 export interface SetDef {
@@ -185,6 +220,23 @@ export const SETS: SetDef[] = [
     ],
     volTarget: { alvo: 0.12, lookback: 21 },
   },
+  // O SET de retorno maximo (missao de 04/08/2026). Nao e da mesma familia dos
+  // tres acima: o objetivo e CAGR maximo com Sharpe >= 1,1, nao Sharpe maximo.
+  // As 10 de ataque foram escolhidas por busca de 65.213 combinacoes
+  // (`_lab\max_cagr_10atk_5def.py`), com nucleo de 6 presente em 100% dos
+  // top-50. A alocacao continua 100% dinamica: peso por momento com teto de
+  // 25% por ataque, e o mesmo gatilho de amplitude dos outros blocos.
+  {
+    id: "dmax",
+    nome: "MAX RETORNO DINÂMICO",
+    rotuloCurto: "Max Retorno Dinâmico",
+    linha: 1,
+    perfil: "agressivo",
+    tese:
+      "Dez estratégias de ataque escolhidas para retorno máximo, com teto de 25% cada, " +
+      "e as cinco de preservação de capital. Retorno primeiro — a volatilidade é o preço.",
+    composicao: [{ bloco: "maxcagr10", peso: 1 }],
+  },
 ];
 
 /**
@@ -198,6 +250,7 @@ export const NOMES_BLOCO: Record<BlocoId, string> = {
   rotacao20: "Rotação mensal entre estratégias",
   corrmin20: "Seleção por mínima correlação",
   aggbond: "Renda fixa (Agg.Bond)",
+  maxcagr10: "Retorno máximo — 10 de ataque + 5 de defesa",
 };
 
 /** De quem e cada bloco. Aparece na tela como legenda de atribuicao. */
@@ -205,6 +258,7 @@ export const ATRIBUICAO: Record<BlocoId, string> = {
   rotacao20: "20 estratégias AlphaDroid · alocação Harpian",
   corrmin20: "20 estratégias AlphaDroid · alocação Harpian",
   aggbond: "índice de referência",
+  maxcagr10: "15 estratégias AlphaDroid · seleção e alocação Harpian",
 };
 
 /**
@@ -235,6 +289,11 @@ export const EXPLICACAO_BLOCO: Record<BlocoId, string> = {
   aggbond:
     "Índice agregado de renda fixa americana. Não é motor da casa: é o amortecedor, e " +
     "está aqui como referência de mercado.",
+  maxcagr10:
+    "Dez estratégias de ataque escolhidas para retorno máximo, com peso dinâmico pelo " +
+    "momento e teto de 25% em cada, mais as cinco de preservação de capital. Quando o " +
+    "momento seca entre as dez, o excedente vai para a preservação — e quando menos de " +
+    "12 das 41 têm momento positivo, a carteira inteira sai de risco.",
 };
 
 // ── composicao ───────────────────────────────────────────────────────────────

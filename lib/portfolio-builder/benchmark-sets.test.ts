@@ -49,7 +49,7 @@ ok(data.janela.de === "2011-08-01", "janela comeca em 2011-08-01");
 ok(data.janela.ate === "2026-06-04", "janela termina em 2026-06-04");
 ok(data.convencoes.rf === 0, "caixa rende zero (rf = 0)");
 ok(data.datas.length === data.janela.n, "uma data por retorno");
-for (const b of ["rotacao20", "corrmin20", "aggbond"] as const) {
+for (const b of ["rotacao20", "corrmin20", "aggbond", "maxcagr10"] as const) {
   ok(data.blocos[b]?.length === data.janela.n, `bloco ${b} alinhado com a janela`);
 }
 ok(data.ew41.length === data.janela.n, "regua EW-41 alinhada com a janela");
@@ -106,14 +106,17 @@ console.log("\n== o gatilho de amplitude — a chave de regime ==");
   // mora dentro de cada estrategia e nao conversa entre elas.
 }
 
-console.log("\n== a linha e os 3 SETs ==");
+console.log("\n== a linha e os 4 SETs ==");
 {
   ok(LINHAS.length === 1, "uma linha de produto");
-  ok(SETS.map((s) => s.id).join(",") === "d3,d5,d6", "os SETs sao D3 / D5 / D6");
+  ok(SETS.map((s) => s.id).join(",") === "d3,d5,d6,dmax", "os SETs sao D3 / D5 / D6 / DMAX");
+  // A familia Sharpe (D3/D5/D6) balanceia os DOIS criterios; o DMAX e outra
+  // prateleira — retorno maximo — e usa o proprio bloco de 10+5.
+  const classicos = SETS.filter((s) => ["d3", "d5", "d6"].includes(s.id));
   ok(
-    SETS.every((s) => s.composicao.some((c) => c.bloco === "rotacao20")
-                   && s.composicao.some((c) => c.bloco === "corrmin20")),
-    "todo SET usa os DOIS blocos — e o balanceamento entre eles que a Harpian assina",
+    classicos.every((s) => s.composicao.some((c) => c.bloco === "rotacao20")
+                        && s.composicao.some((c) => c.bloco === "corrmin20")),
+    "todo SET da familia Sharpe usa os DOIS blocos — e o balanceamento que a Harpian assina",
   );
   ok(
     SETS.every((s) => Math.abs(s.composicao.reduce((a, c) => a + c.peso, 0) - 1) < 1e-12),
@@ -126,6 +129,15 @@ console.log("\n== a linha e os 3 SETs ==");
   ok(comp("d6") === comp("d5"), "D6 tem a MESMA composição do D5 — o que muda é o overlay");
   ok(SETS.find((s) => s.id === "d6")!.volTarget?.alvo === 0.12, "D6 tem vol-target 12%");
   ok(!SETS.find((s) => s.id === "d5")!.volTarget, "D5 não tem overlay");
+  ok(comp("dmax") === "maxcagr10:1", "DMAX = 100% do bloco de retorno máximo");
+  ok(!SETS.find((s) => s.id === "dmax")!.volTarget, "DMAX não tem overlay — retorno primeiro");
+  const mx = data.convencoes.maxcagr;
+  ok(mx.k === 10 && mx.teto === 0.25, "DMAX: 10 de ataque com teto de 25%");
+  ok(mx.idsAtaque.length === 10, "as 10 de ataque estao publicadas no dataset");
+  ok(
+    mx.idsAtaque.every((id) => !data.convencoes.gatilho.idsDefesa.includes(id)),
+    "nenhuma das 10 de ataque e estrategia de defesa",
+  );
 }
 
 console.log("\n== convencao t/t+1: nada olha para frente ==");
@@ -168,6 +180,7 @@ const TABELA: Record<string, {
   d3:   { is: 1.63, ho: 1.63, full: 1.63, sortino: 2.42, calmar: 1.47, cagr: 0.343, vol: 0.192, maxDD: -0.234, corr: 0.42 },
   d5:   { is: 1.65, ho: 1.61, full: 1.64, sortino: 2.44, calmar: 1.46, cagr: 0.275, vol: 0.156, maxDD: -0.188, corr: 0.42 },
   d6:   { is: 1.59, ho: 1.73, full: 1.63, sortino: 2.43, calmar: 1.48, cagr: 0.205, vol: 0.119, maxDD: -0.139, corr: 0.42 },
+  dmax: { is: 1.69, ho: 1.59, full: 1.65, sortino: 2.60, calmar: 1.77, cagr: 0.675, vol: 0.351, maxDD: -0.381, corr: 0.33 },
   ew41: { is: 1.54, ho: 1.61, full: 1.57, sortino: 2.27, calmar: 1.20, cagr: 0.254, vol: 0.151, maxDD: -0.211, corr: 0.49 },
 };
 
@@ -212,11 +225,20 @@ console.log("\n== ano a ano (material de venda) ==");
     });
     console.log(`       ${ano}: D3 ${linha[0]}%  D5 ${linha[1]}%  D6 ${linha[2]}%`);
   }
+  // DMAX validado a parte — a escala e outra (RESULTADO_MAX_CAGR §vencedor)
+  const ANOS_MAX: Record<string, number> = {
+    "2013": 130.1, "2017": 98.7, "2020": 457.1, "2022": 1.2, "2024": 176.3, "2025": 126.7,
+  };
+  for (const [ano, esperado] of Object.entries(ANOS_MAX)) {
+    const a = porId.dmax.porAno.find((x) => x.ano === ano);
+    if (!a) { ok(false, `dmax sem ${ano}`); continue; }
+    publicado(a.ret * 100, esperado, 1, `${ano} DMAX (%)`);
+  }
 }
 
 console.log("\n== 2022, o teste acido ==");
 {
-  const esperado: Record<string, number> = { d3: -7.6, d5: -8.7, d6: -8.3, ew41: -15.3 };
+  const esperado: Record<string, number> = { d3: -7.6, d5: -8.7, d6: -8.3, dmax: 1.2, ew41: -15.3 };
   for (const r of resultados) {
     const a = r.porAno.find((x) => x.ano === "2022");
     if (!a) { ok(false, `${r.def.id} sem 2022`); continue; }
@@ -277,6 +299,26 @@ console.log("\n== coerencia interna ==");
   }
 }
 
+console.log("\n== estatistica tecnica por estrategia (relatorio) ==");
+{
+  const eb = data.estatisticasBloco;
+  ok(!!eb, "o dataset traz estatisticasBloco");
+  for (const b of ["rotacao20", "corrmin20", "maxcagr10"] as const) {
+    ok((eb?.[b]?.estrategias.length ?? 0) > 0, `${b} tem estrategias decompostas`);
+  }
+  const mx = eb.maxcagr10;
+  ok(mx.estrategias.length === 15, "DMAX decompoe em 15 estrategias (10 ataque + 5 defesa)");
+  const somaPeso = mx.estrategias.reduce((a, e) => a + e.pesoMedio, 0);
+  ok(Math.abs(somaPeso - 1) < 0.02, `pesos medios do DMAX somam ~100% (${(somaPeso * 100).toFixed(1)}%)`);
+  ok(mx.estrategias.every((e) => e.mesesTotal === mx.estrategias[0].mesesTotal),
+     "mesma contagem de meses para todas");
+  ok(mx.estrategias.every((e) => e.topAtivos.length <= 3 && e.nAtivos > 0),
+     "cada estrategia traz ate 3 melhores ativos e o total negociado");
+  console.log(`       DMAX: ${mx.simbolosNegociados.length} tickers distintos, ` +
+              `${mx.estrategias.reduce((a, e) => a + e.trocas, 0)} giros somados`);
+  ok(mx.simbolosNegociados.length > 50, "universo de tickers do DMAX e real (> 50)");
+}
+
 console.log("\n== carteiras vigentes ==");
 {
   const rot = data.rotacaoVigente;
@@ -293,6 +335,21 @@ console.log("\n== carteiras vigentes ==");
   ok(sel !== null && sel.ids.length === 20, "corr-min vigente com 20 estrategias");
   console.log(`       trocas por rebalance: ${data.trocasPorRebalance.toFixed(2)}`);
   ok(Math.abs(data.trocasPorRebalance - 1.7) < 0.2, "~1,7 trocas por rebalance no corr-min");
+
+  const mx = data.maxcagrVigente;
+  ok(mx !== null, "o dataset traz a carteira vigente do DMAX");
+  if (mx) {
+    const soma = mx.pesos.reduce((a, p) => a + p.peso, 0);
+    console.log(`       DMAX: ${mx.data}, ${mx.pesos.length} estratégias` +
+                (mx.emDefesa ? " (EM REGIME DE DEFESA)" : ""));
+    ok(mx.data === "2026-06-01", "a carteira vigente e a do rebalance de 2026-06-01");
+    ok(Math.abs(soma - 1) < 1e-9, `os pesos do DMAX somam 100% (${(soma * 100).toFixed(4)}%)`);
+    const ataque = new Set(data.convencoes.maxcagr.idsAtaque);
+    ok(
+      mx.pesos.filter((p) => ataque.has(p.id)).every((p) => p.peso <= 0.25 + 1e-9),
+      "nenhuma estrategia de ataque passa do teto de 25%",
+    );
+  }
 }
 
 console.log(falhas === 0 ? "\nVEREDITO: OK\n" : `\nVEREDITO: ${falhas} FALHA(S)\n`);

@@ -1315,17 +1315,17 @@ export default function PortfolioBuilder() {
                 background: "rgba(10,122,59,.12)", border: "1px solid rgba(10,122,59,.35)",
                 fontSize: 11.5, color: "#0a7a3b",
               }}>
-                <b>✓ Dados do questionário (Ato II) carregados.</b> Nome do cliente, RN e capital inicial vieram da apresentação — pode editar se precisar.
+                <b>✓ Dados do Ato II carregados</b> — cliente, RN e capital vieram da apresentação.
               </div>
             ) : (
               <div style={{
-                marginBottom: 16, padding: "8px 12px", borderRadius: 5,
+                marginBottom: 16, padding: "10px 12px", borderRadius: 5,
                 background: "rgba(224,132,32,.10)", border: "1px solid rgba(224,132,32,.35)",
-                fontSize: 11.5, color: "#a15a10", lineHeight: 1.5,
+                fontSize: 11.5, color: "#a15a10", lineHeight: 1.55,
               }}>
-                <b>⚠ Dados do Ato II não foram importados.</b> Você abriu o builder direto, sem passar pelos atos.
-                Pra trazer o cliente e o RN automaticamente, use o fluxo <b>Ato II → Ato IV</b> na apresentação.
-                Ou digite manualmente abaixo.
+                <b>⚠ Sem dados do Ato II</b> — a URL não trouxe <code>?rn=</code> nem <code>?capital=</code>.
+                Preencha manualmente abaixo, ou volte pra apresentação e clique no card do <b>Ato IV</b>
+                (o link é montado com os dados que você inseriu no simulator-metas).
               </div>
             )}
 

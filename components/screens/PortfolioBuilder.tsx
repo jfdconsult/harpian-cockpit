@@ -531,19 +531,6 @@ export default function PortfolioBuilder() {
 
   const aberta = metricas.find((x) => x.id === metricaAberta) ?? null;
 
-  const lista = useMemo(() => {
-    if (!catalog) return [];
-    const q = busca.trim().toLowerCase();
-    return catalog.estrategias.filter((e) => {
-      // "defesa" corta atravessado: nao e um grupo do catalogo, e o papel da
-      // estrategia no portfolio, e ha defensivas tanto em ETF quanto em ações
-      if (grupo === "defesa") { if (!defensivas.has(e.id)) return false; }
-      else if (grupo !== "todos" && e.grupo !== grupo) return false;
-      if (!q) return true;
-      return (e.label + " " + e.sub + " " + e.simbolo_hoje).toLowerCase().includes(q);
-    });
-  }, [catalog, busca, grupo, defensivas]);
-
   /**
    * Nome curto pra leitura rapida. NAO confia em e.nome — o pipeline atual
    * gera valores truncados ("Developed Cou" em vez de "Developed Countries").
@@ -566,6 +553,24 @@ export default function PortfolioBuilder() {
     if (sub) return sub;
     return label;
   }, []);
+
+  const lista = useMemo(() => {
+    if (!catalog) return [];
+    const q = busca.trim().toLowerCase();
+    const filtradas = catalog.estrategias.filter((e) => {
+      // "defesa" corta atravessado: nao e um grupo do catalogo, e o papel da
+      // estrategia no portfolio, e ha defensivas tanto em ETF quanto em ações
+      if (grupo === "defesa") { if (!defensivas.has(e.id)) return false; }
+      else if (grupo !== "todos" && e.grupo !== grupo) return false;
+      if (!q) return true;
+      return (e.label + " " + e.sub + " " + e.simbolo_hoje).toLowerCase().includes(q);
+    });
+    return filtradas.sort((a, b) =>
+      nomeCurto(a).localeCompare(nomeCurto(b), "pt-BR", {
+        sensitivity: "base", numeric: true,
+      })
+    );
+  }, [catalog, busca, grupo, defensivas, nomeCurto]);
 
   /**
    * Numeracao 1,2,3... quando existem varias estrategias do mesmo nome curto

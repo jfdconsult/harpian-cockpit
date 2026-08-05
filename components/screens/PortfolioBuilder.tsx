@@ -25,7 +25,7 @@ import {
   configDoSet, descricaoDoSet, ehBloco, presetsVitrine, seriesDosBlocos,
 } from "@/lib/portfolio-builder/presets";
 import type { BenchmarkSetsData, SetDef } from "@/lib/portfolio-builder/benchmark-sets";
-import { SETS, avaliarSet } from "@/lib/portfolio-builder/benchmark-sets";
+import { SETS, avaliarSet, EXPLICACAO_BLOCO } from "@/lib/portfolio-builder/benchmark-sets";
 import ApresentacaoPortfolio from "./ApresentacaoPortfolio";
 import ReportPrint from "./ReportPrint";
 import { classificar, idsDeDefesa } from "@/lib/portfolio-builder/defesa";
@@ -565,6 +565,11 @@ export default function PortfolioBuilder() {
       if (!q) return true;
       return (e.label + " " + e.sub + " " + e.simbolo_hoje).toLowerCase().includes(q);
     });
+    // Ordena alfabeticamente pela chave de exibicao (nomeCurto). JD pediu:
+    // Communications 1, Communications 2, Consumer Discretionary 1, 2,
+    // Energy 1, 2, Financials 1, 2 — mais facil de localizar e ver que a
+    // estrategia tem irmas 1 e 2 lado a lado. Usa localeCompare com
+    // sensitivity 'base' pra ignorar acentos/caixa.
     return filtradas.sort((a, b) =>
       nomeCurto(a).localeCompare(nomeCurto(b), "pt-BR", {
         sensitivity: "base", numeric: true,
@@ -682,9 +687,26 @@ export default function PortfolioBuilder() {
               opacity: sim ? 1 : 0.55,
             }}
           >
-            <span style={{ display: "block", fontSize: 12.5, fontWeight: 650 }}>🖨️ Imprimir relatório</span>
-            <span style={{ display: "block", fontSize: 10.5, opacity: .75 }}>PDF com JIM AI</span>
+            <span style={{ display: "block", fontSize: 12.5, fontWeight: 650 }}>📄 Ver Relatório</span>
+            <span style={{ display: "block", fontSize: 10.5, opacity: .75 }}>Análise + PDF</span>
           </button>
+          <a
+            href="/presentation/biblioteca-ativos"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Consulta o universo completo de tickers de cada estratégia — abre em nova aba"
+            style={{
+              font: "inherit", textAlign: "left", padding: "7px 15px", borderRadius: 6,
+              cursor: "pointer", textDecoration: "none",
+              border: "1px solid var(--line2)",
+              background: "transparent",
+              color: "var(--tx1)",
+              display: "inline-block",
+            }}
+          >
+            <span style={{ display: "block", fontSize: 12.5, fontWeight: 650 }}>📚 Biblioteca de Ativos</span>
+            <span style={{ display: "block", fontSize: 10.5, opacity: .75 }}>o que está dentro</span>
+          </a>
         </div>
       </div>
 
@@ -908,6 +930,7 @@ export default function PortfolioBuilder() {
                       key={s.id} sleeve={s} meta={meta[s.id]} cor={CORES[i % CORES.length]}
                       mode={mode} carregando={carregando.has(s.id)}
                       nomeCurto={meta[s.id] ? nomeCurto(meta[s.id]) : undefined}
+                      explicacao={explicacaoSleeve(s.id, meta[s.id])}
                       onPatch={(c, v) => patch(s.id, c, v)} onRemove={() => remover(s.id)}
                     />
                   ))}
@@ -1044,7 +1067,23 @@ export default function PortfolioBuilder() {
                   curva que produziu esses numeros. */}
               {metricas.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(118px,1fr))", gap: 8 }}>
+                  {/* RÉGUA FIXA. Calibrar peso na mão exige ver o número reagir,
+                      e os sliders ficam na coluna da esquerda, muito abaixo da
+                      dobra. Sem isto o gestor rola até o slider, mexe, rola de
+                      volta pra ler o Sharpe, e repete — o loop de otimização
+                      manual fica inviável. Grudada no topo, ele mexe e lê no
+                      mesmo golpe de vista.
+
+                      `--pb-sticky-top`: cada host diz de quanto é o próprio
+                      cabeçalho fixo (52px na apresentação, 86px no shell do
+                      cockpit). Sem a variável, gruda em 0 e continua correto. */}
+                  <div style={{
+                    display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(118px,1fr))", gap: 8,
+                    position: "sticky", top: "var(--pb-sticky-top, 0px)", zIndex: 30,
+                    // fundo opaco: sem ele o conteúdo passa por trás dos gaps da grade
+                    background: "var(--bg, #0B1626)", padding: "8px 0",
+                    boxShadow: "0 8px 18px -10px rgba(0,0,0,.75)",
+                  }}>
                     {metricas.map((x) => (
                       <Tile
                         key={x.id} k={x.k} v={x.v} tom={x.tom}
@@ -1618,21 +1657,66 @@ function BarraAlocacao({ sleeves, meta, soma }: {
   );
 }
 
-function SleeveRow({ sleeve, meta, cor, mode, carregando, nomeCurto: nomeCurtoStr, onPatch, onRemove }: {
+/**
+ * Monta o texto explicativo do sleeve pro popover do icone (?).
+ *  - Blocos dos SETs (rotacao20, corrmin20, aggbond, maxcagr10):
+ *    usa EXPLICACAO_BLOCO — texto denso e comercial.
+ *  - Estrategias individuais do catalogo: assembla a partir do meta
+ *    (subclasse, benchmark, retorno anual, sharpe, maxdd, universo).
+ */
+function explicacaoSleeve(id: string, m?: StrategyMeta): string {
+  const bloco = EXPLICACAO_BLOCO[id as keyof typeof EXPLICACAO_BLOCO];
+  if (bloco) return bloco;
+  if (!m) return "";
+  const partes: string[] = [];
+  if (m.sub) partes.push(m.sub);
+  if (m.referencia_nome) partes.push(`Benchmark: ${m.referencia_nome}`);
+  const kpis: string[] = [];
+  if (m.ann_return_all) kpis.push(`retorno anual ${m.ann_return_all}`);
+  if (m.sharpe_all)     kpis.push(`Sharpe ${m.sharpe_all}`);
+  if (m.maxdd_all)      kpis.push(`Max DD ${m.maxdd_all}`);
+  if (kpis.length) partes.push(kpis.join(" · "));
+  if (Array.isArray(m.universo) && m.universo.length) {
+    partes.push(`Universo: ${m.universo.length} ativo${m.universo.length > 1 ? "s" : ""}`);
+  }
+  return partes.join(" · ");
+}
+
+function SleeveRow({ sleeve, meta, cor, mode, carregando, nomeCurto: nomeCurtoStr, explicacao, onPatch, onRemove }: {
   sleeve: Sleeve; meta?: StrategyMeta; cor: string; mode: AllocMode; carregando: boolean;
   nomeCurto?: string;
+  explicacao?: string;
   onPatch: (campo: keyof Sleeve, v: number) => void; onRemove: () => void;
 }) {
   const nomeExibicao = nomeCurtoStr || meta?.label || sleeve.id;
   const codigoExibicao = meta?.label && meta.label !== nomeExibicao ? meta.label : null;
+  const [aberto, setAberto] = useState(false);
   return (
-    <div style={{ background: "var(--bg2)", border: "1px solid var(--line)", borderRadius: 6, padding: "8px 10px" }}>
+    <div style={{ background: "var(--bg2)", border: "1px solid var(--line)", borderRadius: 6, padding: "8px 10px", position: "relative" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
         <span style={{ width: 8, height: 8, borderRadius: 2, background: cor, flexShrink: 0, marginTop: 5 }} />
         <span style={{ flex: 1, minWidth: 0 }}>
-          {/* Nome curto no topo — leitura rápida */}
-          <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--tx)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {nomeExibicao}
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {/* Nome curto no topo — leitura rápida */}
+            <span style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: "var(--tx)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {nomeExibicao}
+            </span>
+            {explicacao && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setAberto((v) => !v); }}
+                title="O que é isso?"
+                aria-expanded={aberto}
+                style={{
+                  font: "inherit", flexShrink: 0,
+                  width: 16, height: 16, borderRadius: "50%",
+                  border: "1px solid var(--tx3)", background: "transparent",
+                  color: "var(--tx3)", cursor: "pointer",
+                  fontSize: 10, lineHeight: 1, padding: 0,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                }}
+              >?</button>
+            )}
           </span>
           {/* Código AlphaDroid embaixo em mono/escuro */}
           {codigoExibicao && (
@@ -1647,6 +1731,21 @@ function SleeveRow({ sleeve, meta, cor, mode, carregando, nomeCurto: nomeCurtoSt
           border: "none", cursor: "pointer", padding: "0 2px",
         }}>×</button>
       </div>
+
+      {aberto && explicacao && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            margin: "-2px 0 8px", padding: "9px 11px",
+            background: "rgba(201,160,44,0.08)",
+            border: "1px solid rgba(201,160,44,0.35)",
+            borderRadius: 5,
+            fontSize: 11.5, lineHeight: 1.5, color: "var(--tx2)",
+          }}
+        >
+          {explicacao}
+        </div>
+      )}
 
       {mode === "linear" ? (
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>

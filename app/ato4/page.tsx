@@ -110,8 +110,14 @@ export default function Ato4Page() {
         })}
       </nav>
 
-      {/* PortfolioBuilder — offset pra nao ficar coberto pelo header */}
-      <div style={{ paddingTop: 60 }}>
+      {/* PortfolioBuilder — offset pra nao ficar coberto pelo header.
+          --pb-sticky-top: onde a regua de KPIs gruda ao rolar (logo top:14
+          + nav ~35px = 49px, arredondando pra 52). O overflow:visible
+          no body destrava o position:sticky (globals.css do cockpit usa
+          overflow-x:hidden no body, que por sua vez transforma overflow-y
+          em auto e mata o sticky). Escopo local: so nesta rota. */}
+      <style jsx global>{`html, body { overflow: visible !important; }`}</style>
+      <div style={{ paddingTop: 60, ["--pb-sticky-top" as unknown as string]: "52px" } as React.CSSProperties}>
         <PortfolioBuilder />
       </div>
     </div>

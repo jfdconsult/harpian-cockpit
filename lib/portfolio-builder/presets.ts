@@ -127,7 +127,7 @@ export interface Preset {
  *  max retorno. Vai do menos risco pro mais risco, mesmo padrao dos botoes
  *  de janela (1a, 2a, 5a...). Max Retorno fica sempre por ultimo — e ate
  *  outra familia (CAGR max, nao Sharpe max). */
-const ORDEM_VITRINE = ["d6", "d5", "d3", "dmax"];
+const ORDEM_VITRINE = ["dsuave", "d6", "d5", "d3", "dmax"];
 export function presetsVitrine(): Preset[] {
   const linha1 = SETS.filter((s) => s.linha === 1);
   const rank = (id: string) => {

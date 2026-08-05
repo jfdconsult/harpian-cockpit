@@ -39,7 +39,7 @@
 const DIAS_ANO = 252;
 
 /** Um bloco e uma fonte de retorno diario que os SETs combinam. */
-export type BlocoId = "rotacao20" | "corrmin20" | "aggbond" | "maxcagr10";
+export type BlocoId = "rotacao20" | "corrmin20" | "aggbond" | "maxcagr10" | "suavemin15";
 
 /** 1 = comercial dinamica (rotacao) · 2 = institucional (corr-min). */
 export type LinhaId = 1 | 2;
@@ -80,6 +80,7 @@ export interface BenchmarkSetsData {
   rotacaoVigente: { data: string; emDefesa: boolean; pesos: { id: string; peso: number }[] } | null;
   /** carteira do SET de retorno maximo no ultimo rebalance */
   maxcagrVigente: { data: string; emDefesa: boolean; pesos: { id: string; peso: number }[] } | null;
+  suavemin15Vigente?: { data: string; emDefesa: boolean; pesos: { id: string; peso: number }[] } | null;
   /** meses em que o gatilho de amplitude disparou */
   mesesEmDefesa: string[];
   historicoSelecao: { data: string; ids: string[] }[];
@@ -94,7 +95,7 @@ export interface BenchmarkSetsData {
    * Nao e o peso do rebalance: dentro do mes ele deriva com o desempenho de
    * cada uma, e e essa deriva que a tela de apresentacao mostra respirando.
    */
-  pesosDiarios: Record<"rotacao20" | "corrmin20" | "maxcagr10", number[][]>;
+  pesosDiarios: Record<"rotacao20" | "corrmin20" | "maxcagr10" | "suavemin15", number[][]>;
   /**
    * A analise tecnica por estrategia que o relatorio imprime quando um SET
    * esta carregado. Pre-computada no export (mesma janela validada) porque o
@@ -103,7 +104,7 @@ export interface BenchmarkSetsData {
    * pela composicao fixa do SET.
    */
   estatisticasBloco: Record<
-    "rotacao20" | "corrmin20" | "maxcagr10",
+    "rotacao20" | "corrmin20" | "maxcagr10" | "suavemin15",
     { estrategias: EstatisticaEstrategia[]; simbolosNegociados: string[] }
   >;
 }
@@ -237,6 +238,28 @@ export const SETS: SetDef[] = [
       "e as cinco de preservação de capital. Retorno primeiro — a volatilidade é o preço.",
     composicao: [{ bloco: "maxcagr10", peso: 1 }],
   },
+  // 5o SET (missao 04/08/2026 · noite) — o espelho defensivo do DMAX.
+  // Cesta selecionada por Sharpe max s.a. maxDD >= -4.5%, CAGR >= 6.5%, sem
+  // ano negativo, entre 23.754 tentativas (`SUAVE_HANDOFF/suave_ledger.csv`).
+  // 10 de ataque + 5 de preservacao com PISO de 1% em todas (ninguem zera),
+  // motor DMAX por baixo, e OVERLAY de vol-target 3.5% aa (decisao semanal)
+  // fabricando a suavidade. Exposicao media do overlay: 22%. Metricas de
+  // conferencia em `SUAVE_HANDOFF/metricas_conferencia.json`: Sharpe 1,824,
+  // CAGR 8,85%, vol 4,71%, maxDD -4,42%, 0 ano negativo em 15 anos.
+  // SOBE SEM SELO DE VALIDACAO (pendencia Arena/custos, como o DMAX).
+  {
+    id: "dsuave",
+    nome: "SUAVE · MÍNIMA OSCILAÇÃO DINÂMICA",
+    rotuloCurto: "SUAVE",
+    linha: 1,
+    perfil: "conservador",
+    tese:
+      "O motor do DMAX na dose mínima. Cesta de 15 estratégias (piso de 1% em cada) " +
+      "com overlay de volatilidade-alvo de 3,5% ao ano — exposição média ao motor de 22%, " +
+      "o resto em caixa. Sharpe alto pela suavidade, não pelo retorno.",
+    composicao: [{ bloco: "suavemin15", peso: 1 }],
+    volTarget: { alvo: 0.035, lookback: 21 },
+  },
 ];
 
 /**
@@ -251,6 +274,7 @@ export const NOMES_BLOCO: Record<BlocoId, string> = {
   corrmin20: "Seleção por mínima correlação",
   aggbond: "Renda fixa (Agg.Bond)",
   maxcagr10: "Retorno máximo — 10 de ataque + 5 de defesa",
+  suavemin15: "Mínima oscilação — 15 estratégias com piso e overlay de vol",
 };
 
 /** De quem e cada bloco. Aparece na tela como legenda de atribuicao. */
@@ -259,6 +283,7 @@ export const ATRIBUICAO: Record<BlocoId, string> = {
   corrmin20: "20 estratégias AlphaDroid · alocação Harpian",
   aggbond: "índice de referência",
   maxcagr10: "15 estratégias AlphaDroid · seleção e alocação Harpian",
+  suavemin15: "15 estratégias AlphaDroid · seleção e alocação Harpian",
 };
 
 /**
@@ -294,6 +319,12 @@ export const EXPLICACAO_BLOCO: Record<BlocoId, string> = {
     "momento e teto de 25% em cada, mais as cinco de preservação de capital. Quando o " +
     "momento seca entre as dez, o excedente vai para a preservação — e quando menos de " +
     "12 das 41 têm momento positivo, a carteira inteira sai de risco.",
+  suavemin15:
+    "O mesmo motor do Max Retorno, na dose mínima. Quinze estratégias (10 de ataque + 5 " +
+    "de preservação) com piso de 1% em cada — ninguém zera. Por cima, um overlay de " +
+    "volatilidade-alvo de 3,5% ao ano decide semanalmente quanto expor ao motor: em " +
+    "média 22%, o resto em caixa. A queda máxima histórica foi de −4,42% em 15 anos, sem " +
+    "nenhum ano negativo. É o mandato conservador com a mesma engenharia.",
 };
 
 // ── composicao ───────────────────────────────────────────────────────────────

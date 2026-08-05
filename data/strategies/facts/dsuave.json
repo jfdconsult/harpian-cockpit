@@ -1,0 +1,63 @@
+{
+  "_proposito": "Fatos verificados do SET Institucional Dinamico (SUAVE) para ancorar o JIM AI. Toda analise do JIM sobre este SET deve usar EXCLUSIVAMENTE estes numeros. Fonte: serie_diaria_suave.csv + suave_vs_jim.py, conferidos por reimplementacao independente em 2026-08-04.",
+  "janelas": {
+    "producao_tela": {
+      "de": "2011-08-01", "ate": "2026-06-04", "anos": 14.8, "pregoes": 3732,
+      "capitalFinal100k": 359, "cagr": 0.0901, "vol": 0.047, "sharpe": 1.85,
+      "sortino": 2.93, "calmar": 2.04, "maxDD": -0.0442,
+      "melhorAno": 0.17, "piorAno": 0.0085, "anosNegativos": 0
+    },
+    "lab_cheia": {
+      "de": "2011-08-01", "ate": "2026-07-31", "anos": 15.0,
+      "cagr": 0.0885, "sharpe": 1.824, "sharpeIS": 1.82, "sharpeHO": 1.86
+    }
+  },
+  "correlacao_spx": {
+    "diaria_full": 0.30, "mensal_full": 0.40,
+    "diaria_em_dd_spx_maior_10pct": 0.12,
+    "mensal_nos_10pct_piores_meses_spx": 0.03,
+    "retorno_suave_nesses_meses_pct_mes": -0.05,
+    "retorno_spx_nesses_meses_pct_mes": -6.91,
+    "nota": "A correlacao CAI no stress. A janela contem 2020 (SPX -34%) e 2022 (SPX -25%): as caudas do indice FORAM testadas."
+  },
+  "mecanica": {
+    "membros": 15, "ataque": 10, "defesa": 5,
+    "piso_por_estrategia": 0.01,
+    "piso_significado": "MINIMO de alocacao — nao e a alocacao. O water-filling de momento concentra ate 25% por estrategia (ultimo rebalance: maior posicao 22%). Nao ha diluicao.",
+    "teto_ataque": 0.25, "rebalance_motor": "mensal", "gatilho_amplitude": 12,
+    "overlay": {"alvo": 0.035, "lookback": 21, "cadencia": "SEMANAL",
+                "resto": "caixa a rf=0 (convencao conservadora do backtest)"},
+    "exposicao_media": 0.225, "caixa_medio": 0.775,
+    "caixa_acima_80pct_fracao_do_tempo": 0.60,
+    "episodios_4sem_caixa_acima_80pct": 31,
+    "maior_sequencia_caixa_acima_80pct_meses": 25,
+    "fev_abr_2020": {"dd_minimo": -0.0186, "exposicao": "17% -> 7%"}
+  },
+  "caixa_remunerado_projecao": {
+    "cagr_com_tbill_3m_fred": 0.1028, "maxDD": -0.0436,
+    "status": "PROJECAO de implementacao — NAO e a curva oficial (rf=0 ate validacao)",
+    "regra_de_citacao": "so mencionar rotulado como projecao"
+  },
+  "dmax_referencia": {
+    "cagr": 0.675, "vol": 0.351, "maxDD": -0.381,
+    "nota": "Unica comparacao 100%-DMAX permitida. Qualquer outro numero e fabricacao."
+  },
+  "recuperacao_drawdowns": {
+    "quedas_maiores_3pct_em_15_anos": 5, "quedas_maiores_5pct": 0,
+    "maior_espera_topo_a_topo_meses": 14.2,
+    "tempo_com_dd_maior_1pct_fracao": 0.33
+  },
+  "monitores_calibrados": [
+    {"nome": "vol_liquida_vs_banda", "regra": "vol 63d da serie LIQUIDA fora de 3.5% +/- 1.5pp por 2 meses",
+     "substitui": "qualquer monitor sobre a vol do motor (que fica >6% em 96% dos pregoes por construcao)"},
+    {"nome": "corr_stress", "regra": "corr mensal com SPX nos meses de queda do indice acima da regua historica 0.03-0.12"},
+    {"nome": "sortino_sharpe", "valor_atual": 1.58,
+     "regra": "limiar deve sair da distribuicao historica da razao em janelas moveis — NAO usar 1.5 fixo (margem de so 5% hoje, dispararia com ruido)"},
+    {"nome": "caixa_persistente", "nota": "caixa >80% e o estado NORMAL (60% do tempo, ja durou 25 meses). Nao e sinal de anomalia. Nao criar alerta disso."}
+  ],
+  "ressalvas_obrigatorias": [
+    "selecao sobre 23.754 combinacoes — vies de selecao no Sharpe",
+    "custos de transacao nao modelados",
+    "validacao independente (Arena) pendente — nenhum selo"
+  ]
+}

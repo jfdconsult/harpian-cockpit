@@ -343,6 +343,7 @@ export default function ReportPrint(props: ReportData) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         cliente, autor,
+        setId: set?.id ?? null,
         setNome: set?.nome ?? null,
         setTese: set?.tese ?? null,
         mode, rebalance, capital, janela: janelaLabel,

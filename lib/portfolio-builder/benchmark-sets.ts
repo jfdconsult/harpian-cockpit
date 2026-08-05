@@ -123,7 +123,32 @@ export interface BenchmarkSetsData {
     simbolos: string[];
     defensivo: number[];
     runs: [number, number][];
+    /**
+     * Como a estrategia OPERA, medido posicao a posicao na janela do export.
+     * Uma posicao = entrou num ticker e ficou ate a troca seguinte; vale
+     * 2 trades (a venda do anterior e a compra do novo).
+     *
+     * ATAQUE E DEFESA SEPARADOS de proposito: sao maquinas diferentes. O
+     * ataque e onde o ganho e perseguido e onde o acerto importa; a defesa e
+     * protecao — julgar as duas pelo mesmo numero mistura o que nao se mistura.
+     */
+    operacao?: {
+      ataque: OperacaoStats | null;
+      defesa: OperacaoStats | null;
+    };
   }>;
+}
+
+/** Como uma estrategia opera, medido posicao a posicao. */
+export interface OperacaoStats {
+  /** quantas vezes entrou num ticker e ficou ate a troca seguinte */
+  posicoes: number;
+  /** fracao das posicoes que fechou no positivo (0..1) */
+  acerto: number;
+  /** duracao media da posicao, em pregoes */
+  diasMedios: number;
+  /** retorno medio por posicao (0.04 = +4%) */
+  retMedio: number;
 }
 
 /** Estatistica tecnica de uma estrategia dentro de um bloco, na janela do export. */

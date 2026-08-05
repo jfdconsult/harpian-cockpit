@@ -299,8 +299,49 @@ export default function ReportPrint(props: ReportData) {
     const melhores = [...relevantes].sort((a, b) => b.retornoJanela - a.retornoJanela).slice(0, 3);
     const piores = [...relevantes].sort((a, b) => a.retornoJanela - b.retornoJanela).slice(0, 3);
     const giros = linhas.reduce((a, l) => a + l.trocas, 0);
-    return { linhas, relevantes, melhores, piores, giros, nTickers: tickers.size, contribTotal };
+
+    /**
+     * Como o portfolio OPERA — o dimensionamento que o gestor pede antes de
+     * assinar: com que frequencia isto gira, quanto tempo fica em cada posicao,
+     * e com que taxa de acerto.
+     *
+     * ATAQUE SEPARADO DA DEFESA. Sao maquinas diferentes: o ataque persegue
+     * ganho e e onde o acerto significa alguma coisa; a defesa e protecao —
+     * ela "acerta" ficando de fora de uma queda, e misturar as duas numa taxa
+     * so esconde as duas.
+     *
+     * Uma POSICAO = entrou num ticker e ficou ate a troca. Vale 2 TRADES: a
+     * venda do que saiu e a compra do que entrou.
+     *
+     * Ponderado por numero de posicoes, nao por peso: a pergunta e "das
+     * operacoes que este portfolio fez, quantas fecharam no positivo".
+     */
+    const det = props.setsData?.universoDetalhe;
+    let op: null | {
+      ataque: { posicoes: number; acerto: number; dias: number };
+      defesa: { posicoes: number; acerto: number; dias: number } | null;
+    } = null;
+    if (det) {
+      const zero = () => ({ n: 0, w: 0, d: 0 });
+      const A = zero(), D = zero();
+      for (const l of relevantes) {
+        const o = det[l.id]?.operacao;
+        if (!o) continue;
+        if (o.ataque) { A.n += o.ataque.posicoes; A.w += o.ataque.acerto * o.ataque.posicoes; A.d += o.ataque.diasMedios * o.ataque.posicoes; }
+        if (o.defesa) { D.n += o.defesa.posicoes; D.w += o.defesa.acerto * o.defesa.posicoes; D.d += o.defesa.diasMedios * o.defesa.posicoes; }
+      }
+      if (A.n > 0) {
+        op = {
+          ataque: { posicoes: A.n, acerto: A.w / A.n, dias: A.d / A.n },
+          defesa: D.n > 0 ? { posicoes: D.n, acerto: D.w / D.n, dias: D.d / D.n } : null,
+        };
+      }
+    }
+    return { linhas, relevantes, melhores, piores, giros, nTickers: tickers.size, contribTotal, op };
   }, [set, props.setsData]);
+
+  /** Semanas da janela simulada — divisor de "trades por semana". */
+  const semanasJanela = Math.max(1, (sim.to - sim.from + 1) / 5);
 
   /** Meses negativos do PORTFOLIO, da curva simulada — mes-calendario cheio. */
   const mesesPortfolio = useMemo(() => {
@@ -698,6 +739,54 @@ export default function ReportPrint(props: ReportData) {
               <TechTile k="Ativos negociados" v={estatSet.nTickers.toLocaleString("pt-BR")} sub="tickers distintos na janela" />
               <TechTile k="Melhor mês do portfólio" v={pct(mesesPortfolio.melhorMes, 1)} tom="pos" />
             </div>
+          )}
+
+          {/* COMO O PORTFOLIO OPERA — o dimensionamento operacional.
+              Ataque separado da defesa porque sao maquinas diferentes: o ataque
+              e onde o acerto significa alguma coisa, a defesa "acerta" ficando
+              de fora de uma queda. Uma taxa unica esconderia as duas. */}
+          {estatSet?.op && (
+            <section style={{ marginBottom: 18, pageBreakInside: "avoid" }}>
+              <h3 style={{
+                margin: "0 0 8px", fontSize: 12.9, letterSpacing: ".1em", textTransform: "uppercase",
+                color: "#c9a02c", fontFamily: MONO, fontWeight: 700,
+              }}>
+                Como este portfólio opera · posições de ataque
+              </h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                <TechTile
+                  k="Taxa de acerto"
+                  v={pct(estatSet.op.ataque.acerto, 1)}
+                  tom={estatSet.op.ataque.acerto >= 0.5 ? "pos" : "neg"}
+                  sub="posições de ataque fechadas no positivo"
+                />
+                <TechTile
+                  k="Tempo médio na posição"
+                  v={diasParaLegivel(Math.round(estatSet.op.ataque.dias))}
+                  sub={`${Math.round(estatSet.op.ataque.dias)} pregões por ativo`}
+                />
+                <TechTile
+                  k="Trades por semana"
+                  v={((estatSet.op.ataque.posicoes * 2) / semanasJanela).toFixed(1)}
+                  sub="1 posição = 1 venda + 1 compra"
+                />
+                <TechTile
+                  k="Posições de ataque"
+                  v={estatSet.op.ataque.posicoes.toLocaleString("pt-BR")}
+                  sub={`${(estatSet.op.ataque.posicoes * 2).toLocaleString("pt-BR")} trades na janela`}
+                />
+              </div>
+              {estatSet.op.defesa && (
+                <p style={{ margin: "8px 0 0", fontSize: 11.7, color: "#555", lineHeight: 1.5 }}>
+                  <b style={{ color: "#c9a02c" }}>A defesa é contada à parte.</b> Foram{" "}
+                  {estatSet.op.defesa.posicoes.toLocaleString("pt-BR")} posições defensivas
+                  (título, ouro ou caixa), com {pct(estatSet.op.defesa.acerto, 1)} fechadas no
+                  positivo e {Math.round(estatSet.op.defesa.dias)} pregões de permanência média.
+                  Elas não entram nos números acima: a defesa não persegue ganho, ela evita
+                  perda — julgar as duas pela mesma régua esconde o que cada uma faz.
+                </p>
+              )}
+            </section>
           )}
 
           {/* Turnover — so faz sentido quando os sleeves sao as proprias

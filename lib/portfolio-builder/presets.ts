@@ -42,6 +42,78 @@ export function blocoComoSerie(
   for (let i = 0; i < r.length; i++) equity[i + 1] = equity[i] * (1 + r[i]);
 
   const vazio = new Array<number | null>(n).fill(null);
+
+  // A cesta por dentro. Sem isto o bloco chega ao motor como um ticker cego:
+  // a tira "quanto do portfolio estava blindado" fica cravada em 0% e o painel
+  // "o que voce estava carregando" mostra o nome do bloco em vez dos ativos.
+  // `universoDetalhe` (do export) da o ticker e a flag de defesa de cada uma
+  // das 41 em qualquer dia; `pesosDiarios` da o peso dentro do bloco.
+  const matriz = data.pesosDiarios?.[bloco as keyof typeof data.pesosDiarios];
+  const detalhe = data.universoDetalhe;
+  let defesaFrac: number[] | undefined;
+  let composicaoBloco: StrategySeries["composicaoBloco"];
+
+  if (matriz && detalhe) {
+    // RLE -> lookup por dia. Um cursor por estrategia avanca junto com o loop,
+    // entao a expansao inteira e O(dias + runs), nao O(dias x runs).
+    const ids = data.idsUniverso;
+    const cursores = new Array<number>(ids.length).fill(0);
+    const simAtual = new Array<number>(ids.length).fill(-1);
+
+    const avanca = (i: number, dia: number) => {
+      const runs = detalhe[ids[i]]?.runs;
+      if (!runs) return -1;
+      let c = cursores[i];
+      // o cursor so anda para frente; se o dia recuar, reinicia
+      if (runs[c] && runs[c][0] > dia) c = 0;
+      while (c + 1 < runs.length && runs[c + 1][0] <= dia) c++;
+      cursores[i] = c;
+      return runs[c] && runs[c][0] <= dia ? runs[c][1] : -1;
+    };
+
+    // pesos normalizados 0..1 (o export guarda em decimo de ponto percentual)
+    const pesos: number[][] = ids.map((_, i) =>
+      (matriz[i] ?? []).map((v) => (v || 0) / 1000),
+    );
+
+    defesaFrac = new Array<number>(n).fill(0);
+    for (let d = 0; d < n; d++) {
+      let blind = 0;
+      for (let i = 0; i < ids.length; i++) {
+        const w = pesos[i]?.[d] ?? 0;
+        if (w <= 0) continue;
+        const si = avanca(i, d);
+        simAtual[i] = si;
+        if (si < 0) continue;
+        if (detalhe[ids[i]]?.defensivo[si]) blind += w;
+      }
+      // O export arredonda cada peso para decimo de ponto, entao a coluna pode
+      // fechar em 1000,2 e a fracao passar de 1. Trava em 1 para a tira de
+      // defesa nunca desenhar mais que a largura cheia.
+      defesaFrac[d] = blind > 1 ? 1 : blind;
+    }
+
+    composicaoBloco = {
+      ids,
+      pesos,
+      labels: data.labels,
+      ticker: (i, dia) => {
+        const u = detalhe[ids[i]];
+        if (!u) return null;
+        const runs = u.runs;
+        // busca binaria: o painel consulta um dia por vez, sem cursor util
+        let lo = 0, hi = runs.length - 1, si = -1;
+        while (lo <= hi) {
+          const mid = (lo + hi) >> 1;
+          if (runs[mid][0] <= dia) { si = runs[mid][1]; lo = mid + 1; }
+          else hi = mid - 1;
+        }
+        if (si < 0) return null;
+        return { symbol: u.simbolos[si], defense: !!u.defensivo[si] };
+      },
+    };
+  }
+
   return {
     id: idBloco(bloco),
     label: NOMES_BLOCO[bloco],
@@ -49,12 +121,12 @@ export function blocoComoSerie(
     n,
     contigua: true,
     // O bloco e uma cesta, nao um ticker. O "simbolo" e o proprio nome do bloco
-    // para o painel de carregamento dizer algo verdadeiro.
+    // — usado so quando nao ha composicao (aggbond, que e indice puro).
     simbolos: [NOMES_BLOCO[bloco]],
-    // Um bloco nao tem flag de defesa: a defesa mora dentro das estrategias que
-    // o compoem, e o export nao traz a fracao blindada dia a dia.
     defensivo: [0],
     sym: new Array<number>(n).fill(0),
+    defesaFrac,
+    composicaoBloco,
     equity,
     referencia: vazio.slice(),
     retmes: vazio.slice(),

@@ -115,6 +115,29 @@ export interface StrategySeries {
   defensivo: number[];
   /** indice em `simbolos`, por dia */
   sym: number[];
+  /**
+   * SO PARA SERIES SINTETICAS DE BLOCO. Fracao do bloco que estava em defesa
+   * naquele dia, 0..1 — porque um bloco e uma cesta: 6 das 20 estrategias
+   * podem estar blindadas ao mesmo tempo, e `defensivo[sym[]]` so sabe dizer
+   * sim/nao para o sleeve inteiro. Quando presente, o motor usa isto; quando
+   * ausente, cai no comportamento binario de sempre.
+   */
+  defesaFrac?: number[];
+  /**
+   * SO PARA SERIES SINTETICAS DE BLOCO. As estrategias que compoem o bloco,
+   * para o painel "o que voce estava carregando" abrir a cesta em vez de
+   * mostrar so o nome do bloco.
+   */
+  composicaoBloco?: {
+    /** ids na ordem das linhas de `pesos` */
+    ids: string[];
+    /** peso de cada estrategia DENTRO do bloco, por dia local (0..1) */
+    pesos: number[][];
+    /** ticker e flag de defesa de cada estrategia, por dia local */
+    ticker: (i: number, diaLocal: number) => { symbol: string; defense: boolean } | null;
+    /** rotulo legivel de cada estrategia */
+    labels: Record<string, string>;
+  };
   /** curva de capital: comeca em 1000 */
   equity: number[];
   referencia: (number | null)[];

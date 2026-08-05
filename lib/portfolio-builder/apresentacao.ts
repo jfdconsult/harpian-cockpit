@@ -142,7 +142,7 @@ export function linhasDeAlocacao(
 
     if (ehBloco(s.id)) {
       const b = blocoDoId(s.id);
-      const matriz = setsData?.pesosDiarios?.[b as "rotacao20" | "corrmin20" | "maxcagr10"];
+      const matriz = setsData?.pesosDiarios?.[b as "rotacao20" | "corrmin20" | "maxcagr10" | "suavemin15"];
       if (matriz && setsData) {
         // bloco que se desmonta: distribui o peso do bloco entre as 41
         const base = setsData.janela.fromIdx;

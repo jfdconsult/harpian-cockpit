@@ -107,6 +107,23 @@ export interface BenchmarkSetsData {
     "rotacao20" | "corrmin20" | "maxcagr10" | "suavemin15",
     { estrategias: EstatisticaEstrategia[]; simbolosNegociados: string[] }
   >;
+  /**
+   * Ticker e flag de defesa de cada uma das 41, dia a dia, na janela do export.
+   *
+   * POR QUE EXISTE: o SET chega ao motor como bloco sintetico unico. Sem isto,
+   * a tira "quanto do portfolio estava blindado" fica cravada em 0% e o painel
+   * "o que voce estava carregando" mostra o nome do bloco em vez dos ativos —
+   * o navegador nao tem as 41 series individuais carregadas.
+   *
+   * RLE porque o simbolo troca ~110 vezes em 3.733 pregoes: `runs` guarda
+   * [diaLocal, indiceEmSimbolos] no dia da troca. `-1` = a estrategia ainda
+   * nao existia naquele dia (nasceu depois do inicio da janela).
+   */
+  universoDetalhe?: Record<string, {
+    simbolos: string[];
+    defensivo: number[];
+    runs: [number, number][];
+  }>;
 }
 
 /** Estatistica tecnica de uma estrategia dentro de um bloco, na janela do export. */

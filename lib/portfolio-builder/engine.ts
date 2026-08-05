@@ -399,7 +399,13 @@ export function simulate(
       wDia[i] = w;
       if (ativo(i, t)) {
         const ser = series[sleeves[i].id];
-        if (ser.defensivo[ser.sym[local(i, t)]]) blindado += w;
+        const li = local(i, t);
+        // Bloco de SET e cesta: pode estar 30% blindado. `defesaFrac` traz essa
+        // fracao; estrategia individual segue binaria (dentro ou fora do universo).
+        const df = ser.defesaFrac
+          ? (ser.defesaFrac[li] ?? 0)
+          : (ser.defensivo[ser.sym[li]] ? 1 : 0);
+        blindado += w * df;
       }
     }
     weights[d] = wDia;
@@ -670,9 +676,31 @@ export function holdingsEm(
     const ser = series[s.id];
     const li = t - ser.start;
     if (li < 0 || li >= ser.n) return;
-    const si = ser.sym[li];
     const w = sim.weights[d]?.[i] ?? 0;
     if (w <= 1e-6) return;
+
+    // Bloco de SET: abre a cesta. Mostrar "Rotação mensal entre estratégias ·
+    // 50%" nao responde a pergunta do painel — o gestor quer o ATIVO que estava
+    // carregado naquele dia, e cada uma das 20 dentro do bloco carregava um.
+    const comp = ser.composicaoBloco;
+    if (comp) {
+      comp.ids.forEach((sid, k) => {
+        const wIn = comp.pesos[k]?.[li] ?? 0;
+        if (wIn <= 1e-6) return;
+        const tk = comp.ticker(k, li);
+        if (!tk) return;
+        out.push({
+          id: `${s.id}/${sid}`,
+          label: comp.labels[sid] ?? sid,
+          symbol: tk.symbol,
+          weight: w * wIn,          // peso no portfolio = peso do bloco x peso dentro
+          defense: tk.defense,
+        });
+      });
+      return;
+    }
+
+    const si = ser.sym[li];
     out.push({
       id: s.id,
       label: ser.label,

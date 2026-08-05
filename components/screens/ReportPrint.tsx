@@ -762,8 +762,11 @@ export default function ReportPrint(props: ReportData) {
                 />
                 <TechTile
                   k="Tempo médio na posição"
-                  v={diasParaLegivel(Math.round(estatSet.op.ataque.dias))}
-                  sub={`${Math.round(estatSet.op.ataque.dias)} pregões por ativo`}
+                  // Pregao no destaque, nao mes: 38 pregoes arredondava para
+                  // "2 meses" e apagava a diferenca entre 1,8 e 2,4 — que e
+                  // justamente o que diz se a maquina segura ou gira.
+                  v={`${Math.round(estatSet.op.ataque.dias)} pregões`}
+                  sub={`≈ ${(estatSet.op.ataque.dias / 21).toFixed(1)} meses por ativo`}
                 />
                 <TechTile
                   k="Trades por semana"

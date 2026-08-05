@@ -108,19 +108,41 @@ export default function ReportPrint(props: ReportData) {
    * retorno historico simulado.
    */
   const rnReport = useMemo(() => {
+    // Exposicao media do overlay de vol-target: se o SET tem overlay ativo
+    // (Institucional Dinamico, Dinamico Conservador), sim.exposicao vem
+    // preenchido com fracao <1 e o resto do capital fica em CAIXA (rf=0).
+    // Sem esse ajuste, o HRD trataria o sleeve como 100% investido no motor
+    // e o RN sairia muito alto (72 pro Institucional que na verdade tem 22%
+    // de exposicao ao motor + 78% em caixa).
+    const expo = sim?.exposicao;
+    const expoMedia = (Array.isArray(expo) && expo.length)
+      ? expo.reduce((a, b) => a + b, 0) / expo.length
+      : 1;
+    const caixaMedio = Math.max(0, 1 - expoMedia);
+
     const positions = sleeves.map((s) => {
       const m = meta[s.id];
       const cls = classifyStrategy(s.id, m?.label, m?.sub);
       return {
         name: m ? m.label : s.id,
-        weight: s.weight,
+        weight: s.weight * expoMedia,
         asset_class: cls.asset_class,
         jurisdiction: cls.jurisdiction,
         liquidity: cls.liquidity,
       };
     });
+    // Adiciona posicao virtual de CAIXA quando o overlay tira exposicao
+    if (caixaMedio > 0.01) {
+      positions.push({
+        name: "Caixa (overlay de volatilidade)",
+        weight: caixaMedio,
+        asset_class: "CASH",
+        jurisdiction: "USA",
+        liquidity: "D1",
+      });
+    }
     return computePortfolioRN(positions);
-  }, [sleeves, meta]);
+  }, [sleeves, meta, sim?.exposicao]);
   const rnPortfolio = Math.round(rnReport.final_rn);
   const riskClass = classifyBand(rnPortfolio);
   const rnGap = rnCliente != null ? rnPortfolio - rnCliente : null;
@@ -429,29 +451,29 @@ export default function ReportPrint(props: ReportData) {
               alt="HARPIAN"
               style={{ height: 34, width: "auto", display: "block", marginBottom: 6 }}
             />
-            <div style={{ fontSize: 11, color: "#666", fontFamily: MONO, letterSpacing: ".05em", textTransform: "uppercase" }}>
+            <div style={{ fontSize: 12.9, color: "#666", fontFamily: MONO, letterSpacing: ".05em", textTransform: "uppercase" }}>
               Adaptive Portfolio Engineering
             </div>
           </div>
-          <div style={{ textAlign: "right", fontSize: 11, color: "#333", lineHeight: 1.55 }}>
-            <div style={{ fontFamily: MONO, letterSpacing: ".04em", color: "#c9a02c", fontWeight: 700, textTransform: "uppercase", fontSize: 9.5 }}>Relatório · Simulação de Portfólio</div>
+          <div style={{ textAlign: "right", fontSize: 12.9, color: "#333", lineHeight: 1.55 }}>
+            <div style={{ fontFamily: MONO, letterSpacing: ".04em", color: "#c9a02c", fontWeight: 700, textTransform: "uppercase", fontSize: 11.1 }}>Relatório · Simulação de Portfólio</div>
             <div style={{ marginTop: 4 }}>Gerado em <b>{agora}</b></div>
             <div>Autor: <b>{autor || "—"}</b></div>
           </div>
         </header>
 
-        {/* CLIENTE + JANELA */}
-        <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 22 }}>
+        {/* CLIENTE + JANELA — cliente estreito (nome curto), janela ganha espaco */}
+        <section style={{ display: "grid", gridTemplateColumns: "minmax(180px, 260px) 1fr", gap: 14, marginBottom: 22 }}>
           <div style={{ padding: "12px 14px", background: "#f6f4ee", borderLeft: "3px solid #c9a02c", borderRadius: 4 }}>
-            <div style={{ fontSize: 9.5, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 3 }}>Cliente</div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>{cliente || "—"}</div>
+            <div style={{ fontSize: 11.1, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 3 }}>Cliente</div>
+            <div style={{ fontSize: 21.1, fontWeight: 700 }}>{cliente || "—"}</div>
           </div>
           <div style={{ padding: "12px 14px", background: "#f6f4ee", borderRadius: 4 }}>
-            <div style={{ fontSize: 9.5, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 3 }}>Simulação — {janelaLabel}</div>
-            <div style={{ fontSize: 13, fontFamily: MONO, color: "#111", lineHeight: 1.5 }}>
+            <div style={{ fontSize: 11.1, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 3 }}>Simulação — {janelaLabel}</div>
+            <div style={{ fontSize: 15.2, fontFamily: MONO, color: "#111", lineHeight: 1.5 }}>
               {dateRange}
             </div>
-            <div style={{ fontSize: 11, color: "#555", marginTop: 4 }}>
+            <div style={{ fontSize: 12.9, color: "#555", marginTop: 4 }}>
               Capital inicial: <b style={{ color: "#c9a02c" }}>{money(capital)}</b>
               {set && <> · SET base: <b>{set.nome}</b></>}
               {" · "}Alocação {mode === "linear" ? "linear (peso fixo)" : "dinâmica (peso pelo momento)"}
@@ -462,7 +484,7 @@ export default function ReportPrint(props: ReportData) {
 
         {/* KPIs */}
         <section style={{ marginBottom: 22 }}>
-          <h2 style={{ margin: "0 0 10px", fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
+          <h2 style={{ margin: "0 0 10px", fontSize: 14.0, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
             Números do portfólio
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
@@ -471,9 +493,9 @@ export default function ReportPrint(props: ReportData) {
                 padding: "10px 11px", border: "1px solid #eee", borderRadius: 5,
                 background: "#fafafa",
               }}>
-                <div style={{ fontSize: 8.5, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 3 }}>{kp.k}</div>
+                <div style={{ fontSize: 9.9, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 3 }}>{kp.k}</div>
                 <div style={{
-                  fontSize: 15, fontFamily: MONO, fontWeight: 700,
+                  fontSize: 17.5, fontFamily: MONO, fontWeight: 700,
                   color: kp.tom === "pos" ? "#0a7a3b" : kp.tom === "neg" ? "#b0201f" : "#111",
                 }}>{kp.v}</div>
               </div>
@@ -485,7 +507,7 @@ export default function ReportPrint(props: ReportData) {
             contra os 6 portfolios modelo). Baseado em asset_class + CRM
             + liquidez das estratégias, não em VaR paramétrico histórico. */}
         <section style={{ marginBottom: 22, pageBreakInside: "avoid" }}>
-          <h2 style={{ margin: "0 0 10px", fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
+          <h2 style={{ margin: "0 0 10px", fontSize: 14.0, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
             Risk Number — HRD Engine
           </h2>
 
@@ -495,11 +517,11 @@ export default function ReportPrint(props: ReportData) {
               padding: "16px 18px", border: `2px solid ${riskClass.cor}`, borderRadius: 6,
               background: "#fafafa", textAlign: "center",
             }}>
-              <div style={{ fontSize: 9, letterSpacing: ".12em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 4 }}>
+              <div style={{ fontSize: 10.5, letterSpacing: ".12em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 4 }}>
                 Portfolio proposto
               </div>
-              <div style={{ fontSize: 44, fontWeight: 800, fontFamily: MONO, color: riskClass.cor, lineHeight: 1 }}>{rnPortfolio}</div>
-              <div style={{ fontSize: 11.5, color: riskClass.cor, fontWeight: 700, marginTop: 4, letterSpacing: ".02em" }}>{riskClass.band}</div>
+              <div style={{ fontSize: 51.5, fontWeight: 800, fontFamily: MONO, color: riskClass.cor, lineHeight: 1 }}>{rnPortfolio}</div>
+              <div style={{ fontSize: 13.5, color: riskClass.cor, fontWeight: 700, marginTop: 4, letterSpacing: ".02em" }}>{riskClass.band}</div>
             </div>
 
             {/* RN do cliente — só se informado */}
@@ -508,17 +530,17 @@ export default function ReportPrint(props: ReportData) {
                 padding: "16px 18px", border: `2px solid ${rnClienteClass.cor}`, borderRadius: 6,
                 background: "#fafafa", textAlign: "center",
               }}>
-                <div style={{ fontSize: 9, letterSpacing: ".12em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 4 }}>
+                <div style={{ fontSize: 10.5, letterSpacing: ".12em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 4 }}>
                   Cliente (questionário)
                 </div>
-                <div style={{ fontSize: 44, fontWeight: 800, fontFamily: MONO, color: rnClienteClass.cor, lineHeight: 1 }}>{rnCliente}</div>
-                <div style={{ fontSize: 11.5, color: rnClienteClass.cor, fontWeight: 700, marginTop: 4, letterSpacing: ".02em" }}>{rnClienteClass.band}</div>
+                <div style={{ fontSize: 51.5, fontWeight: 800, fontFamily: MONO, color: rnClienteClass.cor, lineHeight: 1 }}>{rnCliente}</div>
+                <div style={{ fontSize: 13.5, color: rnClienteClass.cor, fontWeight: 700, marginTop: 4, letterSpacing: ".02em" }}>{rnClienteClass.band}</div>
               </div>
             )}
 
             {/* Explicação e comparação */}
-            <div style={{ padding: "14px 16px", background: "#f6f4ee", borderRadius: 6, fontSize: 11, color: "#333", lineHeight: 1.55 }}>
-              <div style={{ fontSize: 10, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 6 }}>Interpretação HRD Engine</div>
+            <div style={{ padding: "14px 16px", background: "#f6f4ee", borderRadius: 6, fontSize: 12.9, color: "#333", lineHeight: 1.55 }}>
+              <div style={{ fontSize: 11.7, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 6 }}>Interpretação HRD Engine</div>
               <div style={{ marginBottom: 6 }}>
                 Score bruto: <b style={{ fontFamily: MONO }}>{rnReport.raw_rn.toFixed(1)}</b> · Peso equity:{" "}
                 <b style={{ fontFamily: MONO }}>{(rnReport.equity_weight * 100).toFixed(0)}%</b>
@@ -526,7 +548,7 @@ export default function ReportPrint(props: ReportData) {
                   <span> · <b style={{ color: "#e08420" }}>Correlation Factor {rnReport.cf_applied.toFixed(2)}×</b> aplicado (equity {'>'} 60%)</span>
                 )}
               </div>
-              <div style={{ fontSize: 10.5, color: "#666" }}>
+              <div style={{ fontSize: 12.3, color: "#666" }}>
                 Bandas: 0-20 Cons. Extremo · 21-40 Conservador · 41-60 Moderado · 61-75 Mod. Agressivo · 76-90 Agressivo · 91-99 Ultra
               </div>
               {rnGap != null && (
@@ -534,7 +556,7 @@ export default function ReportPrint(props: ReportData) {
                   marginTop: 8, padding: "6px 10px", borderRadius: 4,
                   background: Math.abs(rnGap) <= 10 ? "rgba(10,122,59,.12)" : "rgba(224,132,32,.14)",
                   color: Math.abs(rnGap) <= 10 ? "#0a7a3b" : "#a15a10",
-                  fontSize: 11, fontWeight: 600,
+                  fontSize: 12.9, fontWeight: 600,
                 }}>
                   Gap: {rnGap > 0 ? "+" : ""}{rnGap} pontos —{" "}
                   {Math.abs(rnGap) <= 10 ? "alinhado ao perfil do cliente"
@@ -545,7 +567,7 @@ export default function ReportPrint(props: ReportData) {
             </div>
           </div>
 
-          <div style={{ fontSize: 9.5, color: "#888", marginTop: 8, lineHeight: 1.45 }}>
+          <div style={{ fontSize: 11.1, color: "#888", marginTop: 8, lineHeight: 1.45 }}>
             HRD Engine v1.0.0 — <code style={{ fontFamily: MONO }}>RS_i = min(BASE[classe] × CRM[país] + LIQUIDITY_PENALTY, 99)</code>,
             <code style={{ fontFamily: MONO }}> RN = Σ(w_i × RS_i) × CF</code>. Calibrado contra os 6 portfólios modelo Harpian.
             Não depende do retorno histórico simulado.
@@ -554,13 +576,13 @@ export default function ReportPrint(props: ReportData) {
 
         {/* GRÁFICO */}
         <section style={{ marginBottom: 22 }}>
-          <h2 style={{ margin: "0 0 10px", fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
+          <h2 style={{ margin: "0 0 10px", fontSize: 14.0, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
             Capital do portfólio ao longo do tempo
           </h2>
           <div style={{ background: "#fafafa", border: "1px solid #eee", borderRadius: 5, padding: 10 }}>
             {curvaCapitalEl}
             <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid #e6e6e6" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 3, fontSize: 10, color: "#666", fontFamily: MONO, letterSpacing: ".08em", textTransform: "uppercase" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 3, fontSize: 11.7, color: "#666", fontFamily: MONO, letterSpacing: ".08em", textTransform: "uppercase" }}>
                 <span>Quanto do portfólio estava blindado</span>
               </div>
               {faixaDefesaEl}
@@ -570,29 +592,29 @@ export default function ReportPrint(props: ReportData) {
 
         {/* COMPOSIÇÃO */}
         <section style={{ marginBottom: 22, pageBreakInside: "avoid" }}>
-          <h2 style={{ margin: "0 0 10px", fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
+          <h2 style={{ margin: "0 0 10px", fontSize: 14.0, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
             Composição do portfólio · {sleeves.length} {sleeves.length === 1 ? "estratégia" : "estratégias"}
           </h2>
           {/* Nota que muda pelo modo: no linear o peso e fixo; no dinamico
               mostramos peso medio (media ao longo da janela) e peso maximo
               (pico historico). O minimo do dinamico e sempre 0 — a estrategia
               pode ficar de fora do portfolio em meses em que o momento cai. */}
-          <div style={{ fontSize: 11, color: "#555", marginBottom: 8, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12.9, color: "#555", marginBottom: 8, lineHeight: 1.5 }}>
             {mode === "linear"
               ? "Alocação linear: cada estratégia mantém o peso fixo o tempo todo, com rebalance " + rebalance + "."
               : "Alocação dinâmica: os pesos variam a cada rebalance " + rebalance + " pela força do momento. A tabela mostra o peso médio (média ao longo da janela) e o pico máximo alocado. O mínimo é sempre 0% — a estratégia pode ficar de fora do portfólio quando o momento cai."}
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14.0 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid #ddd" }}>
-                <th style={{ textAlign: "left", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600 }}>Estratégia</th>
-                <th style={{ textAlign: "left", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600 }}>Código AlphaDroid</th>
+                <th style={{ textAlign: "left", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600 }}>Estratégia</th>
+                <th style={{ textAlign: "left", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600 }}>Código AlphaDroid</th>
                 {mode === "linear" ? (
-                  <th style={{ textAlign: "right", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, width: 80 }}>Peso fixo</th>
+                  <th style={{ textAlign: "right", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, width: 80 }}>Peso fixo</th>
                 ) : (
                   <>
-                    <th style={{ textAlign: "right", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, width: 80 }}>Peso médio</th>
-                    <th style={{ textAlign: "right", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, width: 80 }}>Máx alocado</th>
+                    <th style={{ textAlign: "right", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, width: 80 }}>Peso médio</th>
+                    <th style={{ textAlign: "right", padding: "6px 8px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, width: 80 }}>Máx alocado</th>
                   </>
                 )}
               </tr>
@@ -604,7 +626,7 @@ export default function ReportPrint(props: ReportData) {
                 return (
                   <tr key={s.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
                     <td style={{ padding: "6px 8px", fontWeight: 600 }}>{m ? nomeCurto(m) : s.id}</td>
-                    <td style={{ padding: "6px 8px", color: "#666", fontSize: 10.5, fontFamily: MONO }}>{m?.label ?? s.id}</td>
+                    <td style={{ padding: "6px 8px", color: "#666", fontSize: 12.3, fontFamily: MONO }}>{m?.label ?? s.id}</td>
                     {mode === "linear" ? (
                       <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#c9a02c" }}>
                         {pct(s.weight, 0)}
@@ -628,7 +650,7 @@ export default function ReportPrint(props: ReportData) {
 
         {/* ANÁLISE TÉCNICA — ASSET ALLOCATOR (página 2 típica) */}
         <section style={{ marginBottom: 22, pageBreakInside: "avoid", pageBreakBefore: "always" }}>
-          <h2 style={{ margin: "0 0 10px", fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
+          <h2 style={{ margin: "0 0 10px", fontSize: 14.0, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
             Análise técnica do Asset Allocator
           </h2>
 
@@ -665,7 +687,7 @@ export default function ReportPrint(props: ReportData) {
               estrategias; num SET o sleeve e um bloco unico de peso 100% e o
               numero sairia zero. O giro do SET esta no tile "Giros de ativo". */}
           {!estatSet && (
-            <div style={{ padding: "10px 12px", background: "#fafafa", border: "1px solid #eee", borderRadius: 5, marginBottom: 14, fontSize: 11.5, color: "#333" }}>
+            <div style={{ padding: "10px 12px", background: "#fafafa", border: "1px solid #eee", borderRadius: 5, marginBottom: 14, fontSize: 13.5, color: "#333" }}>
               <b style={{ color: "#c9a02c" }}>Turnover anual da carteira:</b> {portfolioStats.turnoverAnual.toFixed(2)}× / ano — quantas vezes por ano os pesos giram (0 = estático, 1 = uma carteira totalmente nova por ano).
             </div>
           )}
@@ -673,8 +695,8 @@ export default function ReportPrint(props: ReportData) {
           {/* Top 3 melhor e pior retorno — decomposto por estrategia quando ha SET */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div>
-              <div style={{ fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#0a7a3b", fontFamily: MONO, fontWeight: 700, marginBottom: 6 }}>Melhores retornos (janela)</div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+              <div style={{ fontSize: 12.3, letterSpacing: ".08em", textTransform: "uppercase", color: "#0a7a3b", fontFamily: MONO, fontWeight: 700, marginBottom: 6 }}>Melhores retornos (janela)</div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.9 }}>
                 <tbody>
                   {(estatSet ? estatSet.melhores : topBest).map((t) => {
                     const m = meta[t.id];
@@ -689,8 +711,8 @@ export default function ReportPrint(props: ReportData) {
               </table>
             </div>
             <div>
-              <div style={{ fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#b0201f", fontFamily: MONO, fontWeight: 700, marginBottom: 6 }}>Piores retornos (janela)</div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+              <div style={{ fontSize: 12.3, letterSpacing: ".08em", textTransform: "uppercase", color: "#b0201f", fontFamily: MONO, fontWeight: 700, marginBottom: 6 }}>Piores retornos (janela)</div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.9 }}>
                 <tbody>
                   {(estatSet ? estatSet.piores : topWorst).map((t) => {
                     const m = meta[t.id];
@@ -707,22 +729,22 @@ export default function ReportPrint(props: ReportData) {
           </div>
 
           {/* Detalhe por estrategia — decomposto do SET quando ha um, senao dos sleeves */}
-          <div style={{ fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#555", fontFamily: MONO, fontWeight: 700, marginBottom: 6 }}>
+          <div style={{ fontSize: 12.3, letterSpacing: ".08em", textTransform: "uppercase", color: "#555", fontFamily: MONO, fontWeight: 700, marginBottom: 6 }}>
             Estatística técnica por estratégia
           </div>
           {estatSet ? (
             <>
-              <div style={{ fontSize: 10.5, color: "#666", marginBottom: 6, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12.3, color: "#666", marginBottom: 6, lineHeight: 1.5 }}>
                 O SET é um bloco de alocação dinâmica — a tabela abaixo o desmonta nas estratégias
                 que receberam peso na janela validada. Peso médio e pico incluem a deriva diária
                 dentro do mês (por isso o pico pode passar do teto de rebalance). Meses neg. conta
                 os meses-calendário negativos da estratégia em {estatSet.linhas[0]?.mesesTotal ?? "—"} meses.
               </div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.7 }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #ddd" }}>
                     {["Estratégia", "Desde", "Peso méd", "Pico", "Retorno", "% contrib", "Mês méd", "Meses neg", "Giros", "Ativos", "% defesa"].map((h, i) => (
-                      <th key={h} style={{ textAlign: i === 0 ? "left" : "right", padding: "5px 5px", color: "#666", fontFamily: MONO, fontSize: 8.5, letterSpacing: ".05em", textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
+                      <th key={h} style={{ textAlign: i === 0 ? "left" : "right", padding: "5px 5px", color: "#666", fontFamily: MONO, fontSize: 9.9, letterSpacing: ".05em", textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -751,18 +773,18 @@ export default function ReportPrint(props: ReportData) {
               </table>
 
               {/* Os ativos que puxaram o retorno de cada estrategia */}
-              <div style={{ fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#555", fontFamily: MONO, fontWeight: 700, margin: "14px 0 6px" }}>
+              <div style={{ fontSize: 12.3, letterSpacing: ".08em", textTransform: "uppercase", color: "#555", fontFamily: MONO, fontWeight: 700, margin: "14px 0 6px" }}>
                 Ativos que mais renderam, por estratégia
               </div>
-              <div style={{ fontSize: 10.5, color: "#666", marginBottom: 6, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12.3, color: "#666", marginBottom: 6, lineHeight: 1.5 }}>
                 Retorno acumulado do ticker nos dias em que a estratégia o carregava — as 8
                 estratégias de maior contribuição. Melhor e pior mês da estratégia ao lado.
               </div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.7 }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #ddd" }}>
                     {["Estratégia", "1º ativo", "2º ativo", "3º ativo", "Melhor mês", "Pior mês"].map((h, i) => (
-                      <th key={h} style={{ textAlign: i === 0 ? "left" : "right", padding: "5px 5px", color: "#666", fontFamily: MONO, fontSize: 8.5, letterSpacing: ".05em", textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
+                      <th key={h} style={{ textAlign: i === 0 ? "left" : "right", padding: "5px 5px", color: "#666", fontFamily: MONO, fontSize: 9.9, letterSpacing: ".05em", textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -786,15 +808,15 @@ export default function ReportPrint(props: ReportData) {
               </table>
             </>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.9 }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid #ddd" }}>
-                  <th style={{ textAlign: "left", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Estratégia</th>
-                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Retorno</th>
-                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Contribuição</th>
-                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% tempo ativa</th>
-                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Nº trocas</th>
-                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% em defesa</th>
+                  <th style={{ textAlign: "left", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Estratégia</th>
+                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Retorno</th>
+                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Contribuição</th>
+                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% tempo ativa</th>
+                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Nº trocas</th>
+                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% em defesa</th>
                 </tr>
               </thead>
               <tbody>
@@ -819,12 +841,12 @@ export default function ReportPrint(props: ReportData) {
 
         {/* ANÁLISE JIM AI */}
         <section style={{ marginBottom: 22, pageBreakInside: "avoid" }}>
-          <h2 style={{ margin: "0 0 10px", fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
+          <h2 style={{ margin: "0 0 10px", fontSize: 14.0, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
             Análise em tempo real do JIM AI
           </h2>
           <div style={{
             padding: "14px 16px", background: "#f6f4ee", borderLeft: "3px solid #c9a02c",
-            borderRadius: 4, fontSize: 12, lineHeight: 1.65, color: "#222",
+            borderRadius: 4, fontSize: 14.0, lineHeight: 1.65, color: "#222",
             whiteSpace: "pre-wrap", minHeight: 120,
           }}>
             {carregandoAnalise
@@ -838,7 +860,7 @@ export default function ReportPrint(props: ReportData) {
         {/* RODAPÉ */}
         <footer style={{
           marginTop: 28, paddingTop: 12, borderTop: "1px solid #ddd",
-          fontSize: 9.5, color: "#666", fontFamily: MONO, letterSpacing: ".04em",
+          fontSize: 11.1, color: "#666", fontFamily: MONO, letterSpacing: ".04em",
           display: "flex", justifyContent: "space-between",
         }}>
           <span>HARPIAN · Adaptive Portfolio Engineering · relatório gerado por Manager Cockpit</span>
@@ -853,11 +875,17 @@ export default function ReportPrint(props: ReportData) {
         @media print {
           @page { size: A4; margin: 12mm; }
           html, body { background: #fff !important; }
+          /* Truque de visibility em vez de display:none:
+             o print-only-container fica nested dentro do .pb-shell no
+             front-logo, entao 'body > *:not(...)' nao pega ele. visibility
+             hidden + override no proprio container funciona independente
+             de aninhamento. */
           body * { visibility: hidden !important; }
           .print-only-container, .print-only-container * { visibility: visible !important; }
           .print-only-container { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; overflow: visible !important; }
           .print-hide { display: none !important; visibility: hidden !important; }
           .print-page { padding: 0 !important; max-width: none !important; }
+          /* Neutraliza o body::before (paper-grain do front-logo) no PDF */
           body::before, body::after { display: none !important; }
         }
       `}</style>

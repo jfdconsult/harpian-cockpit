@@ -184,12 +184,13 @@ export function classifyStrategy(id: string, label = "", sub = ""): {
   if (/defensive|dividend|large.?cap|large/i.test(s))
     return { asset_class: "EQUITY_BROAD", jurisdiction: "USA", liquidity: "D1" };
 
-  // Blocos sinteticos dos SETs Harpian (rotacao20/corrmin20/aggbond) sao
-  // estrategias ADAPTATIVAS proprietarias — tem defesa embutida (StormGuard),
-  // rotacao entre 41 subjacentes, e limites de exposicao. Classifica como
-  // HARPIAN_ETP (base 42) em vez de EQUITY_BROAD (65). Isso replica a leitura
-  // dos portfolios modelo, onde a fatia Harpian pesa menos que equity puro.
-  if (/rotacao|corrmin|correlacao|rotation|momentum|hpc11|hpc22|harpian/i.test(s))
+  // Blocos sinteticos dos SETs Harpian (rotacao20/corrmin20/aggbond/maxcagr10/
+  // suavemin15) sao estrategias ADAPTATIVAS proprietarias — tem defesa embutida
+  // (StormGuard), rotacao entre 41 subjacentes, e limites de exposicao.
+  // Classifica como HARPIAN_ETP (base 42) em vez de EQUITY_BROAD (65). Isso
+  // replica a leitura dos portfolios modelo, onde a fatia Harpian pesa menos
+  // que equity puro.
+  if (/rotacao|corrmin|correlacao|rotation|momentum|maxcagr|suavemin|hpc11|hpc22|harpian/i.test(s))
     return { asset_class: "HARPIAN_ETP", jurisdiction: "USA", liquidity: "D1" };
 
   // Fallback

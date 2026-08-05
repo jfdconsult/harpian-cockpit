@@ -316,6 +316,20 @@ export default function ReportPrint(props: ReportData) {
      * Ponderado por numero de posicoes, nao por peso: a pergunta e "das
      * operacoes que este portfolio fez, quantas fecharam no positivo".
      */
+    /**
+     * Giro de CAPITAL do portfolio: soma do turnover de cada bloco escalado
+     * pelo peso dele no SET. Bloco sem `turnover` (aggbond — indice estatico,
+     * nao gira) contribui zero, que e o certo.
+     *
+     * ESTA e a metrica de alocador, nao a contagem de trades. Contagem engana:
+     * "6.584 trades" soa catastrofico, mas cada um move ~2% do portfolio.
+     */
+    let turnoverAno = 0;
+    for (const c of set.composicao) {
+      const t = eb[c.bloco as keyof typeof eb]?.turnover;
+      if (t) turnoverAno += c.peso * t.anual;
+    }
+
     const det = props.setsData?.universoDetalhe;
     let op: null | {
       ataque: { posicoes: number; acerto: number; dias: number };
@@ -337,7 +351,7 @@ export default function ReportPrint(props: ReportData) {
         };
       }
     }
-    return { linhas, relevantes, melhores, piores, giros, nTickers: tickers.size, contribTotal, op };
+    return { linhas, relevantes, melhores, piores, giros, nTickers: tickers.size, contribTotal, op, turnoverAno };
   }, [set, props.setsData]);
 
   /** Semanas da janela simulada — divisor de "trades por semana". */
@@ -769,16 +783,80 @@ export default function ReportPrint(props: ReportData) {
                   sub={`≈ ${(estatSet.op.ataque.dias / 21).toFixed(1)} meses por ativo`}
                 />
                 <TechTile
-                  k="Trades por semana"
-                  v={((estatSet.op.ataque.posicoes * 2) / semanasJanela).toFixed(1)}
-                  sub="1 posição = 1 venda + 1 compra"
+                  k="Giro de capital"
+                  v={`${estatSet.turnoverAno.toFixed(1)}× / ano`}
+                  sub={`${(estatSet.turnoverAno * 100).toFixed(0)}% do capital girando por ano`}
                 />
                 <TechTile
                   k="Posições de ataque"
                   v={estatSet.op.ataque.posicoes.toLocaleString("pt-BR")}
-                  sub={`${(estatSet.op.ataque.posicoes * 2).toLocaleString("pt-BR")} trades na janela`}
+                  sub={`${((estatSet.op.ataque.posicoes * 2) / semanasJanela).toFixed(1)} trades por semana`}
                 />
               </div>
+
+              {/* SENSIBILIDADE A CUSTO — a conta que o alocador faz de cabeca
+                  ao ver o giro. O backtest roda com custo zero (convencao); a
+                  ressalva "custos nao modelados" existe desde sempre mas nunca
+                  foi dimensionada. Aqui ela vira numero.
+
+                  Base: custo em bps sobre o notional girado, aplicado ao giro
+                  anual. Sharpe reescalado proporcional ao CAGR liquido — e
+                  aproximacao de primeira ordem (a vol nao muda com o custo),
+                  suficiente para a ordem de grandeza que a pergunta pede. */}
+              {estatSet.turnoverAno > 0 && cagr > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{
+                    fontSize: 11.7, color: "#555", marginBottom: 6, lineHeight: 1.5,
+                  }}>
+                    <b style={{ color: "#c9a02c" }}>Quanto o custo de execução consome.</b> O
+                    backtest roda com custo zero — convenção, não promessa. Com{" "}
+                    {estatSet.turnoverAno.toFixed(1)}× de giro ao ano, é isto que cada faixa de
+                    custo tiraria do resultado:
+                  </div>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.7 }}>
+                    <thead>
+                      <tr style={{ background: "#f6f4ee" }}>
+                        {["Custo por giro", "Dreno ao ano", "Retorno líquido", "Sharpe"].map((h, i) => (
+                          <th key={h} style={{
+                            padding: "5px 8px", textAlign: i === 0 ? "left" : "right",
+                            fontFamily: MONO, fontSize: 9.9, letterSpacing: ".06em",
+                            textTransform: "uppercase", color: "#666", fontWeight: 700,
+                            borderBottom: "1px solid #e2ddd0",
+                          }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[5, 10, 20, 30].map((bps) => {
+                        const dreno = (estatSet.turnoverAno * bps) / 10000;
+                        const liq = cagr - dreno;
+                        // rf = 0 na convencao do backtest, entao Sharpe = CAGR/vol
+                        const sh = volAnual > 0 ? liq / volAnual : 0;
+                        return (
+                          <tr key={bps}>
+                            <td style={{ padding: "5px 8px", fontFamily: MONO, borderBottom: "1px solid #f0f0f0" }}>
+                              {bps} bps
+                            </td>
+                            <td style={{ padding: "5px 8px", textAlign: "right", fontFamily: MONO, color: "#b0201f", borderBottom: "1px solid #f0f0f0" }}>
+                              −{(dreno * 100).toFixed(2)} p.p.
+                            </td>
+                            <td style={{ padding: "5px 8px", textAlign: "right", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #f0f0f0" }}>
+                              {pct(liq, 2)}
+                            </td>
+                            <td style={{ padding: "5px 8px", textAlign: "right", fontFamily: MONO, color: "#666", borderBottom: "1px solid #f0f0f0" }}>
+                              {sh > 0 ? sh.toFixed(2) : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <p style={{ margin: "5px 0 0", fontSize: 10.5, color: "#888", lineHeight: 1.45 }}>
+                    Custo aplicado sobre o notional girado. O Sharpe é reescalado pelo retorno
+                    líquido — aproximação de primeira ordem, a volatilidade não muda com o custo.
+                  </p>
+                </div>
+              )}
               {estatSet.op.defesa && (
                 <p style={{ margin: "8px 0 0", fontSize: 11.7, color: "#555", lineHeight: 1.5 }}>
                   <b style={{ color: "#c9a02c" }}>A defesa é contada à parte.</b> Foram{" "}

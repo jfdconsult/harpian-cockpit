@@ -105,7 +105,23 @@ export interface BenchmarkSetsData {
    */
   estatisticasBloco: Record<
     "rotacao20" | "corrmin20" | "maxcagr10" | "suavemin15",
-    { estrategias: EstatisticaEstrategia[]; simbolosNegociados: string[] }
+    {
+      estrategias: EstatisticaEstrategia[];
+      simbolosNegociados: string[];
+      /**
+       * Giro de CAPITAL do bloco — a metrica que um alocador usa, nao a
+       * contagem de trades. Cada troca de ticker vende 100% da posicao e
+       * compra outra, entao gira o peso daquela estrategia dentro do bloco.
+       *
+       * `anual` = quantas vezes o capital DO BLOCO gira por ano. O relatorio
+       * escala pelo peso do bloco no SET, igual aos outros numeros daqui.
+       *
+       * POR QUE IMPORTA: e o que dimensiona a ressalva "custos de transacao
+       * nao modelados". Contagem de trades engana — 6.584 trades soa
+       * catastrofico, mas cada um move ~2% do portfolio.
+       */
+      turnover?: { anual: number; trocas: number; notionalMedio: number };
+    }
   >;
   /**
    * Ticker e flag de defesa de cada uma das 41, dia a dia, na janela do export.

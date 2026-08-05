@@ -326,6 +326,18 @@ export default function ReportPrint(props: ReportData) {
   // Dispara Claude Haiku ao montar. Análise do "JIM AI" — 3-4 parágrafos.
   useEffect(() => {
     setCarregandoAnalise(true);
+    // Contexto extra pro JIM nao fabricar (janela em anos, overlay real, caixa).
+    // Bug de 04/08/2026: JIM cravou "10 anos" numa janela de 15 e inventou
+    // "DMAX puro = 12%aa/vol 8%" (real: 67%/35%). Endurecemos o prompt e
+    // passamos aqui os numeros que ele precisa pra ancorar.
+    const anosReais = sim?.dates && sim.dates.length > 1
+      ? (sim.to - sim.from + 1) / 252
+      : null;
+    const expo = sim?.exposicao;
+    const expoMedia = (Array.isArray(expo) && expo.length)
+      ? expo.reduce((a, b) => a + b, 0) / expo.length
+      : null;
+    const volTargetAlvo = set?.volTarget?.alvo ?? null;
     fetch("/api/jim-report", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -340,6 +352,10 @@ export default function ReportPrint(props: ReportData) {
           nome: meta[s.id] ? nomeCurto(meta[s.id]) : s.id,
           peso: s.weight,
         })),
+        anos: anosReais,
+        volTargetAlvo,
+        expoMedia,
+        caixaConvencao: "rf=0 (caixa não remunerado no backtest — convenção conservadora)",
       }),
     })
       .then((r) => r.json())

@@ -249,8 +249,8 @@ export const SETS: SetDef[] = [
   // SOBE SEM SELO DE VALIDACAO (pendencia Arena/custos, como o DMAX).
   {
     id: "dsuave",
-    nome: "SUAVE · MÍNIMA OSCILAÇÃO DINÂMICA",
-    rotuloCurto: "SUAVE",
+    nome: "INSTITUCIONAL DINÂMICO",
+    rotuloCurto: "Institucional Dinâmico",
     linha: 1,
     perfil: "conservador",
     tese:
@@ -274,7 +274,7 @@ export const NOMES_BLOCO: Record<BlocoId, string> = {
   corrmin20: "Seleção por mínima correlação",
   aggbond: "Renda fixa (Agg.Bond)",
   maxcagr10: "Retorno máximo — 10 de ataque + 5 de defesa",
-  suavemin15: "Mínima oscilação — 15 estratégias com piso e overlay de vol",
+  suavemin15: "Institucional Dinâmico — 15 estratégias com piso e overlay de vol",
 };
 
 /** De quem e cada bloco. Aparece na tela como legenda de atribuicao. */

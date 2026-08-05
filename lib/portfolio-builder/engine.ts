@@ -671,7 +671,18 @@ export function holdingsEm(
 ): Holding[] {
   const sleeves = cfg.sleeves.filter((s) => series[s.id]);
   const t = sim.from + d;
-  const out: Holding[] = [];
+  // Chaveado pela estrategia, nao pelo sleeve: a mesma estrategia pode estar em
+  // dois blocos do mesmo SET (rotacao20 E corrmin20 escolhem as 41 do mesmo
+  // universo). Duas linhas de 2,0% e 1,3% para a mesma posicao subdeclaram a
+  // exposicao real de 3,3% — o painel responde "quanto eu tinha disso", entao
+  // soma. Tickers iguais de estrategias DIFERENTES seguem separados: sao
+  // posicoes distintas, com tese distinta, e o rotulo desambigua.
+  const acc = new Map<string, Holding>();
+  const somar = (h: Holding) => {
+    const ja = acc.get(h.id);
+    if (ja) ja.weight += h.weight;
+    else acc.set(h.id, h);
+  };
   sleeves.forEach((s, i) => {
     const ser = series[s.id];
     const li = t - ser.start;
@@ -689,8 +700,8 @@ export function holdingsEm(
         if (wIn <= 1e-6) return;
         const tk = comp.ticker(k, li);
         if (!tk) return;
-        out.push({
-          id: `${s.id}/${sid}`,
+        somar({
+          id: sid,                  // a estrategia, nao o par bloco/estrategia
           label: comp.labels[sid] ?? sid,
           symbol: tk.symbol,
           weight: w * wIn,          // peso no portfolio = peso do bloco x peso dentro
@@ -701,7 +712,7 @@ export function holdingsEm(
     }
 
     const si = ser.sym[li];
-    out.push({
+    somar({
       id: s.id,
       label: ser.label,
       symbol: ser.simbolos[si],
@@ -709,5 +720,5 @@ export function holdingsEm(
       defense: !!ser.defensivo[si],
     });
   });
-  return out.sort((a, b) => b.weight - a.weight);
+  return [...acc.values()].sort((a, b) => b.weight - a.weight);
 }

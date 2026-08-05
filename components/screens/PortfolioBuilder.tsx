@@ -1065,64 +1065,70 @@ export default function PortfolioBuilder() {
               {/* NÚMEROS EM CIMA — a leitura vai de cima pra baixo: primeiro o
                   veredito numerico (retorno, drawdown, sharpe...), depois a
                   curva que produziu esses numeros. */}
+              {/* RÉGUA FIXA. Calibrar peso na mão exige ver o número reagir,
+                  e os sliders ficam na coluna da esquerda, muito abaixo da
+                  dobra. Sem isto o gestor rola até o slider, mexe, rola de
+                  volta pra ler o Sharpe, e repete — o loop de otimização
+                  manual fica inviável. Grudada no topo, ele mexe e lê no
+                  mesmo golpe de vista.
+
+                  IMPORTANTE: o sticky esta como filho DIRETO da coluna
+                  direita (o fragment <> que é irmao do gráfico, blindagem,
+                  correlacao...). Se envolver num wrapper curto, o containing
+                  block seria esse wrapper e o sticky se descolaria assim
+                  que o wrapper saisse do viewport — que é logo. Assim
+                  fica preso enquanto a coluna direita inteira existir.
+
+                  `--pb-sticky-top`: cada host diz de quanto é o próprio
+                  cabeçalho fixo (52px na apresentação, 86px no shell do
+                  cockpit). Sem a variável, gruda em 0 e continua correto. */}
               {metricas.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {/* RÉGUA FIXA. Calibrar peso na mão exige ver o número reagir,
-                      e os sliders ficam na coluna da esquerda, muito abaixo da
-                      dobra. Sem isto o gestor rola até o slider, mexe, rola de
-                      volta pra ler o Sharpe, e repete — o loop de otimização
-                      manual fica inviável. Grudada no topo, ele mexe e lê no
-                      mesmo golpe de vista.
+                <div style={{
+                  display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(118px,1fr))", gap: 8,
+                  position: "sticky", top: "var(--pb-sticky-top, 0px)", zIndex: 30,
+                  // fundo opaco: sem ele o conteúdo passa por trás dos gaps da grade
+                  background: "var(--bg, #0B1626)", padding: "8px 0",
+                  boxShadow: "0 8px 18px -10px rgba(0,0,0,.75)",
+                }}>
+                  {metricas.map((x) => (
+                    <Tile
+                      key={x.id} k={x.k} v={x.v} tom={x.tom}
+                      ativo={x.id === metricaAberta}
+                      onClick={() => setMetricaAberta((a) => (a === x.id ? null : x.id))}
+                    />
+                  ))}
+                </div>
+              )}
 
-                      `--pb-sticky-top`: cada host diz de quanto é o próprio
-                      cabeçalho fixo (52px na apresentação, 86px no shell do
-                      cockpit). Sem a variável, gruda em 0 e continua correto. */}
-                  <div style={{
-                    display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(118px,1fr))", gap: 8,
-                    position: "sticky", top: "var(--pb-sticky-top, 0px)", zIndex: 30,
-                    // fundo opaco: sem ele o conteúdo passa por trás dos gaps da grade
-                    background: "var(--bg, #0B1626)", padding: "8px 0",
-                    boxShadow: "0 8px 18px -10px rgba(0,0,0,.75)",
-                  }}>
-                    {metricas.map((x) => (
-                      <Tile
-                        key={x.id} k={x.k} v={x.v} tom={x.tom}
-                        ativo={x.id === metricaAberta}
-                        onClick={() => setMetricaAberta((a) => (a === x.id ? null : x.id))}
-                      />
-                    ))}
-                  </div>
-
-                  {/* explicação do número clicado — encostada nos tiles */}
-                  {aberta && (
-                    <div style={{
-                      display: "flex", alignItems: "flex-start", gap: 12,
-                      padding: "10px 13px 11px", borderRadius: "var(--r-md)",
-                      background: "rgba(201,160,44,.07)", border: "1px solid rgba(201,160,44,.32)",
-                    }}>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "baseline", gap: 9, marginBottom: 3, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 700 }}>
-                            {aberta.k}
-                          </span>
-                          <span style={{
-                            fontFamily: "var(--mono)", fontSize: 15,
-                            color: aberta.tom === "pos" ? "var(--green)" : aberta.tom === "neg" ? "var(--red)" : "var(--tx)",
-                          }}>{aberta.v}</span>
-                        </div>
-                        <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: "var(--tx2)", maxWidth: "104ch" }}>
-                          {aberta.explica}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setMetricaAberta(null)} title="Fechar"
-                        style={{
-                          font: "inherit", fontSize: 15, lineHeight: 1, color: "var(--tx3)",
-                          background: "transparent", border: "none", cursor: "pointer", padding: "0 2px",
-                        }}
-                      >×</button>
+              {/* explicação do número clicado — irma direta da régua pra
+                  não voltar a criar um containing block curto. */}
+              {aberta && (
+                <div style={{
+                  display: "flex", alignItems: "flex-start", gap: 12,
+                  padding: "10px 13px 11px", borderRadius: "var(--r-md)",
+                  background: "rgba(201,160,44,.07)", border: "1px solid rgba(201,160,44,.32)",
+                }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 9, marginBottom: 3, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 700 }}>
+                        {aberta.k}
+                      </span>
+                      <span style={{
+                        fontFamily: "var(--mono)", fontSize: 15,
+                        color: aberta.tom === "pos" ? "var(--green)" : aberta.tom === "neg" ? "var(--red)" : "var(--tx)",
+                      }}>{aberta.v}</span>
                     </div>
-                  )}
+                    <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: "var(--tx2)", maxWidth: "104ch" }}>
+                      {aberta.explica}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setMetricaAberta(null)} title="Fechar"
+                    style={{
+                      font: "inherit", fontSize: 15, lineHeight: 1, color: "var(--tx3)",
+                      background: "transparent", border: "none", cursor: "pointer", padding: "0 2px",
+                    }}
+                  >×</button>
                 </div>
               )}
 

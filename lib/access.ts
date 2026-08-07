@@ -22,6 +22,7 @@ export const ACCESS_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 dias
  */
 export const ALLOWED_EMAILS: readonly string[] = [
   "dj@harpian.com",
+  "ds@harpian.com",
   "jfd@harpian.com",
   "jz@harpian.com",
   "jp@harpian.com",

@@ -38,7 +38,7 @@ export const ALLOWED_EMAILS: readonly string[] = [
  * nao expoe a senha diretamente.
  */
 export const PASSWORD_HASH_FALLBACK =
-  "$2b$12$1PBrqD5./YhgUjtGEHw.UO3FS94fgoZqVd3YtJTisf4x7JqL/xxZK";
+  "$2b$12$4jAE5dqNwWtA.zvg/5Gin.gO90QNrEFlHZn4xCATh4Wy/6lFHmVWO";
 
 export function getPasswordHash(): string {
   return process.env.COCKPIT_PASSWORD_HASH || PASSWORD_HASH_FALLBACK;

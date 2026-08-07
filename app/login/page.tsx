@@ -92,6 +92,12 @@ function CockpitLoginForm() {
           }}
         />
 
+        <img
+          src="/harpian-logo-white.svg"
+          alt="Harpian"
+          style={{ height: 26, width: "auto", display: "block", marginBottom: 24 }}
+        />
+
         <div
           style={{
             fontFamily: "'Cascadia Code','Consolas',monospace",

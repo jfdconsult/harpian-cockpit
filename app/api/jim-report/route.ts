@@ -63,7 +63,11 @@ async function carregaFacts(setId: string | null | undefined): Promise<{
 export async function POST(req: Request) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY não configurada no servidor" }, { status: 503 });
+    // 200 de propósito: é um estado esperado (feature degradada), não uma
+    // falha de infra — o front-end já trata `error` no corpo sem checar
+    // status. Um 5xx aqui só produz um "Failed to load resource" assustador
+    // no console do cliente por um caminho que já é tratado com elegância.
+    return NextResponse.json({ error: "JIM AI indisponível (chave não configurada)" }, { status: 200 });
   }
 
   let body: ReqBody;
@@ -186,14 +190,21 @@ Sua análise deve responder, em 3 a 4 parágrafos:
 
     if (!r.ok) {
       const t = await r.text();
-      return NextResponse.json({ error: `Anthropic ${r.status}: ${t.slice(0, 200)}` }, { status: 502 });
+      // Log completo (com o motivo real — ex.: credito Anthropic esgotado)
+      // fica no server; ao cliente devolvemos so uma mensagem generica em
+      // 200, porque isso e uma falha esperada/degradada do fornecedor, nao
+      // um erro da nossa API — o front-end ja mostra "JIM AI temporariamente
+      // indisponivel" sem exigir status HTTP de erro.
+      console.error(`[jim-report] Anthropic ${r.status}: ${t.slice(0, 500)}`);
+      return NextResponse.json({ error: "JIM AI temporariamente indisponível" }, { status: 200 });
     }
     const d = await r.json();
     const analise = d?.content?.[0]?.text?.trim();
-    if (!analise) return NextResponse.json({ error: "Resposta vazia do Claude" }, { status: 502 });
+    if (!analise) return NextResponse.json({ error: "Resposta vazia do Claude" }, { status: 200 });
     return NextResponse.json({ analise, modo: modoAncorado ? "ancorado" : "generico" });
   } catch (e) {
     clearTimeout(to);
-    return NextResponse.json({ error: String(e) }, { status: 502 });
+    console.error(`[jim-report] falha na chamada Anthropic: ${String(e)}`);
+    return NextResponse.json({ error: "JIM AI temporariamente indisponível" }, { status: 200 });
   }
 }

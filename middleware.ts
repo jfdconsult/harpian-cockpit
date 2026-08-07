@@ -75,6 +75,13 @@ export async function middleware(req: NextRequest) {
 // Roda em tudo (paginas + APIs) exceto assets estaticos — a exclusao fina de
 // /ato4 e das 3 APIs publicas fica em isPublicPath(), verificada dentro da
 // funcao (mais legivel que empilhar tudo no regex do matcher).
+//
+// A lista de extensoes (png/svg/etc.) e necessaria porque arquivos em
+// /public nao caem sob _next/static — sem ela, um asset como o logo do
+// /login ficava atras do gate e nunca carregava pra quem nao tem cookie
+// ainda (exatamente quem esta olhando a tela de login).
 export const config = {
-  matcher: "/((?!_next/static|_next/image|favicon.ico).*)",
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|gif|webp|ico|css|js|woff|woff2|ttf|map)).*)",
+  ],
 };

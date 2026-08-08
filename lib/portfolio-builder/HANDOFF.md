@@ -64,6 +64,17 @@ npx tsx lib/portfolio-builder/benchmark-sets.test.ts
 Gerado por `_pipeline\export_dataset.py` na pasta da apresentação. Para atualizar com dados
 novos, rodar lá e copiar `dataset\` para `data/strategies/`.
 
+**Atualização de preços 2026-08-05:** os fechamentos de tickers CORE22 + SID foram
+atualizados fora deste módulo, em `C:\dev\harpian-data-warehouse\market_data\core_sid_close_panel.parquet`.
+O painel tem 426 tickers, 16.256 datas, janela 1962-01-02 → 2026-08-05, com 416 tickers
+com dados e 414 atualizados até 2026-08-05. A base ampla consolidada está em
+`C:\dev\harpian-data-warehouse\market_data\broad_panel_plus_core_sid_updated.parquet`.
+Ver `C:\dev\harpian-cockpit-next\MARKET_DATA_UPDATE_20260805.md`.
+
+**Não confundir:** esta atualização de preços não torna o pipeline de SETs seguro para rodar.
+O P0 do `suavemin15` continua: `export_3sets.py` ainda não sabe gerar o bloco SUAVE e pode
+apagar o Institucional Dinâmico se for executado antes do porte do motor.
+
 Codificação pensada para caber e carregar rápido:
 
 - **datas por offset** num calendário mestre de 9.548 pregões (1988-09-01 → 2026-07-31);

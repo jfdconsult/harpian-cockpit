@@ -240,10 +240,13 @@ export const LINHAS: LinhaDef[] = [
  * StormGuard mora dentro de cada estrategia e nao conversa entre elas).
  */
 export const SETS: SetDef[] = [
+  // ============================================================
+  // FAMILIA 41 — top-K rotativo sobre as 41 (rotacao20 + corrmin20)
+  // ============================================================
   {
     id: "d3",
-    nome: "DINÂMICO AGRESSIVO",
-    rotuloCurto: "Dinâmico Agressivo",
+    nome: "DINÂMICO 41 AGRESSIVO",
+    rotuloCurto: "Dinâmico 41 Agressivo",
     linha: 1,
     perfil: "agressivo",
     tese: "Os dois critérios de alocação em peso igual, sem amortecedor. É o de maior retorno da casa.",
@@ -254,8 +257,8 @@ export const SETS: SetDef[] = [
   },
   {
     id: "d5",
-    nome: "DINÂMICO BALANCEADO",
-    rotuloCurto: "Dinâmico Balanceado",
+    nome: "DINÂMICO 41 BALANCEADO",
+    rotuloCurto: "Dinâmico 41 Balanceado",
     linha: 1,
     perfil: "balanceado",
     tese: "Os mesmos dois critérios com 20% em renda fixa: tira um quinto da queda e sobe o Sharpe.",
@@ -267,8 +270,8 @@ export const SETS: SetDef[] = [
   },
   {
     id: "d6",
-    nome: "DINÂMICO CONSERVADOR",
-    rotuloCurto: "Dinâmico Conservador",
+    nome: "DINÂMICO 41 CONSERVADOR",
+    rotuloCurto: "Dinâmico 41 Conservador",
     linha: 1,
     perfil: "conservador",
     tese: "O balanceado com alvo de volatilidade de 12% ao ano. Sai de risco sozinho quando o mercado agita.",
@@ -305,18 +308,86 @@ export const SETS: SetDef[] = [
   // conferencia em `SUAVE_HANDOFF/metricas_conferencia.json`: Sharpe 1,824,
   // CAGR 8,85%, vol 4,71%, maxDD -4,42%, 0 ano negativo em 15 anos.
   // SOBE SEM SELO DE VALIDACAO (pendencia Arena/custos, como o DMAX).
+  // ============================================================
+  // FAMILIA 10.5 — mesmo motor do Institucional (suavemin15, piso 1% em 15
+  // estrategias, 10 ataque + 4 defesa apos drop S22) com seis alvos de
+  // vol-target. Escala unica de perfil de risco, do institucional ao max.
+  // Numeros aprovados na janela 20 anos (2006 -> 2026), validados em WFO.
+  // Ver `_lab/motor_janela_20anos.py`. Aprovacao 06/08/2026.
+  // ============================================================
   {
-    id: "dsuave",
-    nome: "INSTITUCIONAL DINÂMICO",
-    rotuloCurto: "Institucional Dinâmico",
+    id: "d105ins",
+    nome: "DINÂMICO 10.5 INSTITUCIONAL",
+    rotuloCurto: "Dinâmico 10.5 Institucional",
     linha: 1,
     perfil: "conservador",
     tese:
-      "O motor do DMAX na dose mínima. Cesta de 15 estratégias (piso de 1% em cada) " +
-      "com overlay de volatilidade-alvo de 3,5% ao ano — exposição média ao motor de 22%, " +
-      "o resto em caixa. Sharpe alto pela suavidade, não pelo retorno.",
+      "Cesta de 14 estratégias (10 ataque + 4 defesa) com piso de 1% em cada e " +
+      "overlay de volatilidade-alvo de 3,5% ao ano. Exposição média ao motor de ~23%, " +
+      "o resto em caixa. Zero anos negativos em 20 anos de histórico.",
     composicao: [{ bloco: "suavemin15", peso: 1 }],
     volTarget: { alvo: 0.035, lookback: 21 },
+  },
+  {
+    id: "d105con",
+    nome: "DINÂMICO 10.5 CONSERVADOR",
+    rotuloCurto: "Dinâmico 10.5 Conservador",
+    linha: 1,
+    perfil: "conservador",
+    tese:
+      "Motor institucional com vol-alvo de 5% ao ano. Exposição média de ~31%, " +
+      "CAGR mantendo o Sharpe da família acima de 1,7.",
+    composicao: [{ bloco: "suavemin15", peso: 1 }],
+    volTarget: { alvo: 0.050, lookback: 21 },
+  },
+  {
+    id: "d105mod",
+    nome: "DINÂMICO 10.5 MODERADO",
+    rotuloCurto: "Dinâmico 10.5 Moderado",
+    linha: 1,
+    perfil: "balanceado",
+    tese:
+      "Motor institucional com vol-alvo de 8% ao ano. Exposição média de ~46%, " +
+      "CAGR próximo de 18% e queda máxima histórica em torno de −12%.",
+    composicao: [{ bloco: "suavemin15", peso: 1 }],
+    volTarget: { alvo: 0.080, lookback: 21 },
+  },
+  {
+    id: "d105adv",
+    nome: "DINÂMICO 10.5 ADVANCED",
+    rotuloCurto: "Dinâmico 10.5 Advanced",
+    linha: 1,
+    perfil: "agressivo",
+    tese:
+      "Motor institucional com vol-alvo de 12% ao ano. CAGR ~26% com Sharpe ~1,73 — " +
+      "retorno de ações com metade da queda de mercado.",
+    composicao: [{ bloco: "suavemin15", peso: 1 }],
+    volTarget: { alvo: 0.120, lookback: 21 },
+  },
+  {
+    id: "d105agr",
+    nome: "DINÂMICO 10.5 AGRESSIVO",
+    rotuloCurto: "Dinâmico 10.5 Agressivo",
+    linha: 1,
+    perfil: "agressivo",
+    tese:
+      "Motor institucional com vol-alvo de 18% ao ano. CAGR ~37% mantendo Sharpe " +
+      "acima de 1,7. Crescimento agressivo com engenharia institucional.",
+    composicao: [{ bloco: "suavemin15", peso: 1 }],
+    volTarget: { alvo: 0.180, lookback: 21 },
+  },
+  {
+    id: "d105max",
+    nome: "DINÂMICO 10.5 MAX",
+    rotuloCurto: "Dinâmico 10.5 Max",
+    linha: 1,
+    perfil: "agressivo",
+    tese:
+      "Motor institucional com vol-alvo de 25% ao ano. CAGR ~46% e Sharpe ~1,74 — " +
+      "quase todo o retorno do motor cru, com o freio de segurança ainda ativo em " +
+      "stress agudo.",
+    composicao: [{ bloco: "suavemin15", peso: 1 }],
+    volTarget: { alvo: 0.250, lookback: 21 },
   },
 ];
 
@@ -332,7 +403,11 @@ export const NOMES_BLOCO: Record<BlocoId, string> = {
   corrmin20: "Seleção por mínima correlação",
   aggbond: "Renda fixa (Agg.Bond)",
   maxcagr10: "Retorno máximo — 10 de ataque + 5 de defesa",
-  suavemin15: "Institucional Dinâmico — 15 estratégias com piso e overlay de vol",
+  // Motor da familia 10.5 — 6 SETs (Institucional, Conservador, Moderado,
+  // Advanced, Agressivo, Max) usam este bloco com vol-targets diferentes.
+  // O rotulo aqui descreve o MOTOR, nao o SET que o consome, para o relatorio
+  // nao dizer "Institucional" quando o cliente escolheu "Moderado".
+  suavemin15: "Motor 10.5 — 15 estratégias com piso 1% e overlay de vol",
 };
 
 /** De quem e cada bloco. Aparece na tela como legenda de atribuicao. */
@@ -378,11 +453,11 @@ export const EXPLICACAO_BLOCO: Record<BlocoId, string> = {
     "momento seca entre as dez, o excedente vai para a preservação — e quando menos de " +
     "12 das 41 têm momento positivo, a carteira inteira sai de risco.",
   suavemin15:
-    "O mesmo motor do Max Retorno, na dose mínima. Quinze estratégias (10 de ataque + 5 " +
+    "O mesmo motor do Max Retorno, com um freio. Quinze estratégias (10 de ataque + 5 " +
     "de preservação) com piso de 1% em cada — ninguém zera. Por cima, um overlay de " +
-    "volatilidade-alvo de 3,5% ao ano decide semanalmente quanto expor ao motor: em " +
-    "média 22%, o resto em caixa. A queda máxima histórica foi de −4,42% em 15 anos, sem " +
-    "nenhum ano negativo. É o mandato conservador com a mesma engenharia.",
+    "volatilidade-alvo decide semanalmente quanto expor ao motor, o resto em caixa. " +
+    "É a base dos seis perfis da família 10.5 — cada um com um alvo de volatilidade " +
+    "diferente, do mais conservador ao mais agressivo, com a mesma engenharia por baixo.",
 };
 
 // ── composicao ───────────────────────────────────────────────────────────────

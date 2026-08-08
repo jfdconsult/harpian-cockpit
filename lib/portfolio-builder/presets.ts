@@ -194,12 +194,22 @@ export interface Preset {
   def: SetDef;
 }
 
-/** Os botoes da barra do topo — so a linha comercial, que e a vitrine.
- *  Ordem de leitura pro cliente: conservador -> balanceado -> agressivo ->
- *  max retorno. Vai do menos risco pro mais risco, mesmo padrao dos botoes
- *  de janela (1a, 2a, 5a...). Max Retorno fica sempre por ultimo — e ate
- *  outra familia (CAGR max, nao Sharpe max). */
-const ORDEM_VITRINE = ["dsuave", "d6", "d5", "d3", "dmax"];
+/** A vitrine dos 10 SETs, agrupada por familia e ordenada por risco crescente.
+ *  Familia 10.5 (motor suavemin15 · piso 1% · dial de vol-target, 6 perfis)
+ *  ocupa a espinha dorsal da escala; familia 41 (top-K rotativo) e Max Retorno
+ *  aparecem depois. Numeros validados na janela 20 anos (2006-2026). */
+const ORDEM_VITRINE = [
+  "d105ins",   // 3,5% vol-target (Institucional)
+  "d105con",   // 5,0% (Conservador)
+  "d105mod",   // 8,0% (Moderado)
+  "d105adv",   // 12,0% (Advanced)
+  "d105agr",   // 18,0% (Agressivo)
+  "d105max",   // 25,0% (Max)
+  "d6",        // Dinamico 41 Conservador (rot+corr+aggbond + vt 12%)
+  "d5",        // Dinamico 41 Balanceado
+  "d3",        // Dinamico 41 Agressivo
+  "dmax",      // Max Retorno Dinamico (sem overlay)
+];
 export function presetsVitrine(): Preset[] {
   const linha1 = SETS.filter((s) => s.linha === 1);
   const rank = (id: string) => {

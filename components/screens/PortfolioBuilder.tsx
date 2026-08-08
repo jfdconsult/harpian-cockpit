@@ -203,8 +203,13 @@ export default function PortfolioBuilder() {
   const [mode, setMode] = useState<AllocMode>("linear");
   const [basis, setBasis] = useState<ScoreBasis>("retmes");
   const [rebalance, setRebalance] = useState<RebalanceFreq>("monthly");
-  const [janela, setJanela] = useState<Janela>("10a");
-  const [windowMode, setWindowMode] = useState<WindowMode>("common");
+  // Defaults pensados pra customizar estrategias (SET sempre sobrescreve os
+  // dois via carregarSet -> periodoFixo/window). "max" + "inception" = usa
+  // todo o historico disponivel; cada estrategia entra zerada e so pesa a
+  // partir do proprio nascimento, em vez de truncar tudo pro nascimento da
+  // ultima selecionada (o que fazia o grafico comecar em ~2017 por default).
+  const [janela, setJanela] = useState<Janela>("max");
+  const [windowMode, setWindowMode] = useState<WindowMode>("inception");
   const [dropNegative, setDropNegative] = useState(false);
   const [capital, setCapital] = useState(100000);
 

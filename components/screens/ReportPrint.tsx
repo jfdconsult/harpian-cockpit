@@ -15,10 +15,11 @@
  * builder, que abre modal com autor/cliente e depois chama window.print().
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type { SimResult, Sleeve, StrategyMeta, StrategySeries } from "@/lib/portfolio-builder/types";
 import type { BenchmarkSetsData, EstatisticaEstrategia, SetDef } from "@/lib/portfolio-builder/benchmark-sets";
 import { computePortfolioRN, classifyBand, classifyStrategy } from "@/lib/portfolio-builder/hrd-engine";
+import { idsDeDefesa } from "@/lib/portfolio-builder/defesa";
 
 const MONO = "var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
 
@@ -100,6 +101,59 @@ function TechTile({ k, v, sub, tom }: { k: string; v: string; sub?: string; tom?
 
 export default function ReportPrint(props: ReportData) {
   const { autor, cliente, sim, sleeves, meta, nomeCurto, kpis, set, mode, rebalance, capital, janelaLabel, curvaCapitalEl, faixaDefesaEl, series, maxDrawdown, cagr, volAnual, rnCliente } = props;
+
+  /**
+   * Agrupamento das linhas de estatistica por estrategia — separa quem
+   * preserva capital (Defesa) de quem persegue retorno (ETF/Macro vs
+   * Acoes/Setoriais), pra o gestor ver de cara como o portfolio se
+   * distribui. "Defesa" corta atravessado do `grupo` do catalogo: ha
+   * defensivas tanto em ETF quanto (raramente) fora dele — por isso o
+   * teste de defesa vem primeiro e tem prioridade sobre o grupo.
+   */
+  const GRUPOS_ORDEM = ["Defesa", "ETF / Macro", "Ações / Setoriais"] as const;
+  const idsDefesa = useMemo(() => idsDeDefesa(Object.values(meta)), [meta]);
+  const grupoDe = (id: string): typeof GRUPOS_ORDEM[number] => {
+    if (idsDefesa.has(id)) return "Defesa";
+    if (meta[id]?.grupo === "etf") return "ETF / Macro";
+    return "Ações / Setoriais";
+  };
+  /** Agrupa uma lista (com `.id`) na ordem fixa, descartando grupos vazios. */
+  function agruparPorCategoria<T extends { id: string }>(itens: T[]): { grupo: string; itens: T[] }[] {
+    const porGrupo = new Map<string, T[]>();
+    for (const it of itens) {
+      const g = grupoDe(it.id);
+      if (!porGrupo.has(g)) porGrupo.set(g, []);
+      porGrupo.get(g)!.push(it);
+    }
+    return GRUPOS_ORDEM
+      .filter((g) => porGrupo.has(g))
+      .map((g) => ({ grupo: g, itens: porGrupo.get(g)! }));
+  }
+
+  /**
+   * % de posicoes fechadas no positivo (equity no fechamento > na abertura),
+   * dentro da janela da simulacao. So conta posicao FECHADA — a que ainda
+   * esta aberta no ultimo dia nao tem resultado ainda, entao nao entra na
+   * conta. `universoDetalhe[id].operacao` (o campo pensado pra isto) nunca
+   * foi preenchido pelo pipeline — por isso calcula aqui, direto da serie
+   * de equity que o relatorio ja tem em mãos.
+   */
+  function winRateDaSerie(s: StrategySeries | undefined, from: number, to: number): number | null {
+    if (!s) return null;
+    const iniIdx = Math.max(0, from - s.start);
+    const fimIdx = Math.min(s.n - 1, to - s.start);
+    if (fimIdx <= iniIdx) return null;
+    let trades = 0, wins = 0;
+    let abertura = s.equity[iniIdx];
+    for (let i = iniIdx + 1; i <= fimIdx; i++) {
+      if (s.sym[i] !== s.sym[i - 1]) {
+        trades++;
+        if (s.equity[i - 1] > abertura) wins++;
+        abertura = s.equity[i - 1];
+      }
+    }
+    return trades > 0 ? wins / trades : null;
+  }
 
   /**
    * Risk Number via HRD Engine (harpian_engine.py portado). Calibrado com
@@ -200,7 +254,8 @@ export default function ReportPrint(props: ReportData) {
         }
       }
       const contribuicao = pesoMedio * retornoJanela;
-      return { id: sl.id, sleeveIdx, pesoMedio, pesoMax, pctTempoAtiva, trocas, pctEmDefesa, retornoJanela, contribuicao };
+      const winRate = winRateDaSerie(s, sim.from, sim.to);
+      return { id: sl.id, sleeveIdx, pesoMedio, pesoMax, pctTempoAtiva, trocas, pctEmDefesa, retornoJanela, contribuicao, winRate };
     });
   }, [sleeves, sim.weights, sim.from, sim.to, series]);
 
@@ -930,30 +985,71 @@ export default function ReportPrint(props: ReportData) {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.7 }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #ddd" }}>
-                    {["Estratégia", "Desde", "Peso méd", "Pico", "Retorno", "% contrib", "Mês méd", "Meses neg", "Giros", "Ativos", "% defesa"].map((h, i) => (
+                    {["Estratégia", "Desde", "Peso méd", "Pico", "Retorno", "% contrib", "Mês méd", "Meses neg", "Giros", "% acerto", "Ativos", "% defesa"].map((h, i) => (
                       <th key={h} style={{ textAlign: i === 0 ? "left" : "right", padding: "5px 5px", color: "#666", fontFamily: MONO, fontSize: 9.9, letterSpacing: ".05em", textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {estatSet.relevantes.map((l) => {
-                    const m = meta[l.id];
+                  {agruparPorCategoria(estatSet.relevantes).map(({ grupo, itens }) => {
+                    const somaPeso = itens.reduce((a, l) => a + l.pesoPortfolio, 0);
+                    const somaContrib = itens.reduce((a, l) => a + Math.max(0, l.contribuicao), 0);
+                    const somaGiros = itens.reduce((a, l) => a + l.trocas, 0);
+                    const defesaPonderada = somaPeso > 0
+                      ? itens.reduce((a, l) => a + l.pctDefesa * l.pesoPortfolio, 0) / somaPeso
+                      : 0;
+                    const acertos = itens.map((l) => ({ wr: winRateDaSerie(series[l.id], sim.from, sim.to), trocas: l.trocas }));
+                    const acertoBase = acertos.filter((a) => a.wr != null);
+                    const trocasComAcerto = acertoBase.reduce((a, x) => a + x.trocas, 0);
+                    const acertoPonderado = trocasComAcerto > 0
+                      ? acertoBase.reduce((a, x) => a + x.wr! * x.trocas, 0) / trocasComAcerto
+                      : null;
                     return (
-                      <tr key={l.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                        <td style={{ padding: "4px 5px", fontWeight: 600 }}>{m ? nomeCurto(m) : l.id}</td>
-                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#666" }}>{l.desde.slice(0, 4)}</td>
-                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#c9a02c" }}>{pct(l.pesoPortfolio, 1)}</td>
-                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#555" }}>{pct(l.picoPortfolio, 0)}</td>
-                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: l.retornoJanela >= 0 ? "#0a7a3b" : "#b0201f" }}>{fmtRet(l.retornoJanela)}</td>
-                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: l.contribuicao >= 0 ? "#0a7a3b" : "#b0201f" }}>
-                          {estatSet.contribTotal > 0 ? pct(Math.max(0, l.contribuicao) / estatSet.contribTotal, 1) : "—"}
-                        </td>
-                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: l.retMesMedio >= 0 ? "#0a7a3b" : "#b0201f" }}>{pct(l.retMesMedio, 1)}</td>
-                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{l.mesesNeg}</td>
-                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{l.trocas}</td>
-                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{l.nAtivos}</td>
-                        <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: l.pctDefesa > 0.1 ? "#0a5aa0" : "#666" }}>{pct(l.pctDefesa, 0)}</td>
-                      </tr>
+                      <Fragment key={grupo}>
+                        <tr style={{ background: "#f6f4ee" }}>
+                          <td colSpan={12} style={{ padding: "5px 5px", fontWeight: 700, fontSize: 11.0, letterSpacing: ".04em", textTransform: "uppercase", color: "#9b7a21", fontFamily: MONO }}>
+                            {grupo} <span style={{ color: "#999", fontWeight: 400 }}>· {itens.length} {itens.length === 1 ? "estratégia" : "estratégias"}</span>
+                          </td>
+                        </tr>
+                        {itens.map((l) => {
+                          const m = meta[l.id];
+                          const wr = winRateDaSerie(series[l.id], sim.from, sim.to);
+                          return (
+                            <tr key={l.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                              <td style={{ padding: "4px 5px 4px 14px", fontWeight: 600 }}>{m ? nomeCurto(m) : l.id}</td>
+                              <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#666" }}>{l.desde.slice(0, 4)}</td>
+                              <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#c9a02c" }}>{pct(l.pesoPortfolio, 1)}</td>
+                              <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#555" }}>{pct(l.picoPortfolio, 0)}</td>
+                              <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: l.retornoJanela >= 0 ? "#0a7a3b" : "#b0201f" }}>{fmtRet(l.retornoJanela)}</td>
+                              <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: l.contribuicao >= 0 ? "#0a7a3b" : "#b0201f" }}>
+                                {estatSet.contribTotal > 0 ? pct(Math.max(0, l.contribuicao) / estatSet.contribTotal, 1) : "—"}
+                              </td>
+                              <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: l.retMesMedio >= 0 ? "#0a7a3b" : "#b0201f" }}>{pct(l.retMesMedio, 1)}</td>
+                              <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{l.mesesNeg}</td>
+                              <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{l.trocas}</td>
+                              <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: wr == null ? "#999" : wr >= 0.5 ? "#0a7a3b" : "#b0201f" }}>{wr == null ? "—" : pct(wr, 0)}</td>
+                              <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{l.nAtivos}</td>
+                              <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: l.pctDefesa > 0.1 ? "#0a5aa0" : "#666" }}>{pct(l.pctDefesa, 0)}</td>
+                            </tr>
+                          );
+                        })}
+                        <tr style={{ borderBottom: "2px solid #ddd" }}>
+                          <td style={{ padding: "4px 5px 6px 14px", fontWeight: 700, fontStyle: "italic", color: "#666" }}>Subtotal {grupo.toLowerCase()}</td>
+                          <td />
+                          <td style={{ padding: "4px 5px 6px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#c9a02c" }}>{pct(somaPeso, 1)}</td>
+                          <td />
+                          <td />
+                          <td style={{ padding: "4px 5px 6px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#0a7a3b" }}>
+                            {estatSet.contribTotal > 0 ? pct(somaContrib / estatSet.contribTotal, 1) : "—"}
+                          </td>
+                          <td />
+                          <td />
+                          <td style={{ padding: "4px 5px 6px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#333" }}>{somaGiros}</td>
+                          <td style={{ padding: "4px 5px 6px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: acertoPonderado == null ? "#999" : "#333" }}>{acertoPonderado == null ? "—" : pct(acertoPonderado, 0)}</td>
+                          <td />
+                          <td style={{ padding: "4px 5px 6px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: defesaPonderada > 0.1 ? "#0a5aa0" : "#666" }}>{pct(defesaPonderada, 0)}</td>
+                        </tr>
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -1003,22 +1099,55 @@ export default function ReportPrint(props: ReportData) {
                   <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Contribuição</th>
                   <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% tempo ativa</th>
                   <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>Nº trocas</th>
+                  <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% acerto</th>
                   <th style={{ textAlign: "right", padding: "5px 6px", color: "#666", fontFamily: MONO, fontSize: 10.5, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600 }}>% em defesa</th>
                 </tr>
               </thead>
               <tbody>
-                {sleeves.map((s, i) => {
-                  const m = meta[s.id];
-                  const st = stats[i];
+                {agruparPorCategoria(sleeves.map((s, i) => ({ id: s.id, sleeveIdx: i }))).map(({ grupo, itens }) => {
+                  const somaContrib = itens.reduce((a, it) => a + Math.max(0, stats[it.sleeveIdx].contribuicao), 0);
+                  const somaTrocas = itens.reduce((a, it) => a + stats[it.sleeveIdx].trocas, 0);
+                  const somaTempoAtiva = itens.reduce((a, it) => a + stats[it.sleeveIdx].pctTempoAtiva, 0);
+                  const defesaPonderada = somaTempoAtiva > 0
+                    ? itens.reduce((a, it) => a + stats[it.sleeveIdx].pctEmDefesa * stats[it.sleeveIdx].pctTempoAtiva, 0) / somaTempoAtiva
+                    : 0;
+                  const acertoBase = itens.filter((it) => stats[it.sleeveIdx].winRate != null);
+                  const trocasComAcerto = acertoBase.reduce((a, it) => a + stats[it.sleeveIdx].trocas, 0);
+                  const acertoPonderado = trocasComAcerto > 0
+                    ? acertoBase.reduce((a, it) => a + stats[it.sleeveIdx].winRate! * stats[it.sleeveIdx].trocas, 0) / trocasComAcerto
+                    : null;
                   return (
-                    <tr key={s.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                      <td style={{ padding: "5px 6px", fontWeight: 600 }}>{m ? nomeCurto(m) : s.id}</td>
-                      <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.retornoJanela >= 0 ? "#0a7a3b" : "#b0201f" }}>{pct(st.retornoJanela, 1)}</td>
-                      <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.contribuicao >= 0 ? "#0a7a3b" : "#b0201f", fontWeight: 700 }}>{pct(st.contribuicao, 2)}</td>
-                      <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{pct(st.pctTempoAtiva, 0)}</td>
-                      <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{st.trocas}</td>
-                      <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.pctEmDefesa > 0.1 ? "#0a5aa0" : "#666" }}>{pct(st.pctEmDefesa, 0)}</td>
-                    </tr>
+                    <Fragment key={grupo}>
+                      <tr style={{ background: "#f6f4ee" }}>
+                        <td colSpan={7} style={{ padding: "5px 6px", fontWeight: 700, fontSize: 10.0, letterSpacing: ".04em", textTransform: "uppercase", color: "#9b7a21", fontFamily: MONO }}>
+                          {grupo} <span style={{ color: "#999", fontWeight: 400 }}>· {itens.length} {itens.length === 1 ? "estratégia" : "estratégias"}</span>
+                        </td>
+                      </tr>
+                      {itens.map((it) => {
+                        const m = meta[it.id];
+                        const st = stats[it.sleeveIdx];
+                        return (
+                          <tr key={it.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                            <td style={{ padding: "5px 6px 5px 15px", fontWeight: 600 }}>{m ? nomeCurto(m) : it.id}</td>
+                            <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.retornoJanela >= 0 ? "#0a7a3b" : "#b0201f" }}>{pct(st.retornoJanela, 1)}</td>
+                            <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.contribuicao >= 0 ? "#0a7a3b" : "#b0201f", fontWeight: 700 }}>{pct(st.contribuicao, 2)}</td>
+                            <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{pct(st.pctTempoAtiva, 0)}</td>
+                            <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{st.trocas}</td>
+                            <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.winRate == null ? "#999" : st.winRate >= 0.5 ? "#0a7a3b" : "#b0201f" }}>{st.winRate == null ? "—" : pct(st.winRate, 0)}</td>
+                            <td style={{ padding: "5px 6px", textAlign: "right", fontFamily: MONO, color: st.pctEmDefesa > 0.1 ? "#0a5aa0" : "#666" }}>{pct(st.pctEmDefesa, 0)}</td>
+                          </tr>
+                        );
+                      })}
+                      <tr style={{ borderBottom: "2px solid #ddd" }}>
+                        <td style={{ padding: "5px 6px 7px 15px", fontWeight: 700, fontStyle: "italic", color: "#666" }}>Subtotal {grupo.toLowerCase()}</td>
+                        <td />
+                        <td style={{ padding: "5px 6px 7px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#0a7a3b" }}>{pct(somaContrib, 2)}</td>
+                        <td />
+                        <td style={{ padding: "5px 6px 7px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#333" }}>{somaTrocas}</td>
+                        <td style={{ padding: "5px 6px 7px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: acertoPonderado == null ? "#999" : "#333" }}>{acertoPonderado == null ? "—" : pct(acertoPonderado, 0)}</td>
+                        <td style={{ padding: "5px 6px 7px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: defesaPonderada > 0.1 ? "#0a5aa0" : "#666" }}>{pct(defesaPonderada, 0)}</td>
+                      </tr>
+                    </Fragment>
                   );
                 })}
               </tbody>

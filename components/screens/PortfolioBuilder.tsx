@@ -330,6 +330,15 @@ export default function PortfolioBuilder() {
     setPeriodoFixo(cfg.periodoFixo ?? null);
     setSetAtivo(setId);
     setCursor(null);
+    // O relatorio desmonta o SET nas estrategias reais por baixo (via
+    // estatisticasBloco) e precisa da serie de cada uma pra calcular o %
+    // de acerto (win rate) por posicao — a serie do bloco sintetico so
+    // tem o resultado agregado, nao ajuda aqui. Carrega em paralelo, sem
+    // bloquear a tela; cada chamada ja se auto-deduplica pelo cache.
+    for (const c of preset.def.composicao) {
+      const bloco = setsData.estatisticasBloco?.[c.bloco as keyof typeof setsData.estatisticasBloco];
+      bloco?.estrategias?.forEach((e) => { carregarSerie(e.id); });
+    }
   };
 
   const limparSet = () => {

@@ -1482,6 +1482,7 @@ export default function PortfolioBuilder() {
           sleeves={sleeves}
           meta={meta}
           nomeCurto={nomeCurto}
+          rotuloIndex={rotuloIndex}
           kpis={metricas.map((x) => ({ k: x.k, v: x.v, tom: x.tom }))}
           set={setAtivo ? SETS.find((s) => s.id === setAtivo) ?? null : null}
           setsData={setsData}

@@ -247,6 +247,16 @@ export function simulate(
   const dispDe = cfg.window === "common" ? Math.max(...ini) : Math.min(...ini);
   let to = cfg.window === "common" ? Math.min(...fim) : Math.max(...fim);
 
+  // As series sinteticas de bloco (SET) tem uma folga de 1 dia no fim (o dia 0
+  // do equity e o baseline, antes do primeiro retorno real — n = retornos + 1
+  // — mas o `start` nao desconta esse dia, entao `fim` calculado aqui aponta
+  // 1 pregao depois do ultimo pregao real do calendario). Isso e inofensivo
+  // enquanto `periodoFixo` corta de volta pro dia validado, mas sem ele (ex.:
+  // cliente clica num periodo por ano com o SET carregado) o indice passa do
+  // fim do calendario e quebra tudo que le `calendar[to]`. Nenhuma serie real
+  // pode ir alem do que o calendario tem — entao trava aqui, pra qualquer sleeve.
+  if (to > calendar.length - 1) to = calendar.length - 1;
+
   // Periodo fixo: os SETs pre-montados foram medidos e aprovados num intervalo
   // especifico. Deixar o cliente mover a janela faria o numero da tela divergir
   // do numero validado — entao aqui a janela nao e negociavel.

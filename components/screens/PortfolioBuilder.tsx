@@ -837,7 +837,13 @@ export default function PortfolioBuilder() {
         )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(300px, 380px) 1fr", gap: 16, alignItems: "start" }}>
+      {/* alignItems: stretch (nao "start") de proposito — a coluna direita
+          precisa ficar tao alta quanto a esquerda (que pode ter 40 sliders)
+          pra ela nunca acabar antes. Sem isso o painel sticky some assim que
+          a coluna direita (mais curta) sai do viewport, mesmo a pagina ainda
+          rolando por causa da esquerda — o "chao" onde o sticky se prende
+          acaba antes da rolagem acabar. */}
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(300px, 380px) 1fr", gap: 16, alignItems: "stretch" }}>
         {/* ── coluna esquerda: catalogo + portfolio ─────────────────────── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <Painel titulo="Catálogo">

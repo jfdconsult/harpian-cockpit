@@ -985,7 +985,7 @@ export default function ReportPrint(props: ReportData) {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.7 }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #ddd" }}>
-                    {["Estratégia", "Desde", "Peso méd", "Pico", "Retorno", "% contrib", "Mês méd", "Meses neg", "Giros", "% acerto", "Ativos", "% defesa"].map((h, i) => (
+                    {["Estratégia", "Desde", "Peso méd", "Pico", "Retorno", "% contrib", "Meses neg", "Giros", "% acerto", "Ativos", "% defesa"].map((h, i) => (
                       <th key={h} style={{ textAlign: i === 0 ? "left" : "right", padding: "5px 5px", color: "#666", fontFamily: MONO, fontSize: 9.9, letterSpacing: ".05em", textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
                     ))}
                   </tr>
@@ -1007,7 +1007,7 @@ export default function ReportPrint(props: ReportData) {
                     return (
                       <Fragment key={grupo}>
                         <tr style={{ background: "#f6f4ee" }}>
-                          <td colSpan={12} style={{ padding: "5px 5px", fontWeight: 700, fontSize: 11.0, letterSpacing: ".04em", textTransform: "uppercase", color: "#9b7a21", fontFamily: MONO }}>
+                          <td colSpan={11} style={{ padding: "5px 5px", fontWeight: 700, fontSize: 11.0, letterSpacing: ".04em", textTransform: "uppercase", color: "#9b7a21", fontFamily: MONO }}>
                             {grupo} <span style={{ color: "#999", fontWeight: 400 }}>· {itens.length} {itens.length === 1 ? "estratégia" : "estratégias"}</span>
                           </td>
                         </tr>
@@ -1024,7 +1024,6 @@ export default function ReportPrint(props: ReportData) {
                               <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: l.contribuicao >= 0 ? "#0a7a3b" : "#b0201f" }}>
                                 {estatSet.contribTotal > 0 ? pct(Math.max(0, l.contribuicao) / estatSet.contribTotal, 1) : "—"}
                               </td>
-                              <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: l.retMesMedio >= 0 ? "#0a7a3b" : "#b0201f" }}>{pct(l.retMesMedio, 1)}</td>
                               <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{l.mesesNeg}</td>
                               <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: "#333" }}>{l.trocas}</td>
                               <td style={{ padding: "4px 5px", textAlign: "right", fontFamily: MONO, color: wr == null ? "#999" : wr >= 0.5 ? "#0a7a3b" : "#b0201f" }}>{wr == null ? "—" : pct(wr, 0)}</td>
@@ -1042,7 +1041,6 @@ export default function ReportPrint(props: ReportData) {
                           <td style={{ padding: "4px 5px 6px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#0a7a3b" }}>
                             {estatSet.contribTotal > 0 ? pct(somaContrib / estatSet.contribTotal, 1) : "—"}
                           </td>
-                          <td />
                           <td />
                           <td style={{ padding: "4px 5px 6px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: "#333" }}>{somaGiros}</td>
                           <td style={{ padding: "4px 5px 6px", textAlign: "right", fontFamily: MONO, fontWeight: 700, color: acertoPonderado == null ? "#999" : "#333" }}>{acertoPonderado == null ? "—" : pct(acertoPonderado, 0)}</td>

@@ -15,7 +15,7 @@
  * builder, que abre modal com autor/cliente e depois chama window.print().
  */
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { SimResult, Sleeve, StrategyMeta, StrategySeries } from "@/lib/portfolio-builder/types";
 import type { BenchmarkSetsData, EstatisticaEstrategia, SetDef } from "@/lib/portfolio-builder/benchmark-sets";
 import { computePortfolioRN, classifyBand, classifyStrategy } from "@/lib/portfolio-builder/hrd-engine";
@@ -51,7 +51,61 @@ const money = (n: number) => {
   return `$${n.toFixed(0)}`;
 };
 
+/**
+ * Probabilidade estimada por simulação — nunca exibe 0% nem 100%.
+ *
+ * Um Monte Carlo de N trajetórias em que nenhuma falha não prova certeza:
+ * prova que a probabilidade verdadeira está acima de ~1-3/N (regra dos três,
+ * Wasserman — All of Statistics, cap. 6). Com 2.000 trajetórias isso é
+ * ">99%", não "100%". Declarar 100% de probabilidade a um alocador
+ * institucional destrói a credibilidade do resto do relatório — e seria
+ * falso: nenhuma estimativa amostral pode excluir a cauda.
+ */
+const pctProb = (n: number) => {
+  if (n == null || isNaN(n)) return "—";
+  if (n >= 0.995) return ">99%";
+  if (n <= 0.005) return "<1%";
+  return `${(n * 100).toFixed(0)}%`;
+};
+
+/** Intervalo de confiança. Quando os dois limites caem no mesmo teto/piso de
+ * exibição, colapsa num rótulo só — ">99%–>99%" não informa nada e polui. */
+const faixaProb = (lo: number, hi: number) => {
+  const a = pctProb(lo), b = pctProb(hi);
+  return a === b ? a : `${a}–${b}`;
+};
+
 interface KPI { k: string; v: string; tom?: "pos" | "neg" }
+
+/** Espelha o retorno de POST /api/probabilidade — ver probabilistic-engine.ts */
+interface ProbData {
+  ok: true;
+  setNome: string;
+  portfolioCagr: number;
+  portfolioVol: number;
+  tolerancia: {
+    clienteRN: number;
+    portfolioRNPontual: number;
+    janelaAnos: number;
+    amostras: number;
+    dentro: number;
+    probabilidade: number;
+    ic95: { p: number; lo: number; hi: number; n: number };
+    excedeu: number;
+    probabilidadeExcedeu: number;
+    folgaMediana: number;
+  } | null;
+  meta: {
+    anos: number;
+    nPaths: number;
+    probabilidade: number;
+    ic95: { p: number; lo: number; hi: number; n: number };
+    capitalFinalP10: number;
+    capitalFinalP50: number;
+    capitalFinalP90: number;
+  }[] | null;
+  horizonteClienteAnos: number | null;
+}
 interface ReportData {
   autor: string;
   cliente: string;
@@ -86,6 +140,13 @@ interface ReportData {
   volAnual: number;
   /** RN do cliente (1..99) vindo do questionario, opcional */
   rnCliente: number | null;
+  /** Mandato do cliente vindo do Ato II (simulator-metas.html) — opcional,
+   * so preenchido quando o relatorio veio do questionario. */
+  horizonteAnos: number | null;
+  aporteAnual: number | null;
+  metaFinal: number | null;
+  /** retorno anual necessario para bater a meta no horizonte, em % (ex: 10.75) */
+  retornoNecessario: number | null;
 }
 
 function TechTile({ k, v, sub, tom }: { k: string; v: string; sub?: string; tom?: "pos" | "neg" }) {
@@ -104,7 +165,8 @@ function TechTile({ k, v, sub, tom }: { k: string; v: string; sub?: string; tom?
 }
 
 export default function ReportPrint(props: ReportData) {
-  const { autor, cliente, sim, sleeves, meta, nomeCurto, rotuloIndex, kpis, set, mode, rebalance, capital, janelaLabel, curvaCapitalEl, faixaDefesaEl, series, maxDrawdown, cagr, volAnual, rnCliente } = props;
+  const { autor, cliente, sim, sleeves, meta, nomeCurto, rotuloIndex, kpis, set, mode, rebalance, capital, janelaLabel, curvaCapitalEl, faixaDefesaEl, series, maxDrawdown, cagr, volAnual, rnCliente, horizonteAnos, aporteAnual, metaFinal, retornoNecessario } = props;
+  const temMandato = horizonteAnos != null || metaFinal != null || retornoNecessario != null;
 
   /** Nome curto + sufixo desambiguador (ex.: "Technology 1"), igual ao builder.
    * Sem rotuloIndex ou sem duplicata, devolve so o nome curto. */
@@ -209,6 +271,46 @@ export default function ReportPrint(props: ReportData) {
   const rnPortfolio = Math.round(rnReport.final_rn);
   const riskClass = classifyBand(rnPortfolio);
   const rnGap = rnCliente != null ? rnPortfolio - rnCliente : null;
+
+  /**
+   * Análise probabilística — chama /api/probabilidade (server-side, motor em
+   * lib/portfolio-builder/probabilistic-engine.ts) com o id do SET carregado
+   * + o mandato do cliente. So dispara quando ha SET ativo e pelo menos um
+   * dos dois insumos (RN de tolerancia ou meta+horizonte) — sem isso nao ha
+   * o que perguntar estatisticamente.
+   */
+  const [prob, setProb] = useState<ProbData | null>(null);
+  const [probErro, setProbErro] = useState<string | null>(null);
+  const [probCarregando, setProbCarregando] = useState(false);
+  const podeCalcularProb = !!set && (rnCliente != null || (metaFinal != null && horizonteAnos != null));
+  useEffect(() => {
+    if (!podeCalcularProb || !set) { setProb(null); return; }
+    let vivo = true;
+    setProbCarregando(true);
+    setProbErro(null);
+    fetch("/api/probabilidade", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        setId: set.id,
+        capital,
+        aporteAnual: aporteAnual ?? 0,
+        meta: metaFinal ?? undefined,
+        clienteRN: rnCliente ?? undefined,
+        horizonteAnos: horizonteAnos ?? undefined,
+      }),
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        if (!vivo) return;
+        if (!j.ok) throw new Error(j.error ?? "falha desconhecida");
+        setProb(j as ProbData);
+      })
+      .catch((e) => { if (vivo) setProbErro(String(e.message ?? e)); })
+      .finally(() => { if (vivo) setProbCarregando(false); });
+    return () => { vivo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [podeCalcularProb, set?.id, capital, aporteAnual, metaFinal, rnCliente, horizonteAnos]);
   const rnClienteClass = rnCliente != null ? classifyBand(rnCliente) : null;
 
   /**
@@ -470,8 +572,22 @@ export default function ReportPrint(props: ReportData) {
   const [carregandoAnalise, setCarregandoAnalise] = useState(true);
   const [baixando, setBaixando] = useState(false);
 
-  // Dispara Claude Haiku ao montar. Análise do "JIM AI" — 3-4 parágrafos.
+  /** Dispara uma única vez, mesmo com o efeito reavaliado quando `prob` chega. */
+  const jimDisparado = useRef(false);
+
+  /**
+   * O JIM só pode ser chamado depois que a análise probabilística resolveu —
+   * senão ele escreveria sobre o portfólio sem enxergar as probabilidades que
+   * o próprio relatório exibe logo acima dele, e poderia contradizê-las.
+   * "Resolvido" inclui o caso de falha (probErro) e o caso de não haver
+   * mandato pra calcular (podeCalcularProb=false).
+   */
+  const probResolvida = !podeCalcularProb || prob != null || probErro != null;
+
+  // Dispara Claude Haiku. Análise do "JIM AI" — 3-4 parágrafos.
   useEffect(() => {
+    if (jimDisparado.current || !probResolvida) return;
+    jimDisparado.current = true;
     setCarregandoAnalise(true);
     // Contexto extra pro JIM nao fabricar (janela em anos, overlay real, caixa).
     // Bug de 04/08/2026: JIM cravou "10 anos" numa janela de 15 e inventou
@@ -504,6 +620,42 @@ export default function ReportPrint(props: ReportData) {
         volTargetAlvo,
         expoMedia,
         caixaConvencao: "rf=0 (caixa não remunerado no backtest — convenção conservadora)",
+        // Mandato do cliente (Ato II) + análise probabilística já calculada e
+        // impressa acima no relatório. Sem isso o JIM comentava o portfólio no
+        // vácuo, sem saber qual objetivo ele precisa atender nem o que a
+        // própria página afirma sobre probabilidade — e podia contradizê-la.
+        mandato: (horizonteAnos != null || metaFinal != null || retornoNecessario != null) ? {
+          horizonteAnos, metaFinal, aporteAnual,
+          retornoNecessarioPct: retornoNecessario,
+          rnCliente,
+          rnPortfolio,
+        } : null,
+        probabilidade: prob ? {
+          tolerancia: prob.tolerancia ? {
+            clienteRN: prob.tolerancia.clienteRN,
+            // RN do portfólio vai UMA vez só, em `mandato.rnPortfolio` (HRD
+            // Engine — o número que o relatório exibe). O motor probabilístico
+            // tem sua própria estimativa (réplica Nitrogen sobre CAGR+vol), que
+            // difere em 1-2 pontos; mandar as duas faria o JIM citar dois
+            // "Risk Numbers do portfólio" no mesmo texto.
+            janelaAnos: prob.tolerancia.janelaAnos,
+            amostras: prob.tolerancia.amostras,
+            dentroPct: prob.tolerancia.probabilidade * 100,
+            excedeuPct: prob.tolerancia.probabilidadeExcedeu * 100,
+            folgaMedianaPontos: prob.tolerancia.folgaMediana,
+            ic95: [prob.tolerancia.ic95.lo * 100, prob.tolerancia.ic95.hi * 100],
+          } : null,
+          meta: prob.meta ? prob.meta.map((h) => ({
+            anos: h.anos,
+            probabilidadePct: h.probabilidade * 100,
+            ic95: [h.ic95.lo * 100, h.ic95.hi * 100],
+            p10: h.capitalFinalP10,
+            mediana: h.capitalFinalP50,
+            p90: h.capitalFinalP90,
+            ehHorizonteDoCliente: h.anos === prob.horizonteClienteAnos,
+          })) : null,
+          nPaths: prob.meta?.[0]?.nPaths ?? null,
+        } : null,
       }),
     })
       .then((r) => r.json())
@@ -514,7 +666,7 @@ export default function ReportPrint(props: ReportData) {
       .catch((e) => setErroAnalise(String(e)))
       .finally(() => setCarregandoAnalise(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [probResolvida]);
 
   const agora = useMemo(() => {
     const d = new Date();
@@ -626,21 +778,44 @@ export default function ReportPrint(props: ReportData) {
           </div>
         </header>
 
-        {/* CLIENTE + JANELA — cliente estreito (nome curto), janela ganha espaco */}
-        <section style={{ display: "grid", gridTemplateColumns: "minmax(180px, 260px) 1fr", gap: 14, marginBottom: 22 }}>
+        {/* CLIENTE (estreito, so o nome) + MANDATO (Ato II, quando houver) + JANELA */}
+        <section style={{
+          display: "grid",
+          gridTemplateColumns: temMandato ? "minmax(150px, 190px) 1.3fr 1fr" : "minmax(180px, 260px) 1fr",
+          gap: 14, marginBottom: 22,
+        }}>
           <div style={{ padding: "12px 14px", background: "#f6f4ee", borderLeft: "3px solid #c9a02c", borderRadius: 4 }}>
             <div style={{ fontSize: 11.1, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 3 }}>Cliente</div>
-            <div style={{ fontSize: 21.1, fontWeight: 700 }}>{cliente || "—"}</div>
+            <div style={{ fontSize: 17.5, fontWeight: 700, wordBreak: "break-word" }}>{cliente || "—"}</div>
           </div>
+
+          {temMandato && (
+            <div style={{ padding: "12px 14px", background: "#f6f4ee", borderRadius: 4 }}>
+              <div style={{ fontSize: 11.1, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 5 }}>
+                Mandato do cliente — Ato II
+              </div>
+              <div style={{ fontSize: 12.9, color: "#333", lineHeight: 1.65 }}>
+                Investimento inicial: <b style={{ color: "#c9a02c" }}>{money(capital)}</b>
+                {" · "}{aporteAnual != null && aporteAnual > 0 ? <>Aporte anual: <b>{money(aporteAnual)}</b></> : <>Sem aportes anuais</>}
+                {horizonteAnos != null && <> · Horizonte: <b>{horizonteAnos} {horizonteAnos === 1 ? "ano" : "anos"}</b></>}
+                {metaFinal != null && <> · Meta ao final: <b>{money(metaFinal)}</b></>}
+                <br />
+                {retornoNecessario != null && <>Retorno necessário: <b style={{ color: "#c9a02c" }}>{retornoNecessario.toFixed(2)}%/ano</b></>}
+                {retornoNecessario != null && <> · </>}
+                Portfólio proposto entrega: <b style={{ color: cagr * 100 >= (retornoNecessario ?? -Infinity) ? "#0a7a3b" : "#b0201f" }}>{pct(cagr)}/ano</b>
+              </div>
+            </div>
+          )}
+
           <div style={{ padding: "12px 14px", background: "#f6f4ee", borderRadius: 4 }}>
             <div style={{ fontSize: 11.1, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 3 }}>Simulação — {janelaLabel}</div>
             <div style={{ fontSize: 15.2, fontFamily: MONO, color: "#111", lineHeight: 1.5 }}>
               {dateRange}
             </div>
             <div style={{ fontSize: 12.9, color: "#555", marginTop: 4 }}>
-              Capital inicial: <b style={{ color: "#c9a02c" }}>{money(capital)}</b>
-              {set && <> · SET base: <b>{set.nome}</b></>}
-              {" · "}Alocação {mode === "linear" ? "linear (peso fixo)" : "dinâmica (peso pelo momento)"}
+              {!temMandato && <>Capital inicial: <b style={{ color: "#c9a02c" }}>{money(capital)}</b>{" · "}</>}
+              {set && <>SET base: <b>{set.nome}</b>{" · "}</>}
+              Alocação {mode === "linear" ? "linear (peso fixo)" : "dinâmica (peso pelo momento)"}
               {" · "}Rebalance {rebalance}
             </div>
           </div>
@@ -1193,6 +1368,108 @@ export default function ReportPrint(props: ReportData) {
             </table>
           )}
         </section>
+
+        {/* ANÁLISE PROBABILÍSTICA — motor em lib/portfolio-builder/probabilistic-engine.ts,
+            servido por /api/probabilidade. So aparece quando ha mandato do
+            cliente (RN de tolerancia e/ou meta+horizonte) pra perguntar. */}
+        {podeCalcularProb && (
+          <section style={{ marginBottom: 22, pageBreakInside: "avoid" }}>
+            <h2 style={{ margin: "0 0 10px", fontSize: 14.0, letterSpacing: ".1em", textTransform: "uppercase", color: "#c9a02c", fontFamily: MONO, fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 5 }}>
+              Análise probabilística
+            </h2>
+
+            {probCarregando && (
+              <div style={{ fontSize: 12.9, color: "#888" }}>Calculando — Monte Carlo (block bootstrap) sobre o histórico real do SET…</div>
+            )}
+            {probErro && (
+              <div style={{ fontSize: 12.9, color: "#b0201f" }}>Não foi possível calcular: {probErro}</div>
+            )}
+
+            {prob && (
+              <>
+                {prob.tolerancia && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11.7, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 6 }}>
+                      Probabilidade de permanecer dentro da tolerância de risco
+                    </div>
+                    <div style={{
+                      padding: "14px 16px", background: "#f6f4ee", borderRadius: 6,
+                      fontSize: 13.5, color: "#222", lineHeight: 1.6,
+                    }}>
+                      O cliente autorizou risco até <b>Risk Number {prob.tolerancia.clienteRN}</b>. O portfólio
+                      proposto opera em <b>RN {rnPortfolio}</b> (HRD Engine, seção acima) — estruturalmente{" "}
+                      <b>{prob.tolerancia.clienteRN - rnPortfolio} pontos abaixo</b> do teto autorizado.
+                      <br />
+                      Nas <b>{prob.tolerancia.amostras}</b> janelas de {prob.tolerancia.janelaAnos === 1 ? "1 ano" : `${prob.tolerancia.janelaAnos} anos`}{" "}
+                      do histórico real do <b>{prob.setNome}</b>, o risco permaneceu dentro do mandato em{" "}
+                      <b style={{ color: "#0a7a3b", fontSize: 17, fontFamily: MONO }}>{pctProb(prob.tolerancia.probabilidade)}</b>{" "}
+                      delas (IC 95%: {faixaProb(prob.tolerancia.ic95.lo, prob.tolerancia.ic95.hi)}), com folga mediana de{" "}
+                      <b>{prob.tolerancia.folgaMediana} pontos</b>. O teto foi excedido em{" "}
+                      <b style={{ color: prob.tolerancia.probabilidadeExcedeu <= 0.10 ? "#0a7a3b" : "#e08420", fontFamily: MONO }}>
+                        {pctProb(prob.tolerancia.probabilidadeExcedeu)}
+                      </b>{" "}
+                      das janelas — este é o único modo de falha do mandato de risco.
+                      <div style={{ marginTop: 8, fontSize: 12.3, color: "#555" }}>
+                        Operar abaixo do teto não é desvio: o cliente autorizou <i>até</i> {prob.tolerancia.clienteRN}, não exigiu {prob.tolerancia.clienteRN}.
+                        A leitura correta do casamento é dupla — <b>risco sistematicamente abaixo do autorizado</b> e{" "}
+                        <b>retorno acima do exigido</b>.
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {prob.meta && (
+                  <div>
+                    <div style={{ fontSize: 11.7, letterSpacing: ".08em", color: "#666", fontFamily: MONO, textTransform: "uppercase", marginBottom: 6 }}>
+                      Probabilidade de atingir a meta ({money(metaFinal ?? 0)}) por horizonte
+                    </div>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1px solid #ddd", color: "#666", fontFamily: MONO, fontSize: 10.5, textTransform: "uppercase" }}>
+                          <td style={{ padding: "5px 8px" }}>Horizonte</td>
+                          <td style={{ padding: "5px 8px" }}>Probabilidade</td>
+                          <td style={{ padding: "5px 8px" }}>IC 95%</td>
+                          <td style={{ padding: "5px 8px" }}>Capital final · p10</td>
+                          <td style={{ padding: "5px 8px" }}>· mediana</td>
+                          <td style={{ padding: "5px 8px" }}>· p90</td>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {prob.meta.map((h) => (
+                          <tr key={h.anos} style={{
+                            borderBottom: "1px solid #f0f0f0",
+                            background: h.anos === prob.horizonteClienteAnos ? "rgba(201,160,44,.10)" : undefined,
+                          }}>
+                            <td style={{ padding: "6px 8px", fontWeight: h.anos === prob.horizonteClienteAnos ? 700 : 400 }}>
+                              {h.anos} {h.anos === 1 ? "ano" : "anos"}{h.anos === prob.horizonteClienteAnos ? " · meta do cliente" : ""}
+                            </td>
+                            <td style={{ padding: "6px 8px", fontFamily: MONO, fontWeight: 700, color: h.probabilidade >= 0.7 ? "#0a7a3b" : h.probabilidade >= 0.4 ? "#e08420" : "#b0201f" }}>
+                              {pctProb(h.probabilidade)}
+                            </td>
+                            <td style={{ padding: "6px 8px", fontFamily: MONO, color: "#888" }}>{faixaProb(h.ic95.lo, h.ic95.hi)}</td>
+                            <td style={{ padding: "6px 8px", fontFamily: MONO }}>{money(h.capitalFinalP10)}</td>
+                            <td style={{ padding: "6px 8px", fontFamily: MONO }}>{money(h.capitalFinalP50)}</td>
+                            <td style={{ padding: "6px 8px", fontFamily: MONO }}>{money(h.capitalFinalP90)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                <div style={{ fontSize: 10.7, color: "#999", marginTop: 10, lineHeight: 1.5 }}>
+                  Tolerância: frequência empírica em janelas reais do backtest (2006–2026), sem premissa de distribuição —
+                  intervalo de Wilson a 95%. Meta: Monte Carlo por block bootstrap (blocos de ~1 mês) dos retornos diários
+                  reais, {prob.meta?.[0]?.nPaths ?? 2000} trajetórias por horizonte. Probabilidades estimadas por
+                  amostragem são exibidas com teto de <b>&gt;99%</b> e piso de <b>&lt;1%</b>: nenhuma simulação finita
+                  demonstra certeza ou impossibilidade. O Risk Number em si assume cauda de retorno próxima da normal
+                  no downside de 6 meses — em eventos de cauda extrema (crises), a probabilidade de permanência na
+                  tolerância tende a ser menor que a aqui reportada.
+                </div>
+              </>
+            )}
+          </section>
+        )}
 
         {/* ANÁLISE JIM AI */}
         <section style={{ marginBottom: 22, pageBreakInside: "avoid" }}>

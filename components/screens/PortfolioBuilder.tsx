@@ -29,6 +29,7 @@ import { SETS, avaliarSet, EXPLICACAO_BLOCO } from "@/lib/portfolio-builder/benc
 import ApresentacaoPortfolio from "./ApresentacaoPortfolio";
 import ReportPrint from "./ReportPrint";
 import { classificar, idsDeDefesa } from "@/lib/portfolio-builder/defesa";
+import { taxaNecessaria } from "@/lib/portfolio-builder/probabilistic-engine";
 
 const pct = (v: number, d = 1) => (v * 100).toFixed(d) + "%";
 const money = (v: number) =>
@@ -120,11 +121,34 @@ function FaixaDefesa({
 
 // ── Grafico de capital ───────────────────────────────────────────────────────
 function CurvaCapital({
-  dates, equity, benchmark, height = 300,
-}: { dates: string[]; equity: number[]; benchmark: (number | null)[]; height?: number }) {
+  dates, equity, benchmark, retornoNecessario = null, aporteAnual = 0, height = 300,
+}: {
+  dates: string[]; equity: number[]; benchmark: (number | null)[];
+  /** Taxa interna de retorno exigida pelo mandato do cliente, em % a.a.
+   * (ex: 11.61 = 11,61%/ano).
+   *
+   * "Quero transformar $100k em $300k em 10 anos" é só a forma leiga de
+   * declarar uma TIR — um gestor diria direto "quero 11,6% ao ano". A meta
+   * em dólar e o horizonte servem pra DERIVAR essa taxa (ver
+   * `taxaNecessaria`), mas o que a linha representa é a TAXA, não o ponto.
+   *
+   * Por isso a curva compõe na mesma inclinação por TODA a janela exibida,
+   * sem teto no horizonte: o capital do cliente não para de trabalhar
+   * quando os 10 anos acabam. Em 5, 10, 20 ou 30 anos de gráfico, é sempre
+   * a mesma taxa composta — e o que se lê é o quanto o portfólio real
+   * corre acima ou abaixo dessa exigência ao longo do tempo. */
+  retornoNecessario?: number | null;
+  /** aporte anual do Ato II — sem isso a curva-objetivo só bate o valor
+   * exato da meta quando aporte=0; com aporte>0 ela precisa somar a
+   * contribuição a cada aniversário simulado, igual o cliente descreveu. */
+  aporteAnual?: number | null;
+  height?: number;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
-  const key = dates.length + ":" + (dates[0] ?? "") + ":" + equity[equity.length - 1];
+  const metaLabelRef = useRef<HTMLDivElement>(null);
+  const key = dates.length + ":" + (dates[0] ?? "") + ":" + equity[equity.length - 1]
+    + ":" + (retornoNecessario ?? "") + ":" + (aporteAnual ?? "");
 
   useEffect(() => {
     if (!ref.current || dates.length < 2) return;
@@ -137,8 +161,11 @@ function CurvaCapital({
       width: ref.current.clientWidth, height,
     });
 
+    // Verde escuro (cor positiva) — o portfólio é o resultado que a Harpian
+    // entrega, não mais destacado em dourado (essa cor agora e' a linha de
+    // objetivo do cliente, abaixo).
     const port = chart.addLineSeries({
-      color: "#C9A02C", lineWidth: 2, priceLineVisible: false,
+      color: "#0a7a3b", lineWidth: 2, priceLineVisible: false,
       priceFormat: { type: "custom", formatter: money, minMove: 1 },
     });
     port.setData(dates.map((t, i) => ({ time: t, value: equity[i] })) as never);
@@ -154,7 +181,56 @@ function CurvaCapital({
           .filter((p) => p.value != null) as never,
       );
     }
+
+    // Curva-OBJETIVO do cliente: capital inicial DESTA janela composto pela
+    // TIR exigida pelo mandato, dia a dia. Em 252 pregões/ano (mesma
+    // convenção do resto do app), ano decorrido no pregão i = i/252.
+    //
+    // Compõe na MESMA INCLINAÇÃO por toda a janela, sem teto no horizonte:
+    // "$100k → $300k em 10 anos" é só como o cliente declara uma TIR (aqui,
+    // ~11,6%/ano); o capital dele não deixa de render no dia em que os 10
+    // anos vencem. Em 5, 10, 20 ou 30 anos de gráfico é sempre a mesma
+    // exigência composta, e o que se lê é o quanto o portfólio real corre
+    // acima ou abaixo dela ao longo de todo o período.
+    let obj: ReturnType<IChartApi["addLineSeries"]> | null = null;
+    let objValues: number[] | null = null;
+    if (retornoNecessario != null && Number.isFinite(retornoNecessario) && equity.length > 0) {
+      const taxaAnual = retornoNecessario / 100;
+      const fatorDiario = Math.pow(1 + taxaAnual, 1 / 252);
+      const aporte = aporteAnual ?? 0;
+      objValues = new Array(dates.length);
+      let val = equity[0];
+      for (let i = 0; i < dates.length; i++) {
+        if (i > 0) {
+          val *= fatorDiario;
+          // aporte entra a cada aniversario simulado (252 pregoes) — mesma
+          // logica de injecao anual que o motor de simulacao usa na curva
+          // real, pra ficar comparavel ponto a ponto.
+          if (aporte > 0 && i % 252 === 0) val += aporte;
+        }
+        objValues[i] = val;
+      }
+      obj = chart.addLineSeries({
+        color: "#C9A02C", lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false,
+        lastValueVisible: true, priceFormat: { type: "custom", formatter: money, minMove: 1 },
+      });
+      obj.setData(dates.map((t, i) => ({ time: t, value: objValues![i] })) as never);
+    }
+
+    const posicionarLabelMeta = () => {
+      const label = metaLabelRef.current;
+      if (!label || !obj || !objValues) { if (label) label.style.display = "none"; return; }
+      // ancora um pouco depois do inicio (nao exatamente no dia 0, onde a
+      // curva-objetivo e a do portfolio comecam coladas uma na outra).
+      const idx = Math.min(objValues.length - 1, Math.floor(objValues.length * 0.12));
+      const y = obj.priceToCoordinate(objValues[idx]);
+      if (y == null) { label.style.display = "none"; return; }
+      label.style.display = "block";
+      label.style.top = y + "px";
+    };
+
     chart.timeScale().fitContent();
+    posicionarLabelMeta();
 
     chart.subscribeCrosshairMove((p) => {
       const tip = tipRef.current;
@@ -162,10 +238,12 @@ function CurvaCapital({
       if (!p.time || !p.point) { tip.style.display = "none"; return; }
       const a = p.seriesData.get(port) as { value?: number } | undefined;
       const b = bench ? (p.seriesData.get(bench) as { value?: number } | undefined) : undefined;
+      const o = obj ? (p.seriesData.get(obj) as { value?: number } | undefined) : undefined;
       if (!a?.value) { tip.style.display = "none"; return; }
       tip.innerHTML =
-        `<div style="color:#C9A02C">Portfólio: <b>${money(a.value)}</b></div>` +
-        (b?.value ? `<div style="color:#5a7391">Referência: <b>${money(b.value)}</b></div>` : "");
+        `<div style="color:#0a7a3b">Portfólio: <b>${money(a.value)}</b></div>` +
+        (b?.value ? `<div style="color:#5a7391">Referência: <b>${money(b.value)}</b></div>` : "") +
+        (o?.value ? `<div style="color:#C9A02C">Objetivo do cliente: <b>${money(o.value)}</b></div>` : "");
       tip.style.display = "block";
       tip.style.left = Math.min(p.point.x + 14, ref.current.clientWidth - 160) + "px";
       tip.style.top = Math.max(8, p.point.y - 10) + "px";
@@ -173,10 +251,11 @@ function CurvaCapital({
 
     const ro = new ResizeObserver(() => {
       if (ref.current) chart.applyOptions({ width: ref.current.clientWidth });
+      posicionarLabelMeta();
     });
     ro.observe(ref.current);
     return () => { ro.disconnect(); chart.remove(); };
-  }, [key, dates, equity, benchmark, height]);
+  }, [key, dates, equity, benchmark, retornoNecessario, aporteAnual, height]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -186,6 +265,15 @@ function CurvaCapital({
         border: "1px solid var(--line2)", borderRadius: 6, padding: "6px 9px",
         fontFamily: "var(--mono)", fontSize: 11, pointerEvents: "none", zIndex: 5,
       }} />
+      {/* Label "Objetivo do cliente" ancorado a ESQUERDA — sempre tem espaço
+          vazio no começo da curva, diferente do fim (onde os números do
+          eixo já disputam espaço com o valor final do portfólio). */}
+      <div ref={metaLabelRef} style={{
+        position: "absolute", display: "none", left: 8, transform: "translateY(-50%)",
+        background: "rgba(4,9,16,.9)", border: "1px solid #C9A02C", borderRadius: 4,
+        padding: "2px 7px", fontFamily: "var(--mono)", fontSize: 10.5, fontWeight: 700,
+        color: "#C9A02C", pointerEvents: "none", zIndex: 4, whiteSpace: "nowrap",
+      }}>Objetivo do cliente</div>
     </div>
   );
 }
@@ -227,8 +315,17 @@ export default function PortfolioBuilder() {
   const [showReport, setShowReport] = useState(false);
   // Origem dos dados: "questionario" = veio do Ato 2 via URL; "manual" = digitado
   const [dadosOrigem, setDadosOrigem] = useState<"questionario" | "manual">("manual");
+  // Mandato do cliente vindo do Ato 2 (questionario simulator-metas.html):
+  // horizonte em anos, aporte anual, meta final e retorno anual necessario.
+  const [reportHorizonte, setReportHorizonte] = useState<number | null>(null);
+  const [reportAporte, setReportAporte] = useState<number | null>(null);
+  const [reportMeta, setReportMeta] = useState<number | null>(null);
+  /** Taxa vinda da URL do Ato II — usada APENAS como fallback. A taxa
+   * autoritativa é a derivada logo abaixo. */
+  const [retornoParam, setRetornoParam] = useState<number | null>(null);
 
-  // Le params do Ato 2 (URL) na primeira renderizacao — cliente, RN, capital.
+  // Le params do Ato 2 (URL) na primeira renderizacao — cliente, RN, capital,
+  // horizonte, aporte, meta e retorno necessario.
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -236,6 +333,10 @@ export default function PortfolioBuilder() {
       const rn = q.get("rn");
       const cliente = q.get("cliente");
       const cap = q.get("capital");
+      const horizonte = q.get("horizonte");
+      const aporte = q.get("aporte");
+      const metaFinal = q.get("meta");
+      const retorno = q.get("retorno");
       if (rn || cliente || cap) setDadosOrigem("questionario");
       if (rn) setReportRNCliente(rn);
       if (cliente) setReportCliente(cliente);
@@ -243,9 +344,46 @@ export default function PortfolioBuilder() {
         const n = Number(cap);
         if (Number.isFinite(n) && n > 0) setCapital(n);
       }
+      if (horizonte) {
+        const n = Number(horizonte);
+        if (Number.isFinite(n) && n > 0) setReportHorizonte(n);
+      }
+      if (aporte) {
+        const n = Number(aporte);
+        if (Number.isFinite(n) && n >= 0) setReportAporte(n);
+      }
+      if (metaFinal) {
+        const n = Number(metaFinal);
+        if (Number.isFinite(n) && n > 0) setReportMeta(n);
+      }
+      if (retorno) {
+        const n = Number(retorno);
+        if (Number.isFinite(n)) setRetornoParam(n);
+      }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * Taxa interna de retorno necessária — DERIVADA de capital + aporte + meta
+   * + horizonte, não simplesmente aceita da querystring.
+   *
+   * O Ato II calcula essa taxa e a manda na URL, mas o cockpit não pode
+   * depender disso: a taxa pode chegar ausente (relatório montado à mão,
+   * sem passar pela apresentação — o modal pede horizonte e meta, mas não
+   * a taxa) ou incoerente com a meta. Quando isso acontece, o cabeçalho
+   * ("Retorno necessário: X%/ano") e a curva-objetivo do gráfico passam a
+   * contar histórias diferentes da meta em dólar, e a probabilidade parece
+   * contradizer o gráfico. Derivando aqui, os três sempre fecham.
+   *
+   * `retornoParam` só entra quando não há meta/horizonte pra derivar.
+   */
+  const reportRetornoNecessario = useMemo(() => {
+    if (reportMeta != null && reportMeta > 0 && reportHorizonte != null && reportHorizonte > 0) {
+      return taxaNecessaria(capital, reportAporte ?? 0, reportHorizonte, reportMeta) * 100;
+    }
+    return retornoParam;
+  }, [capital, reportAporte, reportHorizonte, reportMeta, retornoParam]);
   const [volTarget, setVolTarget] = useState<PortfolioConfig["volTarget"]>(null);
   const [periodoFixo, setPeriodoFixo] = useState<PortfolioConfig["periodoFixo"]>(null);
 
@@ -765,76 +903,75 @@ export default function PortfolioBuilder() {
               );
             })}
           </div>
-          {sim && (
-            <span style={{ marginLeft: "auto", fontFamily: "var(--mono)", fontSize: 11.5, color: "var(--tx3)" }}>
-              {brDate(sim.dates[0])} → {brDate(sim.dates[sim.dates.length - 1])}
-            </span>
-          )}
-        </div>
 
-        {/* SETs prontos — do lado dos anos, com cara diferente de propósito:
-            estes botões não filtram a janela, eles TROCAM o portfólio inteiro. */}
-        {setsData && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
-            padding: "10px 14px", borderTop: "1px solid var(--line)",
-            background: "rgba(201,160,44,.04)",
-          }}>
-            <span style={{ fontSize: 10.5, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--tx3)", fontWeight: 600 }}>
-              Ou carregue um SET pronto
-            </span>
-            <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-              {presetsVitrine().map((p) => {
-                const on = setAtivo === p.id;
-                return (
-                  <button key={p.id} onClick={() => carregarSet(p.id)} aria-pressed={on} style={{
-                    font: "inherit", fontSize: 12.5, fontWeight: on ? 650 : 550,
-                    padding: "5px 12px 5px 6px", borderRadius: 5, cursor: "pointer",
-                    display: "inline-flex", alignItems: "center", gap: 8,
-                    border: "1px solid " + (on ? "var(--gold)" : "var(--line2)"),
-                    background: on ? "rgba(201,160,44,.2)" : "var(--bg2)",
-                    color: on ? "var(--gold)" : "var(--tx1)",
-                  }}>
-                    <span style={{
-                      fontFamily: "var(--mono)", fontSize: 9.5, fontWeight: 700, letterSpacing: ".08em",
-                      padding: "2px 5px", borderRadius: 3,
-                      background: on ? "var(--gold)" : "var(--line2)",
-                      color: on ? "#0b1220" : "var(--tx2)",
-                    }}>SET</span>
-                    {p.rotulo}
-                  </button>
-                );
-              })}
-            </div>
-            {setAtivo && (
-              <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                <button
-                  onClick={() => setDescAberta((v) => !v)}
-                  aria-pressed={descAberta}
-                  title="Ver a composição do SET e o papel de cada bloco"
-                  style={{
+          {/* SET pronto — na MESMA linha da faixa de anos (era uma segunda
+              linha empilhada embaixo, com o texto de status numa altura
+              diferente da data à direita; agora tudo no mesmo eixo). */}
+          {setsData && (
+            <>
+              <span style={{ fontSize: 10.5, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--tx3)", fontWeight: 600 }}>
+                Ou SET pronto
+              </span>
+              <select
+                value={setAtivo ?? ""}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  if (!id) { limparSet(); return; }
+                  carregarSet(id);
+                }}
+                style={{
+                  font: "inherit", fontSize: 12.5, fontWeight: 600,
+                  padding: "5px 10px", borderRadius: 5, cursor: "pointer",
+                  border: "1px solid " + (setAtivo ? "var(--gold)" : "var(--line2)"),
+                  background: setAtivo ? "rgba(201,160,44,.2)" : "var(--bg2)",
+                  color: setAtivo ? "var(--gold)" : "var(--tx1)",
+                }}
+              >
+                <option value="">— escolha um SET —</option>
+                {presetsVitrine().map((p) => (
+                  <option key={p.id} value={p.id}>{p.rotulo}</option>
+                ))}
+              </select>
+              {setAtivo && (
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <button
+                    onClick={() => setDescAberta((v) => !v)}
+                    aria-pressed={descAberta}
+                    title="Ver a composição do SET e o papel de cada bloco"
+                    style={{
+                      font: "inherit", fontSize: 12, background: "transparent", border: 0,
+                      color: descAberta ? "var(--gold)" : "var(--tx2)",
+                      cursor: "pointer", textDecoration: "underline",
+                      textUnderlineOffset: 3, padding: 0,
+                    }}
+                  >{descAberta ? "fechar descrição" : "descrição"}</button>
+                  <button onClick={limparSet} style={{
                     font: "inherit", fontSize: 12, background: "transparent", border: 0,
-                    color: descAberta ? "var(--gold)" : "var(--tx2)",
-                    cursor: "pointer", textDecoration: "underline",
-                    textUnderlineOffset: 3, padding: 0,
-                  }}
-                >{descAberta ? "fechar descrição" : "descrição"}</button>
-                <button onClick={limparSet} style={{
-                  font: "inherit", fontSize: 12, background: "transparent", border: 0,
-                  color: "var(--tx3)", cursor: "pointer", textDecoration: "underline",
-                  textUnderlineOffset: 3,
-                }}>limpar</button>
-              </div>
+                    color: "var(--tx3)", cursor: "pointer", textDecoration: "underline",
+                    textUnderlineOffset: 3,
+                  }}>limpar</button>
+                </div>
+              )}
+            </>
+          )}
+
+          <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+            {setsData && (
+              <span style={{ fontSize: 11.5, color: "var(--tx3)" }}>
+                {setAtivo
+                  ? (periodoFixo
+                      ? "janela travada no período validado — clique um período pra liberar"
+                      : "janela livre — os números respondem a cada período")
+                  : "sobe montado, com os percentuais já fechados"}
+              </span>
             )}
-            <span style={{ fontSize: 11.5, color: "var(--tx3)", marginLeft: "auto" }}>
-              {setAtivo
-                ? (periodoFixo
-                    ? "janela travada no período validado — clique um período pra liberar"
-                    : "janela livre — os números respondem a cada período")
-                : "sobe montado, com os percentuais já fechados"}
-            </span>
-          </div>
-        )}
+            {sim && (
+              <span style={{ fontFamily: "var(--mono)", fontSize: 11.5, color: "var(--tx3)" }}>
+                {brDate(sim.dates[0])} → {brDate(sim.dates[sim.dates.length - 1])}
+              </span>
+            )}
+          </span>
+        </div>
       </div>
 
       {/* alignItems: stretch (nao "start") de proposito — a coluna direita
@@ -1164,7 +1301,7 @@ export default function PortfolioBuilder() {
                     background: "rgba(217,184,79,.1)", border: "1px solid rgba(217,184,79,.3)", color: "var(--gold2)",
                   }}>{w}</div>
                 ))}
-                <CurvaCapital dates={sim.dates} equity={sim.equity} benchmark={sim.benchmark} />
+                <CurvaCapital dates={sim.dates} equity={sim.equity} benchmark={sim.benchmark} retornoNecessario={reportRetornoNecessario} aporteAnual={reportAporte} />
                 <div style={{ marginTop: 6 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 3 }}>
                     <span style={{ fontSize: 10.5, letterSpacing: ".09em", textTransform: "uppercase", color: "var(--tx3)", fontWeight: 600 }}>
@@ -1451,6 +1588,53 @@ export default function PortfolioBuilder() {
               }}
             />
 
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 11.5, color: "var(--tx2)", marginBottom: 4 }}>
+                  Horizonte <span style={{ color: "var(--tx3)", fontSize: 10.5 }}>(anos — opcional)</span>
+                </label>
+                <input
+                  type="number" min={1}
+                  value={reportHorizonte ?? ""}
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    setReportHorizonte(e.target.value && Number.isFinite(n) && n > 0 ? n : null);
+                  }}
+                  placeholder="Ex: 10"
+                  style={{
+                    width: "100%", padding: "8px 11px", borderRadius: 5, marginBottom: 14,
+                    background: "var(--bg2)", border: "1px solid var(--line)", color: "var(--tx)",
+                    font: "inherit", fontSize: 13,
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 11.5, color: "var(--tx2)", marginBottom: 4 }}>
+                  Meta final <span style={{ color: "var(--tx3)", fontSize: 10.5 }}>(US$ — opcional)</span>
+                </label>
+                <input
+                  type="number" min={0}
+                  value={reportMeta ?? ""}
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    setReportMeta(e.target.value && Number.isFinite(n) && n > 0 ? n : null);
+                  }}
+                  placeholder="Ex: 800000"
+                  style={{
+                    width: "100%", padding: "8px 11px", borderRadius: 5, marginBottom: 14,
+                    background: "var(--bg2)", border: "1px solid var(--line)", color: "var(--tx)",
+                    font: "inherit", fontSize: 13,
+                  }}
+                />
+              </div>
+            </div>
+            {(reportHorizonte != null || reportMeta != null) && (
+              <div style={{ fontSize: 11, color: "var(--tx3)", marginTop: -8, marginBottom: 14, lineHeight: 1.5 }}>
+                Preenchendo os dois, o relatório mostra a probabilidade de bater a meta, cercando o
+                horizonte informado (2 anos pra trás e 2 pra frente).
+              </div>
+            )}
+
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
               <button
                 onClick={() => setReportModalOpen(false)}
@@ -1490,13 +1674,17 @@ export default function PortfolioBuilder() {
           rebalance={{ daily: "diário", weekly: "semanal", monthly: "mensal", quarterly: "trimestral", yearly: "anual" }[rebalance]}
           capital={capital}
           janelaLabel={JANELAS.find((j) => j.id === janela)?.label ?? "—"}
-          curvaCapitalEl={<CurvaCapital dates={sim.dates} equity={sim.equity} benchmark={sim.benchmark} />}
+          curvaCapitalEl={<CurvaCapital dates={sim.dates} equity={sim.equity} benchmark={sim.benchmark} retornoNecessario={reportRetornoNecessario} aporteAnual={reportAporte} />}
           faixaDefesaEl={<FaixaDefesa frac={sim.defenseFrac} dates={sim.dates} marcado={null} onHover={() => {}} />}
           series={series}
           maxDrawdown={Math.abs(sim.metrics?.maxDrawdown ?? 0)}
           cagr={sim.metrics?.cagr ?? 0}
           volAnual={sim.metrics?.volAnual ?? 0}
           rnCliente={reportRNCliente ? Number(reportRNCliente) : null}
+          horizonteAnos={reportHorizonte}
+          aporteAnual={reportAporte}
+          metaFinal={reportMeta}
+          retornoNecessario={reportRetornoNecessario}
           onClose={() => setShowReport(false)}
         />
       )}

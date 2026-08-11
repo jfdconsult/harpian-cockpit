@@ -21,7 +21,7 @@ import { ACCESS_COOKIE } from "@/lib/access";
 //
 // Outras APIs (/api/jim-report, /api/*-admin, etc.) continuam protegidas.
 
-const PUBLIC_PREFIXES = ["/ato4", "/api/strategy-catalog", "/api/benchmark-sets", "/api/strategy-series"];
+const PUBLIC_PREFIXES = ["/ato4", "/api/strategy-catalog", "/api/benchmark-sets", "/api/strategy-series", "/api/probabilidade"];
 const ACCESS_PUBLIC_PATHS = new Set<string>(["/login"]);
 
 function isPublicPath(pathname: string): boolean {

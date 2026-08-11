@@ -24,6 +24,32 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface KPI { k: string; v: string; tom?: "pos" | "neg" }
+
+/** Mandato do cliente vindo do Ato II (perfil & metas). */
+interface Mandato {
+  horizonteAnos: number | null;
+  metaFinal: number | null;
+  aporteAnual: number | null;
+  retornoNecessarioPct: number | null;
+  rnCliente: number | null;
+  rnPortfolio: number | null;
+}
+
+/** Saida do motor probabilistico (probabilistic-engine.ts), ja impressa no
+ * relatorio — o JIM precisa ver os MESMOS numeros pra nao contradizer a
+ * pagina em que a analise dele e impressa. */
+interface Probabilidade {
+  tolerancia: {
+    clienteRN: number; janelaAnos: number; amostras: number;
+    dentroPct: number; excedeuPct: number; folgaMedianaPontos: number; ic95: [number, number];
+  } | null;
+  meta: {
+    anos: number; probabilidadePct: number; ic95: [number, number];
+    p10: number; mediana: number; p90: number; ehHorizonteDoCliente: boolean;
+  }[] | null;
+  nPaths: number | null;
+}
+
 interface ReqBody {
   cliente?: string;
   autor?: string;
@@ -40,6 +66,60 @@ interface ReqBody {
   volTargetAlvo?: number | null;
   expoMedia?: number | null;
   caixaConvencao?: string;
+  mandato?: Mandato | null;
+  probabilidade?: Probabilidade | null;
+}
+
+const usd = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+/** Mesma convenção de exibição do relatório: sem 0% nem 100% em estimativa amostral. */
+const pctProb = (p: number) => (p >= 99.5 ? ">99%" : p <= 0.5 ? "<1%" : `${p.toFixed(0)}%`);
+
+/** Monta o bloco de mandato + probabilidade pro prompt. Vazio se não houver. */
+function blocoMandato(m: Mandato | null | undefined, pr: Probabilidade | null | undefined): string {
+  if (!m && !pr) return "";
+  const linhas: string[] = [];
+
+  if (m) {
+    const partes: string[] = [];
+    if (m.metaFinal != null) partes.push(`meta de ${usd(m.metaFinal)}`);
+    if (m.horizonteAnos != null) partes.push(`horizonte de ${m.horizonteAnos} anos`);
+    if (m.aporteAnual != null && m.aporteAnual > 0) partes.push(`aporte anual de ${usd(m.aporteAnual)}`);
+    if (partes.length) linhas.push(`Objetivo declarado: ${partes.join(", ")}.`);
+    if (m.retornoNecessarioPct != null) {
+      linhas.push(`Taxa interna de retorno EXIGIDA pelo mandato: ${m.retornoNecessarioPct.toFixed(2)}% ao ano.`);
+    }
+    if (m.rnCliente != null && m.rnPortfolio != null) {
+      linhas.push(
+        `Risco autorizado pelo cliente: Risk Number ${m.rnCliente} (é um TETO, não uma meta). ` +
+        `Risco estrutural do portfólio proposto: RN ${m.rnPortfolio}.`,
+      );
+    }
+  }
+
+  if (pr?.tolerancia) {
+    const t = pr.tolerancia;
+    linhas.push(
+      `Permanência dentro do mandato de risco: em ${t.amostras} janelas de ${t.janelaAnos} ano(s) do ` +
+      `histórico real, o risco ficou dentro do teto em ${pctProb(t.dentroPct)} delas ` +
+      `(IC 95%: ${pctProb(t.ic95[0])}–${pctProb(t.ic95[1])}), com folga mediana de ${t.folgaMedianaPontos} pontos de RN. ` +
+      `O teto foi excedido em ${pctProb(t.excedeuPct)} das janelas.`,
+    );
+  }
+
+  if (pr?.meta?.length) {
+    const linhasMeta = pr.meta.map((h) =>
+      `  - ${h.anos} anos${h.ehHorizonteDoCliente ? " (HORIZONTE DO CLIENTE)" : ""}: ` +
+      `${pctProb(h.probabilidadePct)} de probabilidade · capital final p10 ${usd(h.p10)} / ` +
+      `mediana ${usd(h.mediana)} / p90 ${usd(h.p90)}`,
+    ).join("\n");
+    linhas.push(
+      `Probabilidade de atingir a meta, por horizonte (Monte Carlo com block bootstrap` +
+      `${pr.nPaths ? `, ${pr.nPaths} trajetórias` : ""}):\n${linhasMeta}`,
+    );
+  }
+
+  return `\nMANDATO DO CLIENTE E ANÁLISE PROBABILÍSTICA (números já calculados e IMPRESSOS neste mesmo relatório, acima da sua análise):
+${linhas.join("\n")}`;
 }
 
 const MODEL = "claude-haiku-4-5-20251001";
@@ -99,16 +179,27 @@ export async function POST(req: Request) {
   // fonte); em modo generico, regras SOFT (mesmas do preview de 04/08/2026).
   const systemBase = `Você é o JIM AI, analista quantitativo da Harpian que revisa portfolios em tempo real. Escreva em português brasileiro, tom institucional e direto, sem pieguice. 3 a 4 parágrafos curtos (2-4 frases cada). Não use bullets nem títulos — só prosa. Termine dizendo o que ajustaria ou monitoraria daqui pra frente.`;
 
+  // Regras de leitura do mandato — valem nos dois modos. Sem elas o JIM tende
+  // a tratar "risco abaixo do teto" como defeito e a reescrever probabilidades
+  // com números proprios, contradizendo a tabela impressa logo acima.
+  const REGRAS_MANDATO = (body.mandato || body.probabilidade) ? `
+REGRAS DE LEITURA DO MANDATO (bloco "MANDATO DO CLIENTE E ANÁLISE PROBABILÍSTICA"):
+A. O casamento portfólio↔cliente tem DUAS pernas independentes: retorno ACIMA da taxa exigida e risco ABAIXO do teto autorizado. Avalie as duas.
+B. Operar abaixo do Risk Number autorizado NÃO é desvio nem ineficiência — o cliente autorizou "até" aquele teto, não exigiu aquele nível. A folga é resultado desejado. O ÚNICO modo de falha do mandato de risco é EXCEDER o teto.
+C. Reproduza as probabilidades EXATAMENTE como estão no bloco. Não recalcule, não arredonde para número "redondo", não converta ">99%" em "100%" nem em "praticamente certo". Nunca escreva que a meta será atingida — só qual é a probabilidade estimada.
+D. Trate a probabilidade como estimativa amostral, não previsão. Se for citar, cite junto o horizonte a que ela se refere.` : "";
+
   const systemAncorado = `${systemBase}
 
 REGRAS DE ANCORAGEM (bloco FATOS_VERIFICADOS abaixo é sua ÚNICA fonte de números):
-1. USE APENAS NÚMEROS DO BLOCO. Se um número não está lá, escreva "não medido" — NUNCA estime, arredonde de memória ou invente comparativos. Se quiser comparar com outro produto, use SÓ o \`dmax_referencia\` do bloco (é a única comparação permitida).
+1. USE APENAS NÚMEROS DO BLOCO — mais os do bloco "MANDATO DO CLIENTE E ANÁLISE PROBABILÍSTICA", quando presente, que é fonte igualmente verificada (saiu do motor probabilístico da própria Harpian e já está impresso neste relatório). Se um número não está em nenhum dos dois, escreva "não medido" — NUNCA estime, arredonde de memória ou invente comparativos. Se quiser comparar com outro produto, use SÓ o \`dmax_referencia\` do bloco (é a única comparação permitida).
 2. Não proponha limiar de monitoramento sem citar a estatística histórica que o calibra. Use exclusivamente os itens de \`monitores_calibrados\` do bloco. Não crie monitor sobre caixa persistente ou vol do motor — o bloco explica por quê.
 3. A janela é a que está em \`janelas.producao_tela\` do bloco (${body.anos ? body.anos.toFixed(1) + " anos" : "ver bloco"}). Aritmética de capital final deve bater com \`capitalFinal100k\`.
 4. Cite a correlação em stress (\`correlacao_spx.mensal_nos_10pct_piores_meses_spx\`) como o argumento de descorrelação — não a correlação média sozinha.
 5. Toda análise TERMINA com as três ressalvas de \`ressalvas_obrigatorias\` (seleção 23.754 / custos / Arena pendente) reunidas em uma frase de rodapé.
 6. Palavras PROIBIDAS: "validado", "aprovado", "seguro", "garantido". O SET é candidato.
-7. Piso de 1% é MÍNIMO de alocação, não a alocação — a mecânica está em \`mecanica.piso_significado\`. Não escreva que o piso "dilui".`;
+7. Piso de 1% é MÍNIMO de alocação, não a alocação — a mecânica está em \`mecanica.piso_significado\`. Não escreva que o piso "dilui".
+${REGRAS_MANDATO}`;
 
   const systemGenerico = `${systemBase}
 
@@ -118,7 +209,8 @@ REGRAS DE INTEGRIDADE:
 3. NÃO CONFUNDA CADÊNCIA: motor rebalanceia mensal; overlay decide semanalmente.
 4. CAIXA NÃO É INIMIGO: se rf=0 (convenção), o custo de retorno em regime de juro alto vem da CONVENÇÃO, não do mercado.
 5. MONITORES CONCRETOS: aponte gatilhos numéricos que existem no relatório.
-6. SEM SELO: proibidas as palavras "validado", "aprovado", "seguro".`;
+6. SEM SELO: proibidas as palavras "validado", "aprovado", "seguro".
+${REGRAS_MANDATO}`;
 
   const system = modoAncorado ? systemAncorado : systemGenerico;
 
@@ -139,7 +231,13 @@ MÉTRICAS FINAIS DA TELA:
 ${kpisTxt}
 
 COMPOSIÇÃO (${body.composicao.length} sleeves):
-${compTxt}`;
+${compTxt}
+${blocoMandato(body.mandato, body.probabilidade)}`;
+
+  // Item extra de roteiro: so entra quando ha mandato/probabilidade pra ler.
+  const itemMandato = (body.mandato || body.probabilidade)
+    ? `\nOBRIGATÓRIO: dedique um parágrafo ao ENCAIXE COM O MANDATO — se o portfólio atende a taxa exigida pelo cliente e se o risco se mantém dentro do teto autorizado, citando as probabilidades do bloco exatamente como estão. Deixe explícito que rodar abaixo do teto de risco é o resultado desejado, não uma ineficiência.`
+    : "";
 
   let user: string;
   if (modoAncorado) {
@@ -154,7 +252,7 @@ Agora escreva a análise deste portfólio em 3–4 parágrafos, seguindo TODAS a
 1) Ler o que o portfólio entregou usando os números de \`janelas.producao_tela\`, com a citação de \`correlacao_spx.mensal_nos_10pct_piores_meses_spx\` como o argumento institucional.
 2) Explicar o que sustentou o resultado usando \`mecanica\` (destacar o significado do piso, a cadência semanal do overlay).
 3) Trade-off: o custo da convenção rf=0, referenciando \`caixa_remunerado_projecao\` explicitamente rotulado como "projeção".
-4) Terminar com os 3 monitores de \`monitores_calibrados\` + a frase de rodapé com as 3 \`ressalvas_obrigatorias\`.`;
+4) Terminar com os 3 monitores de \`monitores_calibrados\` + a frase de rodapé com as 3 \`ressalvas_obrigatorias\`.${itemMandato}`;
   } else {
     user = `Analise este portfólio construído no Manager Cockpit.
 
@@ -164,7 +262,7 @@ Sua análise deve responder, em 3 a 4 parágrafos:
 1) O que este portfólio entregou (retorno, risco, correlação com S&P) e como isso se lê institucionalmente.
 2) O que funcionou bem — quais decisões de composição, overlay ou alocação sustentaram o resultado.
 3) Fraquezas ou trade-offs — drawdown, concentração, sensibilidade à convenção de caixa se aplicável.
-4) O que ajustaria ou monitoraria — recomendação clara e MENSURÁVEL (gatilho numérico + métrica do relatório).`;
+4) O que ajustaria ou monitoraria — recomendação clara e MENSURÁVEL (gatilho numérico + métrica do relatório).${itemMandato}`;
   }
 
   const ctrl = new AbortController();

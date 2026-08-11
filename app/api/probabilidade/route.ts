@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import fs from "node:fs/promises";
 import path from "node:path";
 import { SETS, avaliarSet, type BenchmarkSetsData } from "@/lib/portfolio-builder/benchmark-sets";
 import { probabilidadeDentroTolerancia, probabilidadeDeMeta } from "@/lib/portfolio-builder/probabilistic-engine";
+import { lerJSONCacheado } from "@/lib/portfolio-builder/dataset-cache";
 
 export const runtime = "nodejs";
 
@@ -73,8 +73,7 @@ export async function POST(req: Request) {
 
   let data: BenchmarkSetsData;
   try {
-    const raw = await fs.readFile(ARQ, "utf8");
-    data = JSON.parse(raw) as BenchmarkSetsData;
+    data = await lerJSONCacheado<BenchmarkSetsData>(ARQ);
   } catch {
     return NextResponse.json({ ok: false, error: "benchmark-sets.json não encontrado." }, { status: 404 });
   }

@@ -210,14 +210,29 @@ export interface ParametrosMeta {
 
 /**
  * Block bootstrap Monte Carlo: reamostra blocos de `blocoDias` dias corridos
- * (com reposição) da série real de retornos até completar o horizonte, com
- * aporte anual aplicado a cada 252 dias simulados. Repete `nPaths` vezes por
- * horizonte e mede a fração de trajetórias que bateu a meta.
+ * (com reposição) da série real de retornos, com aporte anual aplicado a cada
+ * 252 dias simulados, e mede a fração de trajetórias que bateu a meta.
  *
  * Bloco default de 21 dias (~1 mês de pregão): preserva autocorrelação de
  * curto prazo e efeito de regime sem exigir um modelo paramétrico de regime
  * (Shumway & Stoffer não exigem — mas i.i.d. dia-a-dia destruiria a
  * estrutura que faz a estratégia funcionar, então não é usado aqui).
+ *
+ * TRAJETÓRIA ÚNICA COM CHECKPOINTS: cada caminho é simulado uma só vez até o
+ * horizonte mais longo, registrando o capital ao cruzar cada horizonte pedido.
+ * A versão anterior refazia `nPaths` caminhos do zero para CADA horizonte —
+ * em [8,9,10,11,12] anos isso era 50 anos-trajetória por caminho contra os 12
+ * de agora (~4x de trabalho desperdiçado).
+ *
+ * Isso NÃO troca precisão por velocidade: o processo é o mesmo para frente, e
+ * a distribuição marginal do capital no ano 8 é idêntica quer o caminho pare
+ * ali, quer siga até o ano 12 — truncar não altera o que já aconteceu. Cada
+ * horizonte continua estimado com os mesmos `nPaths`. A única mudança é que
+ * as estimativas passam a ser positivamente correlacionadas entre horizontes
+ * (compartilham os sorteios), o que inclusive elimina o artefato de um
+ * horizonte curto exibir probabilidade maior que um longo por puro ruído
+ * amostral. A equivalência foi verificada empiricamente contra a versão
+ * independente antes da troca.
  */
 export function probabilidadeDeMeta(
   retornos: number[],
@@ -230,34 +245,48 @@ export function probabilidadeDeMeta(
   const N = retornos.length;
   if (N < blocoDias) throw new Error("Série curta demais para block bootstrap.");
 
-  return horizontesAnos.map((anos) => {
-    const diasAlvo = Math.round(anos * DIAS_ANO);
-    const finais: number[] = new Array(nPaths);
-    let atingiuMeta = 0;
+  // checkpoints ordenados por dia — o caminho registra o capital ao cruzá-los
+  const marcos = horizontesAnos
+    .map((anos) => ({ anos, dia: Math.round(anos * DIAS_ANO) }))
+    .sort((a, b) => a.dia - b.dia);
+  const diaMax = marcos[marcos.length - 1].dia;
 
-    for (let p = 0; p < nPaths; p++) {
-      let capital = capitalInicial;
-      let diasSimulados = 0;
-      let proximoAporte = DIAS_ANO;
-      while (diasSimulados < diasAlvo) {
-        const inicioBloco = Math.floor(Math.random() * (N - blocoDias + 1));
-        const restam = diasAlvo - diasSimulados;
-        const tamanho = Math.min(blocoDias, restam);
-        for (let i = 0; i < tamanho; i++) {
-          capital *= 1 + retornos[inicioBloco + i];
-          diasSimulados++;
-          if (aporteAnual > 0 && diasSimulados >= proximoAporte) {
-            capital += aporteAnual;
-            proximoAporte += DIAS_ANO;
-          }
+  // finais[m][p] = capital do caminho p ao cruzar o marco m
+  const finais = marcos.map(() => new Array<number>(nPaths));
+
+  for (let p = 0; p < nPaths; p++) {
+    let capital = capitalInicial;
+    let diasSimulados = 0;
+    let proximoAporte = DIAS_ANO;
+    let marcoAtual = 0;
+    while (diasSimulados < diaMax) {
+      const inicioBloco = Math.floor(Math.random() * (N - blocoDias + 1));
+      const restam = diaMax - diasSimulados;
+      const tamanho = Math.min(blocoDias, restam);
+      for (let i = 0; i < tamanho; i++) {
+        capital *= 1 + retornos[inicioBloco + i];
+        diasSimulados++;
+        if (aporteAnual > 0 && diasSimulados >= proximoAporte) {
+          capital += aporteAnual;
+          proximoAporte += DIAS_ANO;
+        }
+        // pode cruzar mais de um marco se dois horizontes ficarem muito perto
+        while (marcoAtual < marcos.length && diasSimulados === marcos[marcoAtual].dia) {
+          finais[marcoAtual][p] = capital;
+          marcoAtual++;
         }
       }
-      finais[p] = capital;
-      if (capital >= meta) atingiuMeta++;
     }
+  }
 
-    finais.sort((a, b) => a - b);
-    const pct = (q: number) => finais[Math.min(nPaths - 1, Math.floor(q * nPaths))];
+  return marcos.map((marco, idxMarco) => {
+    const anos = marco.anos;
+    const finaisDoMarco = finais[idxMarco];
+    let atingiuMeta = 0;
+    for (let p = 0; p < nPaths; p++) if (finaisDoMarco[p] >= meta) atingiuMeta++;
+
+    const ordenados = [...finaisDoMarco].sort((a, b) => a - b);
+    const pct = (q: number) => ordenados[Math.min(nPaths - 1, Math.floor(q * nPaths))];
 
     return {
       anos,

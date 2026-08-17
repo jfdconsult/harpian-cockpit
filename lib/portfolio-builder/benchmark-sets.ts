@@ -426,27 +426,27 @@ export const SETS: SetDef[] = [
   // ============================================================
   {
     id: "d4mmax",
-    nome: "DINÂMICO 4 MOTORES MAX",
-    rotuloCurto: "Dinâmico 4 Motores Max",
+    nome: "DYNAMIC 4 ENGINES AGGRESSIVE",
+    rotuloCurto: "Dynamic 4 Engines Aggressive",
     linha: 1,
     perfil: "agressivo",
     tese:
-      "Quatro motores independentes com fatia fixa — dois de ataque, um de retorno " +
-      "máximo e um de hedge tático — sobre o universo CORE11. A defesa vem da " +
-      "diversificação por correlação mínima, não de renda fixa. Motor cru, sem freio " +
-      "de volatilidade.",
+      "Nada aqui é peso parado. Quatro motores de momento dividem o capital; dentro de " +
+      "cada motor as estratégias competem entre si; e dentro de cada estratégia os ativos " +
+      "competem entre si. A cada rebalance quem está mais forte assume a frente. Sem freio " +
+      "de volatilidade — é o motor entregando tudo que tem.",
     composicao: [{ bloco: "combo4m", peso: 1 }],
   },
   {
     id: "d4mins",
-    nome: "DINÂMICO 4 MOTORES INSTITUCIONAL",
-    rotuloCurto: "Dinâmico 4 Motores Institucional",
+    nome: "DYNAMIC 4 ENGINES INSTITUTIONAL",
+    rotuloCurto: "Dynamic 4 Engines Institutional",
     linha: 1,
     perfil: "conservador",
     tese:
-      "O mesmo motor de quatro engines com overlay de volatilidade-alvo de 5% ao ano. " +
-      "A exposição é decidida toda semana e o resto fica em caixa — mantém o Sharpe do " +
-      "motor cru com uma fração da sua queda máxima.",
+      "A mesma máquina de três níveis de competição — motores, estratégias e ativos — " +
+      "com um freio por cima: volatilidade-alvo de 5% ao ano, decidida toda semana, o resto " +
+      "em caixa. Mesmo Sharpe do motor cru com uma fração da queda máxima.",
     composicao: [{ bloco: "combo4m", peso: 1 }],
     volTarget: { alvo: 0.050, lookback: 21 },
   },
@@ -524,13 +524,16 @@ export const EXPLICACAO_BLOCO: Record<BlocoId, string> = {
     "É a base dos seis perfis da família 10.5 — cada um com um alvo de volatilidade " +
     "diferente, do mais conservador ao mais agressivo, com a mesma engenharia por baixo.",
   combo4m:
-    "Quatro motores independentes dividindo o capital em partes fixas: dois de ataque " +
-    "(35% cada) — um que persegue as estratégias de maior momento no universo CORE11 e " +
-    "outro que escolhe as quinze menos correlacionadas entre si — mais um de retorno " +
-    "máximo e um de hedge tático (15% cada). A alocação dentro de cada motor acompanha a " +
-    "força do momento, com teto de 8% por cesta. A defesa é estrutural: vem da própria " +
-    "diversificação por correlação mínima, não de uma aposta em renda fixa — que foi " +
-    "justamente o que não protegeu em 2022.",
+    "TODA alocação aqui é dinâmica, em três níveis que rodam ao mesmo tempo. " +
+    "PRIMEIRO, quatro motores de momento dividem o capital em faixas: duas de ataque " +
+    "(35% cada) — uma que persegue as estratégias de maior momento no universo CORE11 e " +
+    "outra que escolhe as quinze menos correlacionadas entre si — mais retorno máximo e " +
+    "hedge tático (15% cada). SEGUNDO, dentro de cada motor as estratégias competem entre " +
+    "si pelo momento, com teto de 8% por cesta. TERCEIRO, dentro de cada estratégia os " +
+    "ativos competem entre si, e só o líder do momento fica comprado. O resultado é que a " +
+    "cada rebalance a carteira muda de mãos: quem está forte assume a frente, quem esfriou " +
+    "cede espaço. A defesa é estrutural, da própria diversificação por correlação " +
+    "mínima, não de uma aposta em renda fixa — que foi justamente o que não protegeu em 2022.",
 };
 
 // ── composicao ───────────────────────────────────────────────────────────────

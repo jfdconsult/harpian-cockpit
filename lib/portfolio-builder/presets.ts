@@ -284,15 +284,38 @@ const ORDEM_VITRINE = [
   "d3",        // Dinamico 41 Agressivo
   "dmax",      // Max Retorno Dinamico (sem overlay)
 ];
+/**
+ * A vitrine — o que aparece no seletor do cliente.
+ *
+ * SO os SETs listados em ORDEM_VITRINE, nessa ordem. Antes esta funcao
+ * devolvia TODOS os SETs de linha 1 e mandava os nao-listados para o fim, o que
+ * enchia o seletor com 50 opcoes: os 36 experimentos v2..v8 do laboratorio
+ * apareciam para o cliente junto com os produtos. Quem esta do outro lado da
+ * mesa nao tem como saber que "Institucional v6" e rascunho e "Dynamic 4
+ * Engines Institutional" e produto.
+ *
+ * Os experimentos NAO foram removidos: continuam em `SETS` e carregam por URL
+ * (`?set=d105con-v6`) via `presetPorId`, que e como o Joao compara versoes.
+ */
 export function presetsVitrine(): Preset[] {
-  const linha1 = SETS.filter((s) => s.linha === 1);
-  const rank = (id: string) => {
-    const i = ORDEM_VITRINE.indexOf(id);
-    return i < 0 ? ORDEM_VITRINE.length : i;
-  };
-  return [...linha1]
-    .sort((a, b) => rank(a.id) - rank(b.id))
+  const porId = new Map(SETS.map((s) => [s.id, s]));
+  return ORDEM_VITRINE
+    .map((id) => porId.get(id))
+    .filter((s): s is SetDef => !!s && s.linha === 1)
     .map((s) => ({ id: s.id, rotulo: s.rotuloCurto, def: s }));
+}
+
+/**
+ * Busca por id em TODOS os SETs, curados ou nao.
+ *
+ * Existe porque a vitrine passou a filtrar: quem resolve `?set=` na URL ou o
+ * SET ativo tem de continuar achando os experimentos, senao carregar um deles
+ * por link deixaria a tela em branco.
+ */
+export function presetPorId(id: string | null | undefined): Preset | undefined {
+  if (!id) return undefined;
+  const s = SETS.find((x) => x.id === id);
+  return s ? { id: s.id, rotulo: s.rotuloCurto, def: s } : undefined;
 }
 
 /** Todos os SETs, incluindo a linha institucional. */

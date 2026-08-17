@@ -137,11 +137,39 @@ export function linhasDeAlocacao(
   // O universo inteiro entra, mesmo quem nunca recebe peso.
   if (setsData) for (const id of setsData.idsUniverso) garante(id);
 
+  // Rotulo e secao dos constituintes do combo4m: eles NAO estao no catalogo das
+  // 41, entao `meta[id]` nao os conhece. O export traz o nome pronto (as cestas
+  // do Industry Leaders ja vem por industria) e o motor de origem, que e o que
+  // usamos como secao para agrupar na coluna.
+  const rotulo4m = new Map<string, { label: string; motor: string }>();
+  if (setsData?.motores4m) {
+    for (const c of setsData.motores4m.constituintes) {
+      rotulo4m.set(c.id, { label: c.label, motor: c.motor });
+    }
+  }
+
   sleeves.forEach((s, i) => {
     const pesoDia = (d: number) => sim.weights[d]?.[i] ?? 0;
 
     if (ehBloco(s.id)) {
       const b = blocoDoId(s.id);
+      // O combo4m nao se desmonta por `pesosDiarios` (indexado pelas 40): ele
+      // roda sobre 4 motores divididos em 70 constituintes. Sem este ramo, o
+      // modo apresentacao mostraria 40 barras PARADAS nos SETs novos — o que
+      // mais vende na tela e justamente a carteira trocando de maos.
+      if (b === "combo4m" && setsData?.motores4m) {
+        const base = setsData.janela.fromIdx;
+        for (const c of setsData.motores4m.constituintes) {
+          const a = garante(c.id);
+          for (let d = 0; d < nDias; d++) {
+            const idx = sim.from + d - base;
+            const w = c.peso[idx];
+            if (w) a[d] += pesoDia(d) * (w / 1000);
+          }
+        }
+        return;
+      }
+
       const matriz = setsData?.pesosDiarios?.[b as "rotacao20" | "corrmin20" | "maxcagr10" | "suavemin15"];
       if (matriz && setsData) {
         // bloco que se desmonta: distribui o peso do bloco entre as 41
@@ -176,11 +204,16 @@ export function linhasDeAlocacao(
       if (pesos[d] > 5e-5) diasDentro++;
     }
     const ehB = ehBloco(id);
-    const label = ehB ? NOMES_BLOCO[blocoDoId(id)] : meta[id]?.label ?? id;
-    const curto = ehB ? label : nomeDeApresentacao(label, meta[id]);
+    const r4 = rotulo4m.get(id);
+    const label = ehB ? NOMES_BLOCO[blocoDoId(id)] : r4?.label ?? meta[id]?.label ?? id;
+    const curto = ehB ? label : r4 ? r4.label : nomeDeApresentacao(label, meta[id]);
     const m = meta[id];
-    const secao: LinhaAlocacao["secao"] =
-      classificar(m).defesa ? "defesa" : m?.grupo === "acoes" ? "acoes" : "etf";
+    // Constituinte do combo4m: a secao vem do MOTOR. O Tail Shield e defesa por
+    // definicao (volatilidade longa e indice invertido); os outros tres sao
+    // ataque, e o Industry Leaders roda sobre acoes.
+    const secao: LinhaAlocacao["secao"] = r4
+      ? (r4.motor === "m4" ? "defesa" : r4.motor === "m1" ? "acoes" : "etf")
+      : classificar(m).defesa ? "defesa" : m?.grupo === "acoes" ? "acoes" : "etf";
     linhas.push({ id, label, curto, pesos, bloco: ehB, secao, pico, diasDentro });
   }
 

@@ -53,6 +53,45 @@ export function blocoComoSerie(
   let defesaFrac: number[] | undefined;
   let composicaoBloco: StrategySeries["composicaoBloco"];
 
+  // ── Familia 4 MOTORES: o interior vem de `motores4m`, nao de `pesosDiarios` ──
+  //
+  // Este bloco nao roda sobre as 41 estrategias: roda sobre 4 motores que se
+  // dividem em 70 constituintes (11 cestas de industria, 40 estrategias, 15 do
+  // DMAX, 5 sleeves de hedge). O contrato de `pesosDiarios` e indexado por
+  // `idsUniverso` (as 40), entao nao serve — e sem isto a tira "quanto do
+  // portfolio estava blindado" ficava cravada em 0%, afirmando que a carteira
+  // NUNCA esteve defendida. Falso: o Industry Leaders vai a caixa em 15% dos
+  // dias e o Tail Shield fica em caixa 79% do tempo.
+  //
+  // Os pesos aqui ja sao fracao do PORTFOLIO (decimo de ponto percentual), nao
+  // do motor, entao somam direto sem reescalar.
+  if (bloco === "combo4m" && data.motores4m) {
+    const cs = data.motores4m.constituintes;
+    const cursores = new Array<number>(cs.length).fill(0);
+    const df = new Array<number>(n).fill(0);
+    for (let d = 0; d < n; d++) {
+      // o dia 0 da serie e o dia-base (curva = 1000, sem retorno): os pesos
+      // valem de `d-1` no eixo do dataset, mesma convencao do resto do arquivo
+      const dia = d - 1;
+      if (dia < 0) continue;
+      let blind = 0;
+      for (let i = 0; i < cs.length; i++) {
+        const c = cs[i];
+        const w = (c.peso[dia] || 0) / 1000;
+        if (w <= 0) continue;
+        const runs = c.runs;
+        let k = cursores[i];
+        if (runs[k] && runs[k][0] > dia) k = 0;
+        while (k + 1 < runs.length && runs[k + 1][0] <= dia) k++;
+        cursores[i] = k;
+        const si = runs[k] && runs[k][0] <= dia ? runs[k][1] : -1;
+        if (si >= 0 && c.defensivo[si]) blind += w;
+      }
+      df[d] = blind > 1 ? 1 : blind;
+    }
+    defesaFrac = df;
+  }
+
   if (matriz && detalhe) {
     // RLE -> lookup por dia. Um cursor por estrategia avanca junto com o loop,
     // entao a expansao inteira e O(dias + runs), nao O(dias x runs).

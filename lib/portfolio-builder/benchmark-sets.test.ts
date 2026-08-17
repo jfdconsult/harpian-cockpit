@@ -242,6 +242,11 @@ console.log("\n== 2022, o teste acido ==");
   for (const r of resultados) {
     const a = r.porAno.find((x) => x.ano === "2022");
     if (!a) { ok(false, `${r.def.id} sem 2022`); continue; }
+    // Mesma guarda do bloco da tabela (linha ~191): SETs que entraram depois
+    // desta spec (familia 10.5, familia 4 MOTORES) nao tem valor publicado de
+    // 2022. Sem isto o lookup devolve undefined e a suite morre em .toFixed,
+    // escondendo as falhas seguintes.
+    if (esperado[r.def.id] === undefined) continue;
     publicado(a.ret * 100, esperado[r.def.id], 1, `${r.def.id} em 2022 (%)`);
   }
   const ew = resultados.find((r) => r.def.id === "ew41")!;

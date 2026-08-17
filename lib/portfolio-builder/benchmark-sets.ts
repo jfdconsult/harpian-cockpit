@@ -39,7 +39,13 @@
 const DIAS_ANO = 252;
 
 /** Um bloco e uma fonte de retorno diario que os SETs combinam. */
-export type BlocoId = "rotacao20" | "corrmin20" | "aggbond" | "maxcagr10" | "suavemin15";
+export type BlocoId =
+  | "rotacao20"
+  | "corrmin20"
+  | "aggbond"
+  | "maxcagr10"
+  | "suavemin15"
+  | "combo4m";
 
 /** 1 = comercial dinamica (rotacao) · 2 = institucional (corr-min). */
 export type LinhaId = 1 | 2;
@@ -389,6 +395,54 @@ export const SETS: SetDef[] = [
     composicao: [{ bloco: "suavemin15", peso: 1 }],
     volTarget: { alvo: 0.250, lookback: 21 },
   },
+  // ============================================================
+  // FAMILIA 4 MOTORES — a arquitetura da reengenharia AlphaDroid
+  // (trial 451, familia de trials `core11-4motores`, contador em 457).
+  //
+  // Quatro motores com fatia FIXA: ataque CORE11 35% + correlacao minima 35% +
+  // retorno maximo 15% + hedge tatico 15%. Dentro de cada motor a alocacao
+  // segue a forca do momento (tau=91) com teto de 8% por cesta; K=15 na
+  // correlacao minima venceu 20/25/30. Custo de 10bps embutido na serie.
+  //
+  // JANELA DO MOTOR: 2006-08-14 -> 2026-06-04 (4.983 pregoes). O eixo do
+  // dataset e mais largo (2006-01-03 -> 2026-07-31, 5.176), entao o bloco vale
+  // 0 em 193 dias — 154 antes da inception e 39 no fim, porque o motor ainda
+  // nao foi reprocessado ate 31/07. Isso SUBESTIMA o SET, nunca o contrario:
+  // no eixo cheio o cru da Sharpe 2,335 / CAGR 54,6% contra 2,381 / 57,3% na
+  // janela propria, e o institucional 2,203 / 13,4% contra 2,248 / 14,0%.
+  // Numeros de referencia do dossie em
+  // `_DOSSIE_COMPLETO_DIOGO/DOSSIE_COMPLETO_ALPHADROID.md`.
+  //
+  // SOBE SEM SELO DE VALIDACAO COMPLETO: o kernel QIA passa 5 de 7 portoes.
+  // G0 resolvido por pre-registro; G1 (survivorship bias) reprovado por
+  // decisao consciente do Joao — nao comprar base paga por enquanto.
+  // ============================================================
+  {
+    id: "d4mmax",
+    nome: "DINÂMICO 4 MOTORES MAX",
+    rotuloCurto: "Dinâmico 4 Motores Max",
+    linha: 1,
+    perfil: "agressivo",
+    tese:
+      "Quatro motores independentes com fatia fixa — dois de ataque, um de retorno " +
+      "máximo e um de hedge tático — sobre o universo CORE11. A defesa vem da " +
+      "diversificação por correlação mínima, não de renda fixa. Motor cru, sem freio " +
+      "de volatilidade.",
+    composicao: [{ bloco: "combo4m", peso: 1 }],
+  },
+  {
+    id: "d4mins",
+    nome: "DINÂMICO 4 MOTORES INSTITUCIONAL",
+    rotuloCurto: "Dinâmico 4 Motores Institucional",
+    linha: 1,
+    perfil: "conservador",
+    tese:
+      "O mesmo motor de quatro engines com overlay de volatilidade-alvo de 5% ao ano. " +
+      "A exposição é decidida toda semana e o resto fica em caixa — mantém o Sharpe do " +
+      "motor cru com uma fração da sua queda máxima.",
+    composicao: [{ bloco: "combo4m", peso: 1 }],
+    volTarget: { alvo: 0.050, lookback: 21 },
+  },
 ];
 
 /**
@@ -408,6 +462,9 @@ export const NOMES_BLOCO: Record<BlocoId, string> = {
   // O rotulo aqui descreve o MOTOR, nao o SET que o consome, para o relatorio
   // nao dizer "Institucional" quando o cliente escolheu "Moderado".
   suavemin15: "Motor 10.5 — 15 estratégias com piso 1% e overlay de vol",
+  // Motor da familia 4 MOTORES (trial 451 da reengenharia AlphaDroid). Dois SETs
+  // o consomem: o cru e o institucional com vol-target 5%.
+  combo4m: "Motor 4 Motores — CORE11, correlação mínima, retorno máximo e hedge tático",
 };
 
 /** De quem e cada bloco. Aparece na tela como legenda de atribuicao. */
@@ -417,6 +474,7 @@ export const ATRIBUICAO: Record<BlocoId, string> = {
   aggbond: "índice de referência",
   maxcagr10: "15 estratégias AlphaDroid · seleção e alocação Harpian",
   suavemin15: "15 estratégias AlphaDroid · seleção e alocação Harpian",
+  combo4m: "estratégias AlphaDroid em 4 motores · seleção e alocação Harpian",
 };
 
 /**
@@ -458,6 +516,14 @@ export const EXPLICACAO_BLOCO: Record<BlocoId, string> = {
     "volatilidade-alvo decide semanalmente quanto expor ao motor, o resto em caixa. " +
     "É a base dos seis perfis da família 10.5 — cada um com um alvo de volatilidade " +
     "diferente, do mais conservador ao mais agressivo, com a mesma engenharia por baixo.",
+  combo4m:
+    "Quatro motores independentes dividindo o capital em partes fixas: dois de ataque " +
+    "(35% cada) — um que persegue as estratégias de maior momento no universo CORE11 e " +
+    "outro que escolhe as quinze menos correlacionadas entre si — mais um de retorno " +
+    "máximo e um de hedge tático (15% cada). A alocação dentro de cada motor acompanha a " +
+    "força do momento, com teto de 8% por cesta. A defesa é estrutural: vem da própria " +
+    "diversificação por correlação mínima, não de uma aposta em renda fixa — que foi " +
+    "justamente o que não protegeu em 2022.",
 };
 
 // ── composicao ───────────────────────────────────────────────────────────────

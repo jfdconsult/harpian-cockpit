@@ -90,6 +90,32 @@ export function blocoComoSerie(
       df[d] = blind > 1 ? 1 : blind;
     }
     defesaFrac = df;
+    // A composicao por dentro, que e o que anima o painel da esquerda no modo
+    // apresentacao: cada linha e um constituinte e a barra respira com o peso
+    // dele no dia. Sao 70 linhas (11 cestas de industria + 40 estrategias + 15
+    // do DMAX + 5 sleeves de hedge) contra as 40 dos outros blocos.
+    //
+    // `labels` sai do proprio export: as cestas do Industry Leaders ja vem
+    // nomeadas por industria, nao como "CORE11 Cesta 2".
+    composicaoBloco = {
+      ids: cs.map((c) => c.id),
+      pesos: cs.map((c) => c.peso.map((v) => (v || 0) / 1000)),
+      labels: Object.fromEntries(cs.map((c) => [c.id, c.label])),
+      ticker: (i, dia) => {
+        const c = cs[i];
+        if (!c) return null;
+        const runs = c.runs;
+        // busca binaria: o painel consulta um dia por vez, sem cursor util
+        let lo = 0, hi = runs.length - 1, si = -1;
+        while (lo <= hi) {
+          const mid = (lo + hi) >> 1;
+          if (runs[mid][0] <= dia) { si = runs[mid][1]; lo = mid + 1; }
+          else hi = mid - 1;
+        }
+        if (si < 0) return null;
+        return { symbol: c.simbolos[si], defense: !!c.defensivo[si] };
+      },
+    };
   }
 
   if (matriz && detalhe) {
@@ -267,22 +293,23 @@ export interface Preset {
  *  ocupa a espinha dorsal da escala; familia 41 (top-K rotativo) e Max Retorno
  *  aparecem depois. Numeros validados na janela 20 anos (2006-2026). */
 const ORDEM_VITRINE = [
-  // Familia 4 MOTORES (motor combo4m · trial 451 da reengenharia AlphaDroid).
-  // Abre a vitrine porque e a arquitetura mais eficiente que a casa produziu:
-  // Sharpe 2,335 no cru e 2,203 no institucional, contra 1,687 do melhor 10.5.
-  // Ordem interna e a mesma logica das outras familias — risco crescente.
-  "d4mins",    // vol-target 5% (Institucional) · Sharpe 2,203 · DD -8,8%
-  "d4mmax",    // motor cru, sem overlay    · Sharpe 2,335 · DD -20,2%
-  "d105ins",   // 3,5% vol-target (Institucional)
-  "d105con",   // 5,0% (Conservador)
-  "d105mod",   // 8,0% (Moderado)
-  "d105adv",   // 12,0% (Advanced)
-  "d105agr",   // 18,0% (Agressivo)
-  "d105max",   // 25,0% (Max)
-  "d6",        // Dinamico 41 Conservador (rot+corr+aggbond + vt 12%)
-  "d5",        // Dinamico 41 Balanceado
-  "d3",        // Dinamico 41 Agressivo
-  "dmax",      // Max Retorno Dinamico (sem overlay)
+  // DUAS FAMILIAS, e so. Decisao do Joao: "quem tem tudo nao tem nada" — um
+  // seletor com dez linhas obriga o cliente a comparar em vez de escolher.
+  //
+  // Familia 4 MOTORES (bloco combo4m, trial 451): a mais eficiente que a casa
+  // produziu, Sharpe 2,381 no cru e 2,248 no institucional.
+  "d4mins",    // vol-target 5%  · Sharpe 2,248 · DD  -8,8%
+  "d4mmax",    // motor cru      · Sharpe 2,381 · DD -20,2%
+  // Familia 10.5 (bloco suavemin15): a escala de perfil de risco, do
+  // institucional ao max, com o mesmo motor por baixo.
+  "d105ins",   // 3,5% vol-target
+  "d105con",   // 5,0%
+  "d105mod",   // 8,0%
+  "d105adv",   // 12,0%
+  "d105agr",   // 18,0%
+  "d105max",   // 25,0%
+  // FORA da vitrine por decisao de 17/08, mas vivos e carregaveis por URL
+  // (?set=d3): a familia 41 (d3/d5/d6) e o Max Retorno (dmax).
 ];
 /**
  * A vitrine — o que aparece no seletor do cliente.

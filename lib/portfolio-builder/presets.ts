@@ -162,6 +162,34 @@ export function seriesDosBlocos(data: BenchmarkSetsData): Record<string, Strateg
  * honesto e a matematica nao se mexe — `presets.test.ts` confere as duas tabelas
  * de validacao justamente por este caminho.
  */
+/**
+ * Janela efetiva de um SET: o eixo do dataset apertado pela inception dos
+ * blocos que ele usa.
+ *
+ * Por que existe: o eixo e comum, mas cada motor tem a sua vida. O bloco vale
+ * 0 fora dela, e zero num dia de pregao nao e "nao rendeu" — e "nao existia".
+ * Deixar esses dias dentro da conta aplana o grafico nas pontas e dilui CAGR e
+ * Sharpe. Cortando pela intersecao, o grafico vai ate o ultimo dia em que HA
+ * dado e as metricas batem com as do laboratorio.
+ *
+ * Quando o motor for reprocessado ate uma data mais nova, basta o dataset
+ * novo: nao ha nada a mudar aqui.
+ */
+export function janelaDoSet(
+  def: SetDef,
+  data: BenchmarkSetsData,
+): { de: string; ate: string } {
+  let de = data.janela.de;
+  let ate = data.janela.ate;
+  for (const c of def.composicao) {
+    const inc = data.inceptionBloco?.[c.bloco];
+    if (!inc) continue;
+    if (inc.de > de) de = inc.de;
+    if (inc.ate < ate) ate = inc.ate;
+  }
+  return { de, ate };
+}
+
 export function configDoSet(
   def: SetDef,
   data: BenchmarkSetsData,
@@ -183,7 +211,8 @@ export function configDoSet(
     dropNegative: false,
     capital,
     volTarget: def.volTarget ? { alvo: def.volTarget.alvo, lookback: def.volTarget.lookback } : null,
-    periodoFixo: { de: data.janela.de, ate: data.janela.ate },
+    // A janela vem do bloco, nao do eixo: ver janelaDoSet acima.
+    periodoFixo: janelaDoSet(def, data),
   };
 }
 

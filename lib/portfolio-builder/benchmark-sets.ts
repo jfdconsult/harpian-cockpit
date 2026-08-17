@@ -72,6 +72,13 @@ export interface BenchmarkSetsData {
   /** uma data por retorno: datas[i] e o dia do retorno rho[i] */
   datas: string[];
   blocos: Record<BlocoId, number[]>;
+  /**
+   * Janela real de cada bloco, quando ela e menor que o eixo do dataset.
+   * O eixo e comum a todos os blocos, mas um motor pode comecar depois
+   * (inception) ou terminar antes (ultimo dia reprocessado). Sem isto o SET
+   * apareceria plano nas pontas e as metricas sairiam diluidas.
+   */
+  inceptionBloco?: Partial<Record<BlocoId, { de: string; ate: string; obs?: string }>>;
   /** regua: equal-weight das 41, rebalance mensal */
   ew41: number[];
   /** retorno diario do S&P 500, para a correlacao */

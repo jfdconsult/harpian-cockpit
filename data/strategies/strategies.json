@@ -1747,14 +1747,14 @@
       "r_risk": "27.6",
       "trades_ano": "12.0",
       "universo": [
-        "CESTA-INDUSTRY-LEADERS"
+        "MOMENTO-AMPLO-CORE11"
       ],
       "start": 4526,
       "n": 5022,
       "primeiro_dia": "2006-08-14",
       "ultimo_dia": "2026-07-31",
       "equity_final": 16357.25,
-      "simbolo_hoje": "CESTA-INDUSTRY-LEADERS",
+      "simbolo_hoje": "MOMENTO-AMPLO-CORE11",
       "em_defesa_hoje": false,
       "dias_defesa": 0,
       "pct_defesa": 0.0,

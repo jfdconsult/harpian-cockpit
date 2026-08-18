@@ -43,6 +43,13 @@ const METAL_COMMO = new Set([
   "LIT", "REMX", "WOOD", "MOO", "CORN", "WEAT", "SOYB",
 ]);
 
+/** Hedge de cauda: vol longa e inverso alavancado — protecao por construcao
+ * (ganha quando a bolsa cai forte), nao por comportamento observado em crise.
+ * Adicionado 18/08/2026 junto com o Tail Shield (Motor 4 / hedge_sleeve). */
+const VOL_INVERSO = new Set([
+  "UVIX", "VXX", "VIXY", "UVXY", "SPXU", "SPXS", "SDS", "SH",
+]);
+
 /**
  * REITs sao ativo real, mas caem junto com a bolsa quando a coisa aperta —
  * ficam fora da conta. E por isso que a Alternative Investments da 9/11 e nao
@@ -66,17 +73,19 @@ export function classificar(meta: StrategyMeta | undefined): Classificacao {
   const total = universo.length;
   let rf = 0;
   let mc = 0;
+  let vi = 0;
   for (const t of universo) {
     if (RENDA_FIXA.has(t)) rf++;
     else if (METAL_COMMO.has(t)) mc++;
+    else if (VOL_INVERSO.has(t)) vi++;
   }
-  const protetores = rf + mc;
+  const protetores = rf + mc + vi;
   const refRF = !!meta && meta.referencia_nome !== "S&P 500" && !!meta.referencia_nome;
   const defesa = total > 0 && protetores / total >= FRACAO_MINIMA;
 
   let porque = "";
   if (defesa) {
-    const classe = rf >= mc ? "renda fixa" : "ouro e commodities";
+    const classe = vi >= rf && vi >= mc ? "hedge de cauda (vol longa/inverso)" : (rf >= mc ? "renda fixa" : "ouro e commodities");
     porque = `${protetores} dos ${total} ativos que ela negocia são de ${classe}` +
       (refRF ? "; o AlphaDroid compara ela com um índice de renda fixa" : "");
   }

@@ -66,15 +66,17 @@ export default function BibliotecaAtivosPage() {
   const setores = useMemo(() => {
     if (!strats) return [];
     // Agrupa acoes setoriais por sub (ex.: 'Technology') mesclando o universo
-    // de ACT1 e ACT2 num universo unico por setor.
+    // de ACT1 e ACT2 num universo unico por setor. So os 11 setores GICS
+    // originais (C22ACT1/2<COD>) entram aqui — qualquer outra estrategia de
+    // grupo "acoes" (catalogo tematico, Motor 1, etc.) tem card proprio na
+    // secao "Catalogo adicional" abaixo, para nao ser engolida num balde "?".
     const map: Record<string, { key: string; nome: string; universo: Set<string>; estrategias: string[] }> = {};
     for (const s of strats) {
       if (s.grupo !== "acoes") continue;
-      const sub = s.sub || "?";
-      // Deriva o codigo do setor do id (C22ACT[12]<COD>)
       const m = /C22ACT[12]([A-Z]+)/.exec(s.id + " " + s.label);
-      const cod = m ? m[1] : "?";
-      if (!map[cod]) map[cod] = { key: cod, nome: SECTOR_NAMES[cod] || sub, universo: new Set(), estrategias: [] };
+      if (!m) continue;
+      const cod = m[1];
+      if (!map[cod]) map[cod] = { key: cod, nome: SECTOR_NAMES[cod] || (s.sub || cod), universo: new Set(), estrategias: [] };
       map[cod].estrategias.push(s.label);
       (s.universo || []).forEach((t) => map[cod].universo.add(limpaTicker(t)));
     }
@@ -83,6 +85,25 @@ export default function BibliotecaAtivosPage() {
       return i < 0 ? 99 : i;
     };
     return Object.values(map).sort((a, b) => rank(a.key) - rank(b.key));
+  }, [strats]);
+
+  /**
+   * Estrategias de "acoes" que NAO sao um dos 11 setores GICS: catalogo
+   * tematico aprovado (11 categorias, 18/08), Industry Leaders (Motor 1) e
+   * qualquer candidato promovido depois. Cada uma vira card individual, como
+   * os ETFs abaixo — sem isso caiam todas juntas no balde "?" do bloco acima.
+   */
+  const catalogoAdicional = useMemo(() => {
+    if (!strats) return [];
+    return strats
+      .filter((s) => s.grupo === "acoes" && !/C22ACT[12][A-Z]+/.test(s.id + " " + s.label))
+      .map((s) => ({
+        id: s.id,
+        nome: s.label || s.nome || s.id,
+        sub: s.sub,
+        universo: (s.universo || []).map(limpaTicker),
+      }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   }, [strats]);
 
   const etfs = useMemo(() => {
@@ -179,6 +200,23 @@ export default function BibliotecaAtivosPage() {
                 </Card>
               ))}
             </Secao>
+
+            {/* CATALOGO ADICIONAL — tematico aprovado + Industry Leaders + promovidos */}
+            {catalogoAdicional.length > 0 && (
+              <Secao titulo="Catálogo adicional" subtitulo="Categorias temáticas aprovadas e outras estratégias de ações fora dos 11 setores GICS — cada uma com universo próprio">
+                {catalogoAdicional.map((c) => (
+                  <Card
+                    key={c.id}
+                    titulo={c.nome}
+                    sub={`${c.sub || "—"} · ${c.universo.length} ticker${c.universo.length > 1 ? "s" : ""}`}
+                    aberto={abertos.has("c:" + c.id)}
+                    onToggle={() => toggle("c:" + c.id)}
+                  >
+                    <Tickers items={c.universo} />
+                  </Card>
+                ))}
+              </Secao>
+            )}
 
             {/* ETFs MACRO */}
             <Secao titulo="ETFs Macro" subtitulo="Blocos temáticos — bonds, alternativas, big tech, cripto, países desenvolvidos, mercados emergentes etc.">

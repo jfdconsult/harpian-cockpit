@@ -138,6 +138,14 @@ export const SCREEN_MAP: Record<ScreenId, ScreenContext> = {
     title: "XRI — External Regime Index (internal)",
     description: "External risk 0—100 (CALM/WATCH/STRESS/CRISIS), internal view without whitelist: slow prior, fast market stress, turbulence (Mahalanobis), absorption ratio, global and material→US Diebold-Yilmaz, contribution by pillar and country, P7 exposure matrix quality, narrative gate, overlay recommendation, and validation flags (F4/F4.1). External counterpart of ARI.",
   },
+  fundamentos: {
+    title: "Fundamental Base",
+    description:
+      "SEC XBRL point-in-time fundamentals for 974 companies in three levels: sector, subsector and company. " +
+      "Carries JD Score (-5..+5 valuation vote), Piotroski F-Score, historical multiple percentile, trigger " +
+      "buy/sell prices, and the fundamental-vs-momentum divergence. Momentum exists only for the subset with " +
+      "a price series, so cross-axis reads are limited to it.",
+  },
   "market-dna": {
     title: "Market DNA",
     description: "Market DNA — internal structure, breadth, dispersion, cross-asset-class correlation, regime signals.",
@@ -309,6 +317,11 @@ export const SCREEN_SUGGESTIONS: Record<ScreenId, string[]> = {
     "Which channel is holding back the score?",
     "Can the overlay already be applied to the engine?",
     "Is external risk already reaching the US?",
+  ],
+  fundamentos: [
+    "Which sector has the strongest fundamentals right now?",
+    "Where is fundamental quality ahead of price?",
+    "Which subsector is expensive against its own history?",
   ],
   "market-dna": [
     "What's the market's internal dispersion?",

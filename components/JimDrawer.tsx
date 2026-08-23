@@ -106,6 +106,12 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
   const [usesSonnet, setUsesSonnet] = useState(false);
   const [greeted, setGreeted] = useState<ScreenId | null>(null);
   const [greetHadBriefing, setGreetHadBriefing] = useState(false);
+  // Marca do ultimo briefing ja saudado. O controle de saudacao e por TELA, e
+  // isso basta enquanto a tela publica um snapshot so. Telas com foco individual
+  // (o botao J de uma empresa em Fundamentos) publicam um briefing novo sem
+  // trocar de tela — sem esta marca, o segundo clique nao produziria saudacao
+  // nenhuma e o gestor veria a analise da empresa anterior.
+  const ultimoBriefing = useRef<number>(0);
   const [snap, setSnap] = useState<ScreenSnapshot | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [knowledgeSources, setKnowledgeSources] = useState<string[]>([]);
@@ -156,9 +162,26 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
       });
       setGreeted(screen);
       setGreetHadBriefing(!!cur?.briefing);
+      if (cur?.briefing) ultimoBriefing.current = cur.capturedAt;
       scrollToEnd();
     }
   }, [open, screen, greeted, scrollToEnd, sessionLoaded]);
+
+  // Foco novo na mesma tela: entra como saudacao nova, nao substitui a anterior —
+  // o gestor precisa poder comparar duas empresas na mesma conversa.
+  useEffect(() => {
+    if (!open || !snap?.briefing || greeted !== screen) return;
+    if (ultimoBriefing.current === 0) { ultimoBriefing.current = snap.capturedAt; return; }
+    if (snap.capturedAt === ultimoBriefing.current) return;
+    ultimoBriefing.current = snap.capturedAt;
+    const nova: Msg = {
+      role: "assistant", content: buildGreeting(screen, snap),
+      ts: Date.now(), greeting: true, screen,
+    };
+    setMessages((prev) => { const n = [...prev, nova]; saveSessionMessages(n); return n; });
+    setGreetHadBriefing(true);
+    scrollToEnd();
+  }, [snap, open, screen, greeted, scrollToEnd]);
 
   useEffect(() => {
     if (!open || greeted !== screen || greetHadBriefing || !snap?.briefing) return;
@@ -207,7 +230,17 @@ export default function JimDrawer({ open, onClose, screen }: Props) {
           model: usesSonnet ? "sonnet" : "haiku",
           screenData: cur?.rows ?? null,
           screenSummary: cur?.summary ?? null,
-          systemPrompt: buildSystemPrompt(ctx),
+          // O briefing carrega a memoria de calculo publicada pela tela (de onde
+          // veio o dado, qual formula, como cada ancora votou). Antes ele so
+          // alimentava a bolha de saudacao — o modelo respondia sem ver nada
+          // disso e reexplicava por conta propria numeros que ja tinham origem
+          // documentada. Vai junto do system prompt, que e onde vale como regra.
+          systemPrompt: cur?.briefing
+            ? `${buildSystemPrompt(ctx)}
+
+--- CONTEXTO PUBLICADO PELA TELA ---
+${cur.briefing}`
+            : buildSystemPrompt(ctx),
         }),
       });
 

@@ -32,6 +32,7 @@ export type ScreenId =
   | "cot-sentiment"
   | "cot-legacy"
   | "market-dna"
+  | "fundamentos"
   | "portfolio-studio"
   | "portfolio-builder"
   | "construtor"
@@ -154,6 +155,7 @@ export const MENUS: Menu[] = [
           { id: "cot-sentiment", label: "COT Intelligence", icon: "ti-flame", tag: "CFTC" },
           { id: "cot-legacy", label: "COT Data Explorer", icon: "ti-chart-bar" },
           { id: "market-dna", label: "Market DNA", icon: "ti-dna-2", tag: "new" },
+          { id: "fundamentos", label: "Fundamental Base", icon: "ti-report-analytics", tag: "SEC" },
         ],
       },
     ],

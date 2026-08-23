@@ -228,6 +228,11 @@ tbody tr:hover{background:rgba(255,255,255,.03)}
    ============================================================ */
 .atv td,.atv th{padding:7px 9px;font-size:12.5px;text-align:right;white-space:nowrap}
 .atv th{position:sticky;top:0;background:var(--bg2);z-index:2;font-size:11.5px}
+/* Cabecalho congelado em tabela longa dentro de card com rolagem propria.
+   Mesma mecanica do .atv th: o th e que gruda, nao o thead — thead sticky nao
+   funciona no Chrome/Safari, e o th precisa de fundo OPACO senao as linhas
+   passam por tras dele durante a rolagem. */
+.tb-fixa thead th{position:sticky;top:0;background:var(--bg2);z-index:3}
 .atv td:nth-child(3),.atv th:nth-child(3){font-size:11px}
 .atv td:first-child,.atv td:nth-child(2),.atv th:first-child,.atv th:nth-child(2){text-align:left}
 .atv tbody tr:hover{outline:1px solid var(--gold)}

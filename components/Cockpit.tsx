@@ -32,6 +32,7 @@ import Institutional from "./screens/Institutional";
 import CotSentiment from "./screens/CotSentiment";
 import CotLegacy from "./screens/CotLegacy";
 import MarketDna from "./screens/MarketDna";
+import Fundamentos from "./screens/Fundamentos";
 import Construtor from "./screens/Construtor";
 import TicketNews from "./screens/TicketNews";
 import PortfolioStudioScreen from "./screens/PortfolioStudioScreen";
@@ -44,6 +45,7 @@ import { DialogProvider } from "./ui/Dialog";
 import { ThemeProvider } from "@/lib/theme";
 import { I18nProvider } from "@/lib/i18n";
 import { isScreenId, type ScreenId } from "@/lib/nav";
+import { onJimRequest } from "@/lib/jim-data";
 
 export default function Cockpit() {
   const [screen, setScreen] = useState<ScreenId>("mission-control");
@@ -53,6 +55,8 @@ export default function Cockpit() {
   const [studioPid, setStudioPid] = useState<string>("HPC22");
   const [previousScreen, setPreviousScreen] = useState<ScreenId>("admin");
   const [jimOpen, setJimOpen] = useState(false);
+  // Uma tela pode pedir a gaveta do JIM pelo barramento (ver lib/jim-data.ts).
+  useEffect(() => onJimRequest(() => setJimOpen(true)), []);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const go = (id: ScreenId, param?: string) => {
@@ -156,6 +160,8 @@ export default function Cockpit() {
         return <CotLegacy />;
       case "market-dna":
         return <MarketDna />;
+      case "fundamentos":
+        return <Fundamentos />;
       case "construtor":
         return <Construtor go={go} />;
       case "ticket-news":

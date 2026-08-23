@@ -69,8 +69,36 @@ export interface BenchmarkSetsData {
   janela: { de: string; ate: string; fromIdx: number; toIdx: number; n: number };
   /** cortes in-sample / hold-out, em indices do vetor de retornos */
   cortes: { isFim: string; hoInicio: string; nIs: number; iHo: number };
-  /** uma data por retorno: datas[i] e o dia do retorno rho[i] */
+  /** Eixo de datas do dataset. Uma entrada por slot de retorno. */
   datas: string[];
+  /**
+   * ATENCAO — DEFASAGEM DE UM DIA. LEIA ANTES DE CONFERIR QUALQUER BLOCO.
+   *
+   *   blocos[id][i]  e o retorno realizado em  datas[i + 1],  NAO em datas[i].
+   *
+   * O dia-base da curva consome um slot: o vetor esta carimbado na data em que
+   * o peso foi DECIDIDO (fechamento de t), e o retorno correspondente acontece
+   * no pregao seguinte. E a mesma convencao de `convencoes.rebalance`
+   * ("pesos decididos no fechamento de t, valem de t+1") aplicada ao vetor.
+   *
+   * `pesosDiarios[bloco][k][i]` esta no MESMO carimbo: o peso da estrategia k
+   * decidido em datas[i]. Logo a recomposicao correta e
+   *
+   *     blocos[b][i] === soma_k  pesosDiarios[b][k][i] / 1000 * ret_k(datas[i+1])
+   *
+   * SINTOMA DE QUEM ERRA: conferir com a convencao usual
+   * (`r[i] = eq[i]/eq[i-1] - 1`) devolve **correlacao ~0,00 com a volatilidade
+   * correta** — o que parece "motor completamente diferente" e nao e. Com o
+   * deslocamento certo a correlacao vai a 0,99+. Ja custou tempo duas vezes:
+   * ver a nota em `inceptionBloco.combo4m.obs` ("a correlacao com o S&P saia
+   * -0,00 em vez de 0,26, porque portfolio e indice ficavam um dia fora de
+   * fase") e a auditoria do `suavemin15` de 22/08/2026.
+   *
+   * O QUE ISSO AFETA: nada nas metricas agregadas (CAGR, Sharpe, vol, maxDD sao
+   * invariantes a um relabel). AFETA toda afirmacao datada — "o que voce
+   * carregava em 25/10/2007", as datas das tabelas de queda e recuperacao, e
+   * qualquer join com uma serie externa (indice, macro, preco de ativo).
+   */
   blocos: Record<BlocoId, number[]>;
   /**
    * Janela real de cada bloco, quando ela e menor que o eixo do dataset.
@@ -79,6 +107,36 @@ export interface BenchmarkSetsData {
    * apareceria plano nas pontas e as metricas sairiam diluidas.
    */
   inceptionBloco?: Partial<Record<BlocoId, { de: string; ate: string; obs?: string }>>;
+  /**
+   * Detalhamento do motor da familia 4 MOTORES: o interior do bloco combo4m.
+   *
+   * `pesoPorMotor` e `constituintes[].peso` estao em DECIMO DE PONTO
+   * PERCENTUAL do portfolio (1000 = 100%), e a soma dos constituintes de um
+   * motor fecha exatamente com o peso do motor em todo dia. `runs` e RLE:
+   * [diaIdx, indiceEmSimbolos] — vale daquele dia em diante.
+   *
+   * Fidelidade: recompor a curva por `pesoPorMotor` reproduz a serie oficial
+   * com erro de ponto flutuante (3,4e-17). No nivel do constituinte ha um
+   * residuo conhecido (~1,4e-3 no retorno diario), concentrado em meses depois
+   * de eventos extremos, porque a serie fonte deriva o peso entre rebalances e
+   * o export recalcula. Nao afeta Sharpe/CAGR/MaxDD; afeta qual constituinte
+   * aparece como maior nesses meses.
+   */
+  motores4m?: {
+    gerado_em: string;
+    spec: string;
+    motores: { id: string; nome: string; nomeInterno?: string; tese?: string; fatia: number }[];
+    pesoPorMotor: Record<string, number[]>;
+    constituintes: {
+      id: string;
+      motor: string;
+      label: string;
+      peso: number[];
+      simbolos: string[];
+      defensivo: number[];
+      runs: [number, number][];
+    }[];
+  };
   /** regua: equal-weight das 41, rebalance mensal */
   ew41: number[];
   /** retorno diario do S&P 500, para a correlacao */

@@ -129,7 +129,7 @@ export default function Fundamentos() {
     if (!doc) return;
     publishScreenData(
       "fundamentos",
-      `Analise individual: ${e.nome} (${e.ticker}) — HS ${e.JD_SCORE_FUND ?? "n/d"}, ` +
+      `Analise individual: ${e.nome} (${e.ticker}) — HS ${e.JD_SCORE_NORM ?? "n/d"}, ` +
       `${e.setor_hx} > ${e.subsetor_hx}`,
       e,
       { briefing: memoriaDeCalculo(e, doc), suggestions: perguntasSugeridas(e) },
@@ -287,7 +287,7 @@ export default function Fundamentos() {
                     <tr key={e.ticker}>
                       <td style={{ fontWeight: 700, color: "var(--gold)" }}>{e.ticker}</td>
                       <td style={{ color: "var(--tx2)", fontSize: 11 }}>{e.nome?.slice(0, 26)}</td>
-                      <td className="num" style={{ color: sinal(e.JD_SCORE_FUND) }}>{n1(e.JD_SCORE_FUND)}</td>
+                      <td className="num" style={{ color: sinal(e.JD_SCORE_NORM) }}>{n1(e.JD_SCORE_NORM)}</td>
                       <td className="num" style={{ color: sinal(e.mom_12_1) }}>{n1((e.mom_12_1 ?? 0) * 100, "%")}</td>
                       <td className="num pos">{n1(e.divergencia)}</td>
                     </tr>
@@ -307,7 +307,7 @@ export default function Fundamentos() {
                     <tr key={e.ticker}>
                       <td style={{ fontWeight: 700, color: "var(--gold)" }}>{e.ticker}</td>
                       <td style={{ color: "var(--tx2)", fontSize: 11 }}>{e.nome?.slice(0, 26)}</td>
-                      <td className="num" style={{ color: sinal(e.JD_SCORE_FUND) }}>{n1(e.JD_SCORE_FUND)}</td>
+                      <td className="num" style={{ color: sinal(e.JD_SCORE_NORM) }}>{n1(e.JD_SCORE_NORM)}</td>
                       <td className="num" style={{ color: sinal(e.mom_12_1) }}>{n1((e.mom_12_1 ?? 0) * 100, "%")}</td>
                       <td className="num neg">{n1(e.divergencia)}</td>
                     </tr>
@@ -402,6 +402,7 @@ export default function Fundamentos() {
                   <th className="num">Compra</th>
                   <th className="num">Venda</th>
                   <th className="num">HS</th>
+                  <th className="num" title="ancoras aplicaveis que conseguiram votar">Cob.</th>
                   <th>Postura</th>
                   <th className="num">F</th>
                   <th className="num">P/L</th>
@@ -429,7 +430,17 @@ export default function Fundamentos() {
                         propria faixa; acima do de venda, no topo. */}
                     <td className="num" style={{ color: "var(--green)" }}>{n2(e.preco_compra_hist)}</td>
                     <td className="num" style={{ color: "var(--red)" }}>{n2(e.preco_venda_hist)}</td>
-                    <td className="num" style={{ color: sinal(e.JD_SCORE_FUND), fontWeight: 600 }}>{n1(e.JD_SCORE_FUND)}</td>
+                    {/* HS e o placar NORMALIZADO pelas ancoras aplicaveis ao tipo
+                        de negocio. O bruto (JD_SCORE_FUND) nao e comparavel entre
+                        um banco, que tem 3 ancoras, e uma industria, que tem 5. */}
+                    <td className="num" style={{ color: sinal(e.JD_SCORE_NORM), fontWeight: 600 }}>{n1(e.JD_SCORE_NORM)}</td>
+                    {/* Cobertura baixa com HS perto de zero significa "sabemos
+                        pouco", nao "esta no preco justo". Sem esta coluna as duas
+                        leituras ficam indistinguiveis na tela. */}
+                    <td className="num" title={e.ancoras_nao_aplicaveis ? `nao se aplicam: ${e.ancoras_nao_aplicaveis.replace(/\|/g, ", ")}` : undefined}
+                        style={{ color: (e.cobertura_ancoras ?? 0) >= 1 ? "var(--tx3)" : "var(--gold)" }}>
+                      {e.ancoras_validas ?? 0}/{e.ancoras_aplicaveis ?? 0}
+                    </td>
                     <td style={{ fontSize: 10, color: e.n_gatilhos ? "var(--red)" : "var(--tx2)" }}>
                       {e.postura ?? "—"}
                       {!!e.n_gatilhos && <span title="gatilhos defensivos acionados" style={{ marginLeft: 4 }}>▲{e.n_gatilhos}</span>}

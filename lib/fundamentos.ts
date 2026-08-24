@@ -7,9 +7,13 @@
 // CADEIA: de onde veio o dado, qual formula produziu cada ancora, como cada
 // ancora votou, e o que o conjunto NAO consegue afirmar.
 //
-// Por isso o texto declara explicitamente as ancoras que nao foram avaliadas.
-// Uma empresa com 2 de 5 ancoras pode ter o mesmo placar de uma com 5 de 5, e
-// sao afirmacoes de forca completamente diferente.
+// Por isso o texto declara a COBERTURA: quantas ancoras aplicaveis conseguiram
+// votar. Ate 23/08/2026 uma empresa com 2 de 5 ancoras podia exibir o mesmo
+// placar de uma com 5 de 5 — a ancora sem dado votava "neutro" em vez de se
+// abster, e o sistema afirmava preco justo sobre o que nunca mediu (546 das 987
+// empresas, US$ 42,5 tri). Corrigido no L5: a ancora se abstem, e o placar e
+// normalizado pelas ancoras APLICAVEIS, de modo que falta de dado puxa para
+// zero em vez de passar despercebida.
 //
 // Fica fora do componente porque e texto de dominio, nao interface: muda quando
 // a metodologia muda, nao quando a tela muda.
@@ -67,6 +71,15 @@ export interface Empresa {
   grupo_comparacao: string | null; nivel_faixa: string | null; sic_descricao: string | null;
   dias_desde_filing: number | null; F_criterios_avaliados: number | null;
   premio_sobre_tesouro_pp: number | null;
+  // ---- abstencao e aplicabilidade ----
+  // JD_SCORE_NORM e o placar de referencia (escala -5..+5 comparavel entre
+  // tipos de negocio). JD_SCORE_FUND e a soma bruta e NAO e comparavel.
+  JD_SCORE_NORM: number | null;
+  tipo_negocio: string | null;
+  ancoras_validas: number | null;      // aplicaveis que conseguiram votar
+  ancoras_aplicaveis: number | null;   // aplicaveis a este tipo de negocio
+  ancoras_nao_aplicaveis: string | null;
+  cobertura_ancoras: number | null;    // validas / aplicaveis
 }
 
 export interface Doc {
@@ -82,8 +95,12 @@ export interface Doc {
   setores: Setor[]; subsetores: Subsetor[]; empresas: Empresa[];
 }
 
-const votoTxt = (v: number | null | undefined) =>
-  v === null || v === undefined ? "nao avaliada"
+// Tres estados, nao dois. A diferenca entre "NEUTRO" e "SEM DADO" e a correcao
+// mais importante desta versao: ate 23/08/2026 a ancora sem dado votava 0, e o
+// sistema afirmava preco justo sobre 546 empresas que nunca mediu.
+const votoTxt = (v: number | null | undefined, aplicavel = true) =>
+  !aplicavel ? "NAO SE APLICA a este tipo de negocio"
+    : v === null || v === undefined ? "SEM DADO — a ancora se absteve, nao votou neutro"
     : v > 0 ? "BARATO (+1)" : v < 0 ? "CARO (-1)" : "NEUTRO (0)";
 
 export function memoriaDeCalculo(e: Empresa, doc: Doc): string {
@@ -92,6 +109,7 @@ export function memoriaDeCalculo(e: Empresa, doc: Doc): string {
   const pct = (v: number | null | undefined, d = 1) =>
     v === null || v === undefined ? "sem dado" : `${(v * 100).toFixed(d)}%`;
   const L: string[] = [];
+  const naoAplica = new Set((e.ancoras_nao_aplicaveis ?? "").split("|").filter(Boolean));
 
   L.push(`EMPRESA: ${e.nome} (${e.ticker})`);
   L.push(
@@ -130,17 +148,33 @@ export function memoriaDeCalculo(e: Empresa, doc: Doc): string {
   );
 
   L.push("");
-  L.push(`PLACAR HS (Harpian Score) = ${p(e.JD_SCORE_FUND, 1)} | postura: ${e.postura ?? "n/d"}`);
-  L.push(
-    `HS e a SOMA dos votos de ate 5 ancoras independentes, cada uma votando +1` +
-    ` (barato), 0 (neutro) ou -1 (caro). Escala -5 a +5. Nesta empresa foram` +
-    ` avaliadas ${e.ancoras_avaliadas ?? 0} de 5 ancoras` +
-    ` (${e.votos_barato ?? 0} barato, ${e.votos_caro ?? 0} caro).`
-  );
-  L.push(
-    `Ancora nao avaliada NAO conta como neutra: ela reduz a forca da afirmacao.` +
-    ` Se o numero de ancoras for baixo, diga isso antes de qualquer conclusao.`
-  );
+  if (e.postura === "SEM_DADO" || !(e.ancoras_validas ?? 0)) {
+    L.push(`PLACAR HS: NAO CALCULADO. Nenhuma ancora aplicavel a esta empresa` +
+      ` conseguiu ser avaliada com os dados disponiveis.`);
+    L.push(`ISTO NAO E "NEUTRO". Nao ha leitura de valuation aqui. Diga isso de` +
+      ` forma direta e nao construa conclusao sobre o preco. O que ainda vale sao` +
+      ` os indicadores que nao dependem de valuation (margens, ROE, crescimento) e` +
+      ` a qualidade contabil.`);
+  } else {
+    L.push(`PLACAR HS (Harpian Score) = ${p(e.JD_SCORE_NORM, 1)} | postura: ${e.postura ?? "n/d"}`);
+    L.push(
+      `HS e a soma dos votos das ancoras APLICAVEIS a este tipo de negocio` +
+      ` (${e.tipo_negocio ?? "n/d"}), normalizada para a escala -5..+5. Cada ancora` +
+      ` vota +1 (barato), 0 (neutro) ou -1 (caro), e se ABSTEM quando falta dado.`
+    );
+    L.push(
+      `Cobertura: ${e.ancoras_validas ?? 0} de ${e.ancoras_aplicaveis ?? 0} ancoras` +
+      ` aplicaveis conseguiram votar (${((e.cobertura_ancoras ?? 0) * 100).toFixed(0)}%)` +
+      `${e.ancoras_nao_aplicaveis ? `. Nao se aplicam a este negocio: ${e.ancoras_nao_aplicaveis.replace(/\|/g, ", ")}` : ""}.`
+    );
+    L.push(
+      `O DENOMINADOR e o numero de ancoras APLICAVEIS, nao o de ancoras que` +
+      ` votaram. Consequencia que voce deve usar: falta de dado puxa o placar para` +
+      ` ZERO. Um HS proximo de zero com cobertura baixa significa "sabemos pouco",` +
+      ` nao "esta no preco justo" — e a diferenca entre as duas leituras e toda.` +
+      ` So com cobertura de 100% o placar consegue chegar aos extremos.`
+    );
+  }
 
   L.push("");
   L.push("1) ANCORA HISTORICA — o multiplo contra a propria historia da empresa");
@@ -153,7 +187,7 @@ export function memoriaDeCalculo(e: Empresa, doc: Doc): string {
     `   Precos de gatilho derivados: compra ${p(e.preco_compra_hist)}, venda` +
     ` ${p(e.preco_venda_hist)}. Sao o fundo e o topo da FAIXA DE MULTIPLO da propria` +
     ` empresa aplicados ao lucro corrente — nao sao preco-alvo de casa nem consenso` +
-    ` de mercado. Voto: ${votoTxt(e.voto_hist)}.`
+    ` de mercado. Voto: ${votoTxt(e.voto_hist, !naoAplica.has("hist"))}.`
   );
 
   L.push("");
@@ -162,7 +196,7 @@ export function memoriaDeCalculo(e: Empresa, doc: Doc): string {
     `   Percentil do P/L dentro de ${e.grupo_comparacao ?? "seu grupo"}:` +
     ` ${p(e.PL_percentil_setor, 0)}. Esta ancora existe porque cada setor tem sua` +
     ` propria faixa normal de multiplo: industria pesada e software nao se comparam` +
-    ` pelo mesmo P/L. Voto: ${votoTxt(e.voto_setor)}.`
+    ` pelo mesmo P/L. Voto: ${votoTxt(e.voto_setor, !naoAplica.has("setor"))}.`
   );
 
   L.push("");
@@ -175,7 +209,7 @@ export function memoriaDeCalculo(e: Empresa, doc: Doc): string {
   L.push(
     `   P/VPA justo ${p(e.PVPA_justo)} contra P/VPA atual ${p(e.PVPA)} => preco justo` +
     ` ${p(e.preco_justo_gordon)} (upside ${p(e.upside_gordon_pct, 1, "%")}).` +
-    ` Voto: ${votoTxt(e.voto_gordon)}.`
+    ` Voto: ${votoTxt(e.voto_gordon, !naoAplica.has("gordon"))}.`
   );
   L.push(
     `   LIMITE CONHECIDO da formula: quando g se aproxima de Ke o denominador tende a` +
@@ -188,7 +222,7 @@ export function memoriaDeCalculo(e: Empresa, doc: Doc): string {
   L.push(
     `   FCF yield ${p(e.fcf_yield_pct, 1, "%")}; earnings yield ${pct(e.earn_yield)};` +
     ` premio sobre o Tesouro de 10 anos ${p(e.premio_sobre_tesouro_pp, 1, " p.p.")}.` +
-    ` Preco de compra pelo caixa: ${p(e.preco_compra_fcf)}. Voto: ${votoTxt(e.voto_fcf)}.`
+    ` Preco de compra pelo caixa: ${p(e.preco_compra_fcf)}. Voto: ${votoTxt(e.voto_fcf, !naoAplica.has("fcf"))}.`
   );
   L.push(
     `   E a ancora que menos depende de escolha contabil: caixa e mais dificil de` +
@@ -200,7 +234,7 @@ export function memoriaDeCalculo(e: Empresa, doc: Doc): string {
   L.push(
     `   Ranking combinado: ${p(e.MagicFormula, 0)}. ROIC ${pct(e.ROIC)},` +
     ` EV/EBIT ${p(e.EV_EBIT, 1)}, EV/EBITDA ${p(e.EV_EBITDA, 1)}.` +
-    ` Voto: ${votoTxt(e.voto_magic)}.`
+    ` Voto: ${votoTxt(e.voto_magic, !naoAplica.has("magic"))}.`
   );
   L.push(
     `   Nao se aplica a banco, seguradora nem utility: capital tangivel nao tem o` +
@@ -279,7 +313,7 @@ export function memoriaDeCalculo(e: Empresa, doc: Doc): string {
 
 export function perguntasSugeridas(e: Empresa): string[] {
   const q = [
-    `Por que ${e.ticker} tem HS ${e.JD_SCORE_FUND?.toFixed(0) ?? "n/d"}? Abra ancora por ancora.`,
+    `Por que ${e.ticker} tem HS ${e.JD_SCORE_NORM?.toFixed(1) ?? "n/d"}? Abra ancora por ancora.`,
     `Quais ancoras de ${e.ticker} discordam entre si, e qual delas eu deveria pesar mais?`,
   ];
   if (e.n_gatilhos) q.push(`O que exatamente disparou o gatilho defensivo em ${e.ticker}?`);

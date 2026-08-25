@@ -80,6 +80,16 @@ export interface Empresa {
   ancoras_aplicaveis: number | null;   // aplicaveis a este tipo de negocio
   ancoras_nao_aplicaveis: string | null;
   cobertura_ancoras: number | null;    // validas / aplicaveis
+  // ---- forense contabil (Beneish 1999) e solidez ----
+  M_Score: number | null; M_sinaliza: boolean | null; M_razoes_ok: number | null;
+  M_DSRI: number | null; M_GMI: number | null; M_AQI: number | null;
+  M_SGI: number | null; M_DEPI: number | null; M_SGAI: number | null;
+  M_LVGI: number | null; M_TATA: number | null;
+  CurrentRatio: number | null; Leverage: number | null;
+  InterestCoverage: number | null; NetDebtToEBITDA: number | null;
+  EquityRatio: number | null; CashConversion: number | null;
+  FCFMargin: number | null; CFOGrowth: number | null;
+  gatilho_forense_contabil: number | null;
 }
 
 export interface Doc {
@@ -272,6 +282,51 @@ export function memoriaDeCalculo(e: Empresa, doc: Doc): string {
     ` ${pct(e.GrossMargin)}, operacional ${pct(e.OperMargin)}, liquida ${pct(e.NetMargin)}.` +
     ` Crescimento de receita ${pct(e.RevGrowth)}.`
   );
+
+  L.push("");
+  L.push("SOLIDEZ DO BALANCO");
+  L.push(
+    `Alavancagem ${p(e.Leverage, 1, "x")} (ativo sobre patrimonio), liquidez corrente` +
+    ` ${p(e.CurrentRatio)}, cobertura de juros ${p(e.InterestCoverage, 1, "x")},` +
+    ` divida liquida sobre EBITDA ${p(e.NetDebtToEBITDA, 1, "x")},` +
+    ` patrimonio sobre ativo ${pct(e.EquityRatio, 0)}.`
+  );
+  L.push(
+    `Conversao de caixa ${pct(e.CashConversion, 0)} — quanto do lucro contabil vira` +
+    ` dinheiro. Abaixo de 100% de forma persistente e o sinal que Sloan associa a` +
+    ` accruals altos e a retorno futuro pior.`
+  );
+
+  L.push("");
+  L.push("FORENSE CONTABIL — M-SCORE DE BENEISH (1999)");
+  if (e.M_Score === null) {
+    L.push(
+      `NAO CALCULADO. O modelo exige as oito razoes com o exercicio anterior, e` +
+      ` faltou pelo menos uma (${e.M_razoes_ok ?? 0} de 8 disponiveis). Meio M-Score` +
+      ` nao e um M-Score menos preciso: e outro numero, porque os coeficientes vem` +
+      ` de um probit conjunto. Nao improvise uma versao parcial.`
+    );
+  } else {
+    L.push(
+      `M-Score ${p(e.M_Score)} (limiar -1,78).` +
+      `${e.M_sinaliza ? " ACIMA DO LIMIAR." : " Abaixo do limiar."}` +
+      ` Razoes: DSRI ${p(e.M_DSRI)} (recebiveis sobre receita), GMI ${p(e.M_GMI)}` +
+      ` (deterioracao da margem bruta), AQI ${p(e.M_AQI)} (qualidade do ativo),` +
+      ` SGI ${p(e.M_SGI)} (crescimento de receita), DEPI ${p(e.M_DEPI)} (ritmo de` +
+      ` depreciacao), SGAI ${p(e.M_SGAI)} (despesa comercial sobre receita),` +
+      ` LVGI ${p(e.M_LVGI)} (alavancagem), TATA ${p(e.M_TATA)} (accruals sobre ativo).`
+    );
+    L.push(
+      `COMO NAO LER: acima do limiar NAO significa manipulacao. O modelo tem taxa` +
+      ` alta de falso positivo e crescimento acelerado legitimo dispara varias` +
+      ` razoes ao mesmo tempo — receita e recebiveis subindo juntos e o padrao` +
+      ` normal de empresa em expansao. Verificado na nossa base: os sinalizados` +
+      ` entre as grandes sao Micron, NVIDIA, Western Digital e Dell, com F-Score` +
+      ` de 7 a 9. E fila de VERIFICACAO, nunca veredito. Se for comentar, diga` +
+      ` QUAL razao puxou o escore e se ela tem explicacao operacional obvia.`
+    );
+    L.push(`Nao se aplica a banco nem seguradora: a amostra de Beneish e nao financeira.`);
+  }
 
   L.push("");
   L.push("MOMENTO E DIVERGENCIA");

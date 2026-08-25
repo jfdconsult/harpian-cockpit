@@ -411,6 +411,7 @@ export default function Fundamentos() {
                   <th className="num">FCF y.</th>
                   <th className="num">Mom.</th>
                   <th className="num">Diverg.</th>
+                  <th className="num" title="M-Score de Beneish — fila de verificacao, nao veredito">M</th>
                   <th style={{ textAlign: "center" }}>Dado</th>
                   <th style={{ textAlign: "center" }} title="analise do JIM">JIM</th>
                 </tr>
@@ -452,6 +453,12 @@ export default function Fundamentos() {
                     <td className="num" style={{ color: sinal(e.fcf_yield_pct) }}>{n1(e.fcf_yield_pct, "%")}</td>
                     <td className="num" style={{ color: sinal(e.mom_12_1) }}>{e.mom_12_1 === null ? "—" : n1(e.mom_12_1 * 100, "%")}</td>
                     <td className="num" style={{ color: sinal(e.divergencia) }}>{n1(e.divergencia)}</td>
+                    {/* Ambar acima do limiar, nunca vermelho: vermelho leria como
+                        acusacao, e o modelo so aponta para a fila de verificacao. */}
+                    <td className="num" title={e.M_Score === null ? "sem as 8 razoes" : "acima de -1,78 = verificar, nao concluir"}
+                        style={{ color: e.M_sinaliza ? "var(--gold)" : "var(--tx3)" }}>
+                      {n2(e.M_Score)}
+                    </td>
                     <td style={{
                       textAlign: "center", fontSize: 10,
                       color: e.qualidade_dado === "OK" ? "var(--tx3)" : "var(--gold)",
